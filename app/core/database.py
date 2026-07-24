@@ -76,11 +76,12 @@ def session_scope() -> Generator[Session, None, None]:
 
 
 def initialize_database() -> None:
+    from app.core.migrations import ensure_database_schema
     from app.models.access import AuditEvent, Permission, Role, User
     from app.services.access_service import seed_access_control
 
     _ = (AuditEvent, Permission, Role, User)
-    Base.metadata.create_all(bind=engine)
+    ensure_database_schema(engine)
 
     with session_scope() as session:
         seed_access_control(session)

@@ -62,13 +62,18 @@ jobs:
           git apply --check --verbose /tmp/netdoc.patch
           git apply /tmp/netdoc.patch
 
-      - name: Commit completed batch
+      - name: Commit completed source batch
         shell: bash
         run: |
           set -euo pipefail
           rm -rf .github/patches
-          rm -f .github/workflows/apply-access-control-batch.yml
           git add -A
+
+          # Workflow files are finalized afterward through the repository connector,
+          # because the job token is intentionally not allowed to rewrite workflows.
+          git restore --staged .github/workflows/ci.yml
+          git restore .github/workflows/ci.yml
+
           git diff --cached --check
           git config user.name "NetDoc Automation"
           git config user.email "netdoc-automation@users.noreply.github.com"

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     netbox_write_enabled: bool = False
 
     session_secret: str
+    session_cookie_name: str = "netdoc_session"
     session_cookie_secure: bool = False
     session_max_age: int = 28800
 

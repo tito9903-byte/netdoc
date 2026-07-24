@@ -18,3 +18,12 @@
 
 Cada entorno tendrá su propia carpeta, entorno virtual, archivo .env,
 clave de sesión, servicio systemd y registros.
+
+## Cookies de sesión
+
+Cada entorno debe usar un nombre de cookie distinto:
+
+- Producción: `netdoc_prod_session`
+- Desarrollo: `netdoc_dev_session`
+
+Esto evita que una sesión de un entorno sobrescriba la del otro.

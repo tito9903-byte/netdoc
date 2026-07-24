@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Actualiza exclusivamente producción de NetDoc; requiere confirmación explícita.
+set -euo pipefail
+
+APP_DIR="/opt/netdoc-prod"
+BRANCH="main"
+SERVICE="netdoc-prod"
+HEALTH_URL="http://127.0.0.1:8100/login"
+VENV_DIR="$APP_DIR/.venv"
+
+if [[ ${1:-} == "--help" ]]; then echo "Uso: netdoc-deploy-prod [--yes]"; exit 0; fi
+if [[ ${1:-} != "" && ${1:-} != "--yes" ]]; then echo "ERROR: opción no reconocida. Use --yes." >&2; exit 2; fi
+if [[ ${EUID} -ne 0 ]]; then echo "ERROR: este comando debe ejecutarse como root." >&2; exit 1; fi
+if [[ ${1:-} != "--yes" ]]; then
+  read -r -p "ADVERTENCIA: se actualizará PRODUCCIÓN. Escriba DESPLEGAR para continuar: " confirmation
+  [[ $confirmation == "DESPLEGAR" ]] || { echo "Cancelado."; exit 0; }
+fi
+if [[ ! -d $APP_DIR || ! -d $APP_DIR/.git ]]; then echo "ERROR: $APP_DIR no es un repositorio Git." >&2; exit 1; fi
+if [[ ! -f $APP_DIR/.env ]]; then echo "ERROR: falta $APP_DIR/.env (no se mostrará ni modificará)." >&2; exit 1; fi
+if [[ ! -x $VENV_DIR/bin/python ]]; then echo "ERROR: falta el entorno virtual en $VENV_DIR." >&2; exit 1; fi
+if ! systemctl cat "$SERVICE" >/dev/null 2>&1; then echo "ERROR: el servicio $SERVICE no existe." >&2; exit 1; fi
+cd "$APP_DIR"
+if [[ $(git branch --show-current) != "$BRANCH" ]]; then echo "ERROR: la rama local debe ser $BRANCH." >&2; exit 1; fi
+if ! git remote get-url origin >/dev/null 2>&1; then echo "ERROR: falta el remoto origin." >&2; exit 1; fi
+PREVIOUS_COMMIT=$(git rev-parse HEAD); NEW_COMMIT=""; HTTP_STATUS="no comprobado"
+rollback() {
+  local status=$?
+  echo "ERROR: despliegue de producción falló; se restaura $PREVIOUS_COMMIT." >&2
+  git reset --hard "$PREVIOUS_COMMIT" || true
+  "$VENV_DIR/bin/pip" install --requirement requirements-lock.txt || "$VENV_DIR/bin/pip" install --requirement requirements.txt || true
+  systemctl restart "$SERVICE" || true
+  sleep 2
+  HTTP_STATUS=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 10 "$HEALTH_URL" || true)
+  echo "Rollback: rama=$BRANCH, commit=$PREVIOUS_COMMIT, HTTP=$HTTP_STATUS" >&2
+  exit "$status"
+}
+trap rollback ERR
+echo "NetDoc PRODUCCIÓN: rama=$BRANCH, commit anterior=$PREVIOUS_COMMIT"
+git fetch --prune origin
+if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then echo "ERROR: origin/$BRANCH no existe." >&2; exit 1; fi
+git reset --hard "origin/$BRANCH"; NEW_COMMIT=$(git rev-parse HEAD)
+"$VENV_DIR/bin/pip" install --requirement requirements-lock.txt
+"$VENV_DIR/bin/python" -m compileall app
+"$VENV_DIR/bin/python" -c 'from app.main import app; print(app.title)'
+systemctl restart "$SERVICE"; sleep 2; systemctl is-active --quiet "$SERVICE"
+HTTP_STATUS=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 10 "$HEALTH_URL")
+if [[ ! $HTTP_STATUS =~ ^(200|30[0-9])$ ]]; then echo "ERROR: /login devolvió HTTP $HTTP_STATUS." >&2; false; fi
+trap - ERR
+echo "Despliegue completado: rama=$BRANCH, anterior=$PREVIOUS_COMMIT, nuevo=$NEW_COMMIT, HTTP=$HTTP_STATUS"

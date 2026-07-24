@@ -6,8 +6,8 @@ El repositorio incluye pruebas de servicios de acceso y rutas administrativas en
 
 | Módulo | Cobertura actual | Pendiente |
 |---|---|---|
-| Autenticación y roles | Inicialización, usuario, contraseña, permisos, persistencia y autorización web | bloqueo, revocación de sesiones y concurrencia |
-| Usuarios administrativos | Login, acceso de administrador y denegación de Consulta | formularios completos, último administrador, CSRF inválido y cambio de contraseña |
+| Autenticación y roles | Inicialización, usuario, contraseña, permisos, persistencia y actualización inmediata | bloqueo por intentos y concurrencia |
+| Usuarios administrativos | Login, acceso de administrador, denegación, desactivación y cambio de rol | formularios completos, último administrador y CSRF inválido |
 | Auditoría | Creación, persistencia y login fallido visible | filtros, retención, exportación y carga |
 | Dispositivos/interfaces | Manual | unitarias e integración con NetBox simulado |
 | Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
@@ -36,14 +36,16 @@ Se ejecutaron en un entorno aislado, no en el servidor:
 - Creación de rol personalizado y evento de auditoría: correcta.
 - Persistencia de permisos personalizados del rol Operador tras repetir la inicialización: correcta.
 - Carga sintáctica de todas las plantillas administrativas: correcta.
-- Ocho pruebas automatizadas: superadas localmente.
+- Diez pruebas automatizadas: superadas localmente.
 - TestClient: login administrativo y acceso a Usuarios, Roles y Auditoría: correctos.
 - TestClient: rol Consulta redirigido a `/forbidden` al intentar administrar usuarios: correcto.
 - TestClient: intento de login fallido visible en Auditoría: correcto.
+- TestClient: la desactivación invalida una sesión existente en la siguiente solicitud: correcto.
+- TestClient: el cambio de rol actualiza permisos en la siguiente solicitud: correcto.
 
 ## Integración continua
 
-`.github/workflows/ci.yml` instala `requirements-lock.txt`, compila `app` y `tests`, ejecuta la suite, importa `app.main`, analiza todas las plantillas Jinja2 y valida los scripts de despliegue. El workflow `NetDoc CI` del PR #3 completó correctamente instalación, compilación, pruebas, importación, plantillas y scripts.
+`.github/workflows/ci.yml` instala `requirements-lock.txt`, compila `app` y `tests`, ejecuta la suite, importa `app.main`, analiza todas las plantillas Jinja2 y valida los scripts de despliegue. La ejecución previa de `NetDoc CI` completó correctamente todas las etapas; el último commit debe mostrar el mismo resultado antes de fusionar.
 
 Estos resultados no validan systemd, el puerto 8101, la base persistente real del servidor, el navegador con datos reales ni NetBox.
 
@@ -55,11 +57,12 @@ Estos resultados no validan systemd, el puerto 8101, la base persistente real de
 4. Crear usuarios de los roles Administrador, Operador y Consulta.
 5. Confirmar que cada menú y URL respeta sus permisos.
 6. Probar creación, edición, activación y cambio de contraseña.
-7. Crear y editar un rol personalizado.
-8. Verificar eventos correctos y fallidos en Auditoría.
-9. Confirmar que desarrollo sigue sin escritura hacia NetBox.
-10. Revisar logs, permisos del archivo de base y que Git lo ignore.
+7. Confirmar que la desactivación y los cambios de rol se aplican sin volver a iniciar sesión.
+8. Crear y editar un rol personalizado.
+9. Verificar eventos correctos y fallidos en Auditoría.
+10. Confirmar que desarrollo sigue sin escritura hacia NetBox.
+11. Revisar logs, permisos del archivo de base y que Git lo ignore.
 
 ## Estrategia siguiente
 
-Agregar pruebas de formularios completos, CSRF inválido, protección del último administrador, cambios de rol, filtros de auditoría, fallos de base, integración simulada con NetBox y migraciones. Antes de `main`: diff y documentación revisados, pruebas existentes, despliegue en desarrollo, revisión de permisos y validación manual del propietario sin inventar resultados.
+Agregar pruebas de formularios completos, CSRF inválido, protección del último administrador, filtros de auditoría, fallos de base, integración simulada con NetBox y migraciones. Antes de `main`: diff y documentación revisados, pruebas existentes, despliegue en desarrollo, revisión de permisos y validación manual del propietario sin inventar resultados.

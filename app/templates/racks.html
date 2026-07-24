@@ -7,6 +7,21 @@
 {% endblock %}
 
 {% block content %}
+<section class="workflow-intro">
+    <div>
+        <span class="eyebrow">Infraestructura física</span>
+        <h2>Ubica cada equipo y revisa la capacidad del rack</h2>
+        <p>
+            Mantén documentados sitio, localidad, altura, cara y posición U para
+            que la elevación represente el entorno real.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/device-types">Preparar modelos</a>
+        <a class="button primary" href="/devices/actions/new">Ubicar un equipo</a>
+    </div>
+</section>
+
 <section class="rack-toolbar">
     <form method="get" action="/racks" class="rack-filters">
         <div class="rack-filter search">
@@ -37,13 +52,8 @@
         </div>
 
         <div class="rack-filter-actions">
-            <button type="submit" class="rack-primary-button">
-                Buscar
-            </button>
-
-            <a href="/racks" class="rack-secondary-button">
-                Limpiar
-            </a>
+            <button type="submit" class="rack-primary-button">Buscar</button>
+            <a href="/racks" class="rack-secondary-button">Limpiar</a>
         </div>
     </form>
 </section>
@@ -54,23 +64,19 @@
         <p>{{ racks | length }} bastidores encontrados</p>
     </div>
 
-    <span class="rack-result-badge">
-        Vista 2D disponible
-    </span>
+    <span class="rack-result-badge">Vista 2D disponible</span>
 </section>
 
 {% if racks %}
 <section class="rack-card-grid">
     {% for rack in racks %}
+    {% set rack_width = rack.get("width") %}
     <a class="rack-card" href="/racks/{{ rack.get('id') }}">
         <div class="rack-card-top">
             <div class="rack-card-icon">▥</div>
 
             <div class="rack-card-identity">
-                <h3>
-                    {{ rack.get("name") or rack.get("display") or "Sin nombre" }}
-                </h3>
-
+                <h3>{{ rack.get("name") or rack.get("display") or "Sin nombre" }}</h3>
                 <p>
                     {{ rack.get("_site_label") }}
                     {% if rack.get("_location_label") != "—" %}
@@ -79,9 +85,7 @@
                 </p>
             </div>
 
-            <span class="rack-card-status">
-                {{ rack.get("_status_label") }}
-            </span>
+            <span class="rack-card-status">{{ rack.get("_status_label") }}</span>
         </div>
 
         <div class="rack-card-metrics">
@@ -89,33 +93,38 @@
                 <span>Altura</span>
                 <strong>{{ rack.get("_u_height") }}U</strong>
             </div>
-
             <div>
                 <span>Equipos</span>
                 <strong>{{ rack.get("_device_count") }}</strong>
             </div>
-
             <div>
                 <span>Ocupación</span>
+                {% if rack.get("utilization") is not none %}
                 <strong>{{ rack.get("_utilization") | round(1) }}%</strong>
+                {% else %}
+                <strong title="Abre la elevación para calcular las unidades ocupadas">Ver detalle</strong>
+                {% endif %}
             </div>
         </div>
 
         <div class="rack-progress">
             <div
                 class="rack-progress-fill"
-                style="width: {{ rack.get('_utilization') }}%;"
+                style="width: {% if rack.get('utilization') is not none %}{{ rack.get('_utilization') }}{% else %}0{% endif %}%;"
             ></div>
         </div>
 
         <div class="rack-card-footer">
             <span>
-                {{ rack.get("width", "—") }} pulgadas
+                {% if rack_width is mapping %}
+                    {{ rack_width.get("label") or rack_width.get("value") or "—" }}
+                {% else %}
+                    {{ rack_width or "—" }}
+                {% endif %}
                 {% if rack.get("facility_id") %}
                 · {{ rack.get("facility_id") }}
                 {% endif %}
             </span>
-
             <strong>Ver elevación →</strong>
         </div>
     </a>

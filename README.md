@@ -1,37 +1,51 @@
 # NetDoc
 
-NetDoc es una plataforma independiente que simplifica la consulta y
-documentación diaria de infraestructura de red, utilizando NetBox como
-fuente oficial de datos.
+NetDoc simplifica la consulta, creación guiada y visualización de infraestructura
+de red mediante NetBox como fuente oficial del inventario técnico.
 
-## Objetivos
+## Estado y funcionalidades
 
-- Consultar dispositivos, interfaces, racks y cables.
-- Crear equipos mediante formularios guiados.
-- Documentar conexiones físicas de manera sencilla.
-- Visualizar racks en 2D.
-- Incorporar posteriormente topologías y visualización 3D.
+El estado oficial está en [PROJECT_STATUS](docs/PROJECT_STATUS.md). El código
+incluye autenticación administrativa inicial, dashboard, dispositivos con
+búsqueda/filtros/paginación/detalle e interfaces, creación guiada, conexiones y
+cables, y racks 2D con detalle. El próximo objetivo planificado es usuarios,
+roles, permisos y auditoría.
 
-## Módulos actuales
+## Arquitectura y tecnologías
 
-- Inicio de sesión administrativo.
-- Dashboard.
-- Consulta y detalle de dispositivos.
-- Creación guiada de equipos.
-- Conexiones entre interfaces.
-- Visualización de racks en 2D.
+Navegador → FastAPI/Jinja2 → servicios HTTPX → API REST de NetBox. Usa Python,
+FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, Uvicorn,
+HTML, CSS y JavaScript. Consulte [arquitectura](docs/ARCHITECTURE.md).
 
-## Ramas
+## Estructura
 
-- main: producción.
-- develop: desarrollo.
-- feature/*: cambios individuales.
+`app/main.py` inicia la aplicación; `app/core` configuración/seguridad;
+`app/routers` rutas; `app/services` NetBox; `app/templates` y `app/static` UI;
+`scripts` despliegue; `docs` conocimiento versionado.
 
-## Instalación local
+## Entornos y ramas
 
-    python3 -m venv .venv
-    .venv/bin/pip install -r requirements.txt
-    cp .env.example .env
-    .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8100
+`feature/*` se crea desde `develop`; PR a `develop`, prueba de desarrollo y
+promoción posterior a `main`. Desarrollo usa 8101 y producción 8100 en
+entornos separados. No programe en `main` ni modifique producción manualmente.
 
-Nunca se deben subir archivos .env, tokens, contraseñas o claves privadas.
+## Inicio rápido local
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env  # sustituya solo en su entorno los marcadores seguros
+.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8101
+```
+
+No versionar `.env`, tokens, contraseñas, hashes, secretos de sesión o claves.
+Para despliegues controlados consulte [DEPLOYMENT](docs/DEPLOYMENT.md), no use
+`git push` como sustituto de despliegue.
+
+## Documentación
+
+[Índice](docs/README.md) · [Estado](docs/PROJECT_STATUS.md) ·
+[Operaciones](docs/OPERATIONS.md) · [Seguridad](docs/SECURITY.md) ·
+[Roadmap](docs/ROADMAP.md) · [Pruebas](docs/TESTING.md) ·
+[NetBox](docs/NETBOX_INTEGRATION.md) · [ADR](docs/adr/README.md) ·
+[Contribución](CONTRIBUTING.md) · [Handoff IA](docs/AI_HANDOFF_PROMPT.md).

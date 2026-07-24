@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Imágenes del modelo | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_images.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set manufacturer = device_type.get("manufacturer") or {} %}
+{% set manufacturer_name = manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" %}
+{% set model_name = device_type.get("model") or device_type.get("display") or "Sin modelo" %}
+
+<div class="model-image-navigation">
+    <a href="/device-types?device_type_id={{ device_type.get('id') }}">← Volver al modelo</a>
+    <a href="/racks">Revisar racks →</a>
+</div>
+
+{% if notice %}
+<div class="notice success-notice">
+    <strong>Operación completada.</strong>
+    <span>{{ notice }}</span>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible completar la operación.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="workflow-intro compact-workflow-intro">
+    <div>
+        <span class="eyebrow">Galería del modelo</span>
+        <h2>{{ model_name }}</h2>
+        <p>
+            {{ manufacturer_name }} · {{ device_type.get("u_height") or 0 }}U.
+            La misma imagen se reutiliza en todos los equipos creados con este modelo.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/interface-templates?device_type_id={{ device_type.get('id') }}">Plantillas de puertos</a>
+        <a class="button primary" href="/topology">Topología 3D</a>
+    </div>
+</section>
+
+<section class="model-image-grid">
+    <article class="panel model-image-card">
+        <header>
+            <div>
+                <span class="eyebrow">Frente</span>
+                <h2>Imagen frontal</h2>
+            </div>
+            {% if device_type.get("front_image") %}<span class="status-pill healthy">Documentada</span>{% else %}<span class="status-pill neutral">Sin imagen</span>{% endif %}
+        </header>
+        <div class="model-image-preview">
+            {% if device_type.get("front_image") %}
+            <img src="/media/device-types/{{ device_type.get('id') }}/front" alt="Frente del modelo {{ model_name }}">
+            {% else %}
+            <div class="model-image-placeholder">
+                <span>{{ manufacturer_name[:1] | upper }}</span>
+                <strong>{{ model_name }}</strong>
+                <small>La elevación mostrará un bloque con el nombre.</small>
+            </div>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="panel model-image-card">
+        <header>
+            <div>
+                <span class="eyebrow">Parte trasera</span>
+                <h2>Imagen trasera</h2>
+            </div>
+            {% if device_type.get("rear_image") %}<span class="status-pill healthy">Documentada</span>{% else %}<span class="status-pill neutral">Sin imagen</span>{% endif %}
+        </header>
+        <div class="model-image-preview">
+            {% if device_type.get("rear_image") %}
+            <img src="/media/device-types/{{ device_type.get('id') }}/rear" alt="Parte trasera del modelo {{ model_name }}">
+            {% else %}
+            <div class="model-image-placeholder">
+                <span>{{ manufacturer_name[:1] | upper }}</span>
+                <strong>{{ model_name }}</strong>
+                <small>Puede agregarse después sin modificar los equipos.</small>
+            </div>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<section class="panel model-image-upload-panel">
+    <div class="panel-header compact-panel-header">
+        <div>
+            <h2>Actualizar imágenes del modelo</h2>
+            <p>JPG, PNG, WEBP o GIF; máximo 5 MB por archivo.</p>
+        </div>
+        {% if write_enabled and "devices.create" in current_permissions %}
+        <span class="status-pill healthy">Escritura habilitada</span>
+        {% else %}
+        <span class="status-pill neutral">Solo preparación</span>
+        {% endif %}
+    </div>
+
+    {% if not write_enabled %}
+    <div class="read-only-callout model-image-readonly">
+        <span>i</span>
+        <div>
+            <strong>Desarrollo continúa en modo de solo lectura.</strong>
+            <span>Puedes revisar las imágenes existentes. La carga se habilitará únicamente en un entorno autorizado para escritura.</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <form
+        class="model-image-form"
+        action="/device-types/{{ device_type.get('id') }}/images"
+        method="post"
+        enctype="multipart/form-data"
+    >
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <label class="model-image-file">
+            <span>Imagen frontal</span>
+            <input type="file" name="front_image" accept="image/jpeg,image/png,image/webp,image/gif">
+            <small>Representación frontal del equipo en el rack.</small>
+        </label>
+        <label class="model-image-file">
+            <span>Imagen trasera</span>
+            <input type="file" name="rear_image" accept="image/jpeg,image/png,image/webp,image/gif">
+            <small>Puertos, ventiladores o conectores vistos desde atrás.</small>
+        </label>
+        <div class="model-image-guidance">
+            <strong>Recomendación visual</strong>
+            <span>Usa una imagen horizontal, recortada al chasis y con fondo transparente o uniforme para que se ajuste bien a la altura U.</span>
+        </div>
+        <button
+            class="button primary"
+            type="submit"
+            {% if not write_enabled or "devices.create" not in current_permissions %}disabled{% endif %}
+        >
+            Guardar imágenes en NetBox
+        </button>
+    </form>
+</section>
+{% endblock %}

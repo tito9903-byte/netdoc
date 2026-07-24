@@ -25,34 +25,122 @@ jobs:
           ref: feature/access-control-audit
           fetch-depth: 0
 
-      - name: Restore exact source base
-        shell: bash
-        run: |
-          set -euo pipefail
-          git checkout 82f21d16719a181c83bc9d4d8f09a7ee3fa232c0 -- \
-            .env.example \
-            app/core/config.py \
-            app/services/access_service.py \
-            app/main.py \
-            tests/test_access_control.py \
-            tests/test_admin_routes.py
-
       - name: Apply login throttle
         shell: bash
         run: |
           set -euo pipefail
-          test -f .github/login-throttle.patch
-          git apply --check --verbose .github/login-throttle.patch
-          git apply .github/login-throttle.patch
-          rm .github/login-throttle.patch
-          git add \
-            .env.example \
-            app/core/config.py \
-            app/services/access_service.py \
-            app/main.py \
-            tests/test_access_control.py \
-            tests/test_admin_routes.py \
-            .github/login-throttle.patch
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              content = target.read_text()
+              if new in content:
+                  return
+              if old not in content:
+                  raise SystemExit(f"No se encontró el marcador en {path}")
+              target.write_text(content.replace(old, new, 1))
+
+          replace_once(
+              ".env.example",
+              "SESSION_MAX_AGE=28800\n\n# Credenciales",
+              "SESSION_MAX_AGE=28800\n\n"
+              "# Protección básica contra intentos repetidos desde la misma IP.\n"
+              "LOGIN_MAX_ATTEMPTS=5\n"
+              "LOGIN_WINDOW_SECONDS=900\n\n"
+              "# Credenciales",
+          )
+
+          replace_once(
+              "app/core/config.py",
+              "    session_max_age: int = 28800\n\n    admin_username",
+              "    session_max_age: int = 28800\n\n"
+              "    login_max_attempts: int = 5\n"
+              "    login_window_seconds: int = 900\n\n"
+              "    admin_username",
+          )
+
+          replace_once(
+              "app/services/access_service.py",
+              "@dataclass(frozen=True)\nclass AuthenticatedIdentity:",
+              "@dataclass(frozen=True)\n"
+              "class LoginThrottleStatus:\n"
+              "    blocked: bool\n"
+              "    attempts: int\n"
+              "    retry_after_seconds: int\n\n\n"
+              "@dataclass(frozen=True)\n"
+              "class AuthenticatedIdentity:",
+          )
+
+          throttle_function = '''\n\ndef login_throttle_status(\n    session: Session,\n    *,\n    username: str,\n    ip_address: str | None,\n    max_attempts: int,\n    window_seconds: int,\n    now: datetime | None = None,\n) -> LoginThrottleStatus:\n    normalized = normalize_username(username)\n    safe_max_attempts = min(max(max_attempts, 1), 100)\n    safe_window_seconds = min(max(window_seconds, 60), 86400)\n    current_time = now or utc_now()\n    cutoff = current_time - timedelta(seconds=safe_window_seconds)\n\n    conditions = [\n        AuditEvent.username == normalized,\n        AuditEvent.ip_address == ip_address,\n        AuditEvent.created_at >= cutoff,\n    ]\n\n    latest_success = session.scalar(\n        select(func.max(AuditEvent.created_at)).where(\n            *conditions,\n            AuditEvent.action == "LOGIN_SUCCESS",\n            AuditEvent.success.is_(True),\n        )\n    )\n\n    failure_conditions = [\n        *conditions,\n        AuditEvent.action == "LOGIN_FAILED",\n        AuditEvent.success.is_(False),\n    ]\n\n    if latest_success is not None:\n        failure_conditions.append(AuditEvent.created_at > latest_success)\n\n    failures = list(\n        session.scalars(\n            select(AuditEvent.created_at)\n            .where(*failure_conditions)\n            .order_by(AuditEvent.created_at.asc())\n        ).all()\n    )\n    attempts = len(failures)\n\n    if attempts < safe_max_attempts:\n        return LoginThrottleStatus(\n            blocked=False,\n            attempts=attempts,\n            retry_after_seconds=0,\n        )\n\n    oldest = failures[0]\n    if oldest.tzinfo is None:\n        oldest = oldest.replace(tzinfo=timezone.utc)\n    if current_time.tzinfo is None:\n        current_time = current_time.replace(tzinfo=timezone.utc)\n\n    retry_after = max(\n        1,\n        int(\n            (\n                oldest\n                + timedelta(seconds=safe_window_seconds)\n                - current_time\n            ).total_seconds()\n        ),\n    )\n\n    return LoginThrottleStatus(\n        blocked=True,\n        attempts=attempts,\n        retry_after_seconds=retry_after,\n    )\n'''
+          replace_once(
+              "app/services/access_service.py",
+              "\ndef authenticate_user(\n",
+              throttle_function + "\ndef authenticate_user(\n",
+          )
+
+          replace_once(
+              "app/main.py",
+              "    authenticate_user,\n    record_audit,",
+              "    authenticate_user,\n"
+              "    login_throttle_status,\n"
+              "    record_audit,",
+          )
+
+          throttle_route = '''        throttle = login_throttle_status(\n            session,\n            username=username,\n            ip_address=ip_address,\n            max_attempts=settings.login_max_attempts,\n            window_seconds=settings.login_window_seconds,\n        )\n\n        if throttle.blocked:\n            record_audit(\n                session,\n                action="LOGIN_BLOCKED",\n                resource="session",\n                username=username.strip().lower() or "desconocido",\n                detail=(\n                    "Intento temporalmente bloqueado por exceso "\n                    "de fallos recientes."\n                ),\n                success=False,\n                ip_address=ip_address,\n                user_agent=user_agent,\n            )\n            return templates.TemplateResponse(\n                request=request,\n                name="login.html",\n                status_code=429,\n                headers={\n                    "Retry-After": str(throttle.retry_after_seconds),\n                },\n                context={\n                    "page_title": "Iniciar sesión",\n                    "next_url": normalize_next_url(next_url),\n                    "error": (\n                        "Demasiados intentos fallidos. "\n                        "Espera unos minutos e inténtalo nuevamente."\n                    ),\n                },\n            )\n\n'''
+          replace_once(
+              "app/main.py",
+              "    with session_scope() as session:\n"
+              "        identity = authenticate_user(\n",
+              "    with session_scope() as session:\n"
+              + throttle_route
+              + "        identity = authenticate_user(\n",
+          )
+
+          replace_once(
+              "tests/test_access_control.py",
+              "import os\nimport unittest\n",
+              "import os\nimport unittest\n"
+              "from datetime import datetime, timedelta, timezone\n",
+          )
+          replace_once(
+              "tests/test_access_control.py",
+              "    list_permissions,\n    record_audit,",
+              "    list_permissions,\n"
+              "    login_throttle_status,\n"
+              "    record_audit,",
+          )
+
+          access_tests = '''    def test_login_throttle_blocks_recent_failures(self):\n        now = datetime(2026, 7, 24, 12, 0, tzinfo=timezone.utc)\n\n        for index in range(5):\n            self.session.add(AuditEvent(\n                created_at=now - timedelta(minutes=4, seconds=index),\n                username="bloqueado",\n                action="LOGIN_FAILED",\n                resource="session",\n                success=False,\n                ip_address="192.0.2.10",\n            ))\n        self.session.commit()\n\n        status = login_throttle_status(\n            self.session,\n            username="Bloqueado",\n            ip_address="192.0.2.10",\n            max_attempts=5,\n            window_seconds=900,\n            now=now,\n        )\n\n        self.assertTrue(status.blocked)\n        self.assertEqual(5, status.attempts)\n        self.assertGreater(status.retry_after_seconds, 0)\n\n    def test_login_throttle_is_scoped_by_ip_and_window(self):\n        now = datetime(2026, 7, 24, 12, 0, tzinfo=timezone.utc)\n\n        for index in range(5):\n            self.session.add(AuditEvent(\n                created_at=now - timedelta(hours=1, seconds=index),\n                username="consulta",\n                action="LOGIN_FAILED",\n                resource="session",\n                success=False,\n                ip_address="192.0.2.11",\n            ))\n        self.session.commit()\n\n        expired = login_throttle_status(\n            self.session,\n            username="consulta",\n            ip_address="192.0.2.11",\n            max_attempts=5,\n            window_seconds=900,\n            now=now,\n        )\n        other_ip = login_throttle_status(\n            self.session,\n            username="consulta",\n            ip_address="192.0.2.12",\n            max_attempts=5,\n            window_seconds=900,\n            now=now,\n        )\n\n        self.assertFalse(expired.blocked)\n        self.assertFalse(other_ip.blocked)\n\n'''
+          replace_once(
+              "tests/test_access_control.py",
+              "    def test_custom_role_and_audit_event(self):\n",
+              access_tests + "    def test_custom_role_and_audit_event(self):\n",
+          )
+
+          replace_once(
+              "tests/test_admin_routes.py",
+              "from sqlalchemy import select\n",
+              "from sqlalchemy import delete, select\n",
+          )
+          replace_once(
+              "tests/test_admin_routes.py",
+              "from app.models.access import Role, User\n",
+              "from app.models.access import AuditEvent, Role, User\n",
+          )
+
+          route_test = '''    def test_repeated_failed_logins_are_temporarily_blocked(self):\n        self.ensure_user("bloqueo.test", "consulta")\n\n        for _ in range(5):\n            failed = self.login("bloqueo.test", "incorrect-password")\n            self.assertEqual(401, failed.status_code)\n\n        blocked = self.login("bloqueo.test", "Password123")\n        self.assertEqual(429, blocked.status_code)\n        self.assertIn("Retry-After", blocked.headers)\n        self.assertIn("Demasiados intentos", blocked.text)\n\n        with session_scope() as session:\n            actions = set(session.scalars(\n                select(AuditEvent.action).where(\n                    AuditEvent.username == "bloqueo.test"\n                )\n            ).all())\n            self.assertIn("LOGIN_BLOCKED", actions)\n            session.execute(\n                delete(AuditEvent).where(\n                    AuditEvent.username == "bloqueo.test"\n                )\n            )\n\n'''
+          replace_once(
+              "tests/test_admin_routes.py",
+              "    def test_invalid_login_is_audited(self):\n",
+              route_test + "    def test_invalid_login_is_audited(self):\n",
+          )
+          PY
+
+          rm -f .github/login-throttle.patch
+          git add -A
+          git restore --staged .github/workflows/apply-login-throttle.yml
+          git restore .github/workflows/apply-login-throttle.yml
           git diff --cached --check
           git config user.name "NetDoc Automation"
           git config user.email "netdoc-automation@users.noreply.github.com"

@@ -1,81 +1,82 @@
-name: Apply staged NetDoc module batch
+name: NetDoc CI
 
 on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
   pull_request:
     branches:
       - develop
+      - main
 
 permissions:
-  contents: write
-
-concurrency:
-  group: netdoc-staged-module-batch
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  apply:
-    if: github.event.pull_request.head.ref == 'feature/access-control-audit'
+  validate:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
+    env:
+      NETBOX_URL: https://netbox.invalid
+      NETBOX_TOKEN: ci-placeholder-token
+      NETBOX_TOKEN_TYPE: token
+      NETBOX_VERIFY_SSL: "false"
+      NETBOX_WRITE_ENABLED: "false"
+      SESSION_SECRET: ci-session-secret-not-for-production
+      SESSION_COOKIE_NAME: netdoc_ci_session
+      ADMIN_USERNAME: admin
+      DATABASE_URL: sqlite:///./data/ci.db
+
     steps:
-      - name: Checkout feature branch
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          ref: feature/access-control-audit
-          fetch-depth: 0
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
 
-      - name: Restore exact patch base
+      - name: Install dependencies
+        run: python -m pip install --requirement requirements-lock.txt
+
+      - name: Prepare CI password hash
         shell: bash
         run: |
-          set -euo pipefail
-          git checkout 22cf9f98b55d01263b6c20ebb3271c12c1356b6f -- \
-            .env.example \
-            .github/workflows/ci.yml \
-            CHANGELOG.md \
-            README.md \
-            app/core/auth.py \
-            app/core/config.py \
-            app/main.py \
-            app/routers/admin.py \
-            app/services/access_service.py \
-            app/templates/admin_audit.html \
-            app/templates/admin_roles.html \
-            app/templates/admin_users.html \
-            app/templates/base.html \
-            docs/AI_HANDOFF_PROMPT.md \
-            docs/ARCHITECTURE.md \
-            docs/PROJECT_STATUS.md \
-            docs/ROADMAP.md \
-            docs/SECURITY.md \
-            docs/TESTING.md \
-            tests/test_access_control.py \
-            tests/test_admin_routes.py
+          python - <<'PY' >> "$GITHUB_ENV"
+          from argon2 import PasswordHasher
+          print("ADMIN_PASSWORD_HASH=" + PasswordHasher().hash("AdminPassword123"))
+          PY
 
-      - name: Decode and apply staged patch
-        shell: bash
+      - name: Compile Python
+        run: python -m compileall -q app tests
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Import application
+        run: python -c 'from app.main import app; print(app.title, len(app.routes))'
+
+      - name: Parse templates
         run: |
-          set -euo pipefail
-          test -f .github/patches/apply.marker
-          cat .github/patches/chunk-* > /tmp/netdoc-patch.b64
-          base64 --decode /tmp/netdoc-patch.b64 | gzip --decompress > /tmp/netdoc.patch
-          git apply --check --verbose /tmp/netdoc.patch
-          git apply /tmp/netdoc.patch
+          python - <<'PY'
+          from pathlib import Path
+          from jinja2 import Environment, FileSystemLoader
 
-      - name: Commit completed source batch
-        shell: bash
+          root = Path("app/templates")
+          environment = Environment(loader=FileSystemLoader(root))
+          for template in sorted(root.glob("*.html")):
+              environment.get_template(template.name)
+              print(template.name)
+          PY
+
+      - name: Validate deployment scripts
         run: |
-          set -euo pipefail
-          rm -rf .github/patches
-          git add -A
-
-          # Workflow files are finalized afterward through the repository connector,
-          # because the job token is intentionally not allowed to rewrite workflows.
-          git restore --staged .github/workflows/ci.yml
-          git restore .github/workflows/ci.yml
-
-          git diff --cached --check
-          git config user.name "NetDoc Automation"
-          git config user.email "netdoc-automation@users.noreply.github.com"
-          git commit -m "feat: add global search system health and admin controls"
-          git push origin HEAD:feature/access-control-audit
+          bash -n scripts/netdoc-deploy-dev
+          bash -n scripts/netdoc-deploy-prod
+          test -x scripts/netdoc-deploy-dev
+          test -x scripts/netdoc-deploy-prod

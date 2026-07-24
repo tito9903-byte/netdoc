@@ -25,26 +25,51 @@ jobs:
           ref: feature/access-control-audit
           fetch-depth: 0
 
-      - name: Apply staged patch
+      - name: Restore exact patch base
         shell: bash
         run: |
           set -euo pipefail
+          git checkout 22cf9f98b55d01263b6c20ebb3271c12c1356b6f -- \
+            .env.example \
+            .github/workflows/ci.yml \
+            CHANGELOG.md \
+            README.md \
+            app/core/auth.py \
+            app/core/config.py \
+            app/main.py \
+            app/routers/admin.py \
+            app/services/access_service.py \
+            app/templates/admin_audit.html \
+            app/templates/admin_roles.html \
+            app/templates/admin_users.html \
+            app/templates/base.html \
+            docs/AI_HANDOFF_PROMPT.md \
+            docs/ARCHITECTURE.md \
+            docs/PROJECT_STATUS.md \
+            docs/ROADMAP.md \
+            docs/SECURITY.md \
+            docs/TESTING.md \
+            tests/test_access_control.py \
+            tests/test_admin_routes.py
 
+      - name: Decode and apply staged patch
+        shell: bash
+        run: |
+          set -euo pipefail
           test -f .github/patches/apply.marker
-          git checkout 4810a81848ab065bf31f32bda2ad9525bca00863 -- .github/workflows/ci.yml
-
           cat .github/patches/chunk-* > /tmp/netdoc-patch.b64
           base64 --decode /tmp/netdoc-patch.b64 | gzip --decompress > /tmp/netdoc.patch
-
-          git apply --check /tmp/netdoc.patch
+          git apply --check --verbose /tmp/netdoc.patch
           git apply /tmp/netdoc.patch
 
+      - name: Commit completed batch
+        shell: bash
+        run: |
+          set -euo pipefail
           rm -rf .github/patches
           rm -f .github/workflows/apply-access-control-batch.yml
-
           git add -A
           git diff --cached --check
-
           git config user.name "NetDoc Automation"
           git config user.email "netdoc-automation@users.noreply.github.com"
           git commit -m "feat: add global search system health and admin controls"

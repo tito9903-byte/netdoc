@@ -3,7 +3,7 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 1.2.
+- **Versión documental:** 1.3.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/access-control-audit`.
 
@@ -50,7 +50,8 @@ FastAPI sirve HTML Jinja2 y estáticos; routers y servicios consumen REST de Net
 - No se permite desactivar la propia cuenta ni dejar el sistema sin un administrador activo.
 - Los cambios de contraseña usan Argon2 y validación mínima de complejidad.
 - Las personalizaciones de permisos de Operador y Consulta no son reemplazadas al reiniciar.
-- Las sesiones almacenan identidad, rol y permisos; otros usuarios reciben cambios de rol al iniciar sesión nuevamente.
+- Cada solicitud protegida vuelve a cargar el usuario, su rol y sus permisos desde la base.
+- La desactivación de una cuenta y los cambios de rol se aplican en la siguiente solicitud.
 - La base de datos y su directorio están excluidos de Git.
 
 ## Pruebas y validaciones de la rama actual
@@ -62,9 +63,11 @@ Ejecutadas fuera del servidor:
 - Creación de roles y permisos iniciales: correcta.
 - Creación y autenticación de usuarios: correcta.
 - Carga sintáctica de las nuevas plantillas Jinja2: correcta.
-- Ocho pruebas automatizadas locales: superadas.
+- Diez pruebas automatizadas locales: superadas.
 - TestClient: login administrativo, páginas de Usuarios/Roles/Auditoría, denegación del rol Consulta y auditoría de login fallido: correctos.
-- GitHub Actions `NetDoc CI`: completado correctamente; instalación, compilación, pruebas, importación de `app.main`, plantillas y scripts finalizaron con éxito.
+- TestClient: una cuenta desactivada pierde su sesión en la siguiente solicitud: correcto.
+- TestClient: un cambio de rol actualiza los permisos en la siguiente solicitud: correcto.
+- GitHub Actions `NetDoc CI`: la ejecución anterior del PR completó correctamente instalación, compilación, pruebas, importación de `app.main`, plantillas y scripts. La ejecución correspondiente al último commit debe permanecer verde antes de fusionar.
 
 No se probaron todavía esta rama mediante systemd, el puerto 8101, la base persistente real del servidor ni el navegador con NetBox real.
 
@@ -73,9 +76,9 @@ No se probaron todavía esta rama mediante systemd, el puerto 8101, la base pers
 - La primera versión crea el esquema automáticamente; antes de cambios futuros de tablas debe adoptarse una migración formal con Alembic.
 - SQLite es apropiado para la etapa y el proceso actual, pero debe reevaluarse si aumenta la concurrencia o se ejecutan varios workers.
 - El token de NetBox expuesto anteriormente debe rotarse y limitarse al mínimo privilegio.
-- Las sesiones abiertas antes de activar la nueva autenticación deberán iniciarse nuevamente.
+- Las sesiones antiguas previas al nuevo esquema deberán iniciar sesión nuevamente.
 - Falta prueba manual de todos los roles y flujos de administración en desarrollo.
-- Falta definir revocación inmediata de sesiones, retención/exportación de auditoría y protección contra intentos repetidos de login.
+- Falta definir retención/exportación de auditoría, bloqueo por intentos repetidos y una respuesta diferenciada ante fallos de la base.
 
 ## Decisiones y referencias
 

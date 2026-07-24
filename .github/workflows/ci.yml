@@ -28,7 +28,7 @@ jobs:
       SESSION_SECRET: ci-session-secret-not-for-production
       SESSION_COOKIE_NAME: netdoc_ci_session
       ADMIN_USERNAME: admin
-      DATABASE_URL: sqlite:///:memory:
+      DATABASE_URL: sqlite:///./data/ci.db
 
     steps:
       - name: Checkout

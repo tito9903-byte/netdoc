@@ -35,6 +35,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Migración inicial Alembic `20260724_0001` para permisos, roles, usuarios y auditoría.
 - Adopción segura de bases heredadas completas y rechazo de esquemas parciales.
 - Pruebas automatizadas de creación, actualización idempotente y adopción del esquema.
+- Módulo de direccionamiento IP con prefijos, pools, localidad, VRF, rol, capacidad, disponibilidad y ocupación.
+- Clasificación de pools saludables, en advertencia, críticos y llenos.
+- Catálogo de modelos de dispositivo y consulta de plantillas de interfaz.
+- Generación masiva de hasta 256 interfaces a partir de patrones con vista previa interactiva.
+- Creación guiada de modelos de dispositivo protegida por permiso, CSRF y modo de escritura.
+- Creación guiada de racks con sitio, ubicación, capacidad, ancho, numeración, estado, rol e identificadores físicos.
+- Pruebas para patrones de interfaces, normalización de slug y capacidad/localidad IPAM.
 
 ### Changed
 
@@ -47,7 +54,15 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La identidad, el estado de la cuenta, el rol y los permisos se recargan desde la base antes de cada solicitud protegida.
 - La desactivación de una cuenta y los cambios de permisos se aplican en la siguiente solicitud.
 - La inicialización del esquema deja de depender de `create_all` y utiliza Alembic durante el arranque.
-- La versión de aplicación por defecto avanza a `0.9.0`.
+- La navegación se reorganiza alrededor de flujos de documentación y separa General, Documentación, Acciones rápidas y Administración.
+- El dashboard funciona como centro de inicio para IPAM, modelos, racks y conexiones.
+- La búsqueda global ofrece accesos directos a los flujos principales cuando no existe una consulta.
+- La pantalla de creación de equipo explica la relación entre modelo, interfaces, ubicación y elevación.
+- El listado de racks deja de presentar ocupación `0.0%` cuando NetBox no devuelve un valor calculado.
+- El ancho de rack se renderiza correctamente cuando la API devuelve una opción estructurada.
+- La pantalla de conexiones diferencia claramente modo de escritura y vista previa de solo lectura.
+- Las pantallas administrativas alinean acciones, estados y tablas.
+- La versión de aplicación por defecto avanza a `0.10.0`.
 
 ### Security
 
@@ -63,3 +78,6 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Exportación CSV protegida contra fórmulas de hoja de cálculo y limitada a 10,000 eventos.
 - El módulo Sistema usa únicamente lecturas no privilegiadas y no ejecuta comandos de administración.
 - El arranque falla ante esquemas locales parciales en lugar de crear silenciosamente tablas faltantes.
+- Las creaciones de modelos, interfaces y racks requieren autenticación, autorización, CSRF y escritura habilitada.
+- Desarrollo conserva los botones de escritura deshabilitados y muestra el modo de solo lectura de forma explícita.
+- El menú móvil mantiene `aria-expanded`, admite cierre con Escape y devuelve el foco al control de apertura.

@@ -3,14 +3,14 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 1.4.
+- **Versión documental:** 1.5.
 - **Versión de aplicación de la rama:** 0.9.0.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/access-control-audit`.
 
 ## Resumen ejecutivo
 
-La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, además de una segunda ola de funcionalidades: búsqueda global, salud del sistema, eliminación controlada de usuarios, filtros administrativos y exportación CSV. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
+La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, búsqueda global, salud del sistema, administración ampliada y un perfil de autoservicio para cada usuario. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
 
 ## Entornos y servicios
 
@@ -43,6 +43,8 @@ Dashboard, dispositivos e interfaces, filtros y paginación, creación guiada de
 - Autenticación multiusuario y contraseñas Argon2.
 - Roles Administrador, Operador y Consulta, roles personalizados y 11 permisos.
 - Creación, edición, activación, cambio de rol, contraseña y eliminación controlada de usuarios.
+- Perfil de autoservicio para actualizar nombre, correo y contraseña propia.
+- Verificación de la contraseña actual antes del cambio y auditoría sin registrar secretos.
 - Protección de la propia cuenta y del último administrador activo.
 - Auditoría de accesos, fallos, cambios administrativos y operaciones guiadas.
 - Filtros de auditoría por texto, acción, recurso, resultado y rango de fechas.
@@ -61,11 +63,11 @@ Migraciones Alembic, respaldo/retención de auditoría, bloqueo por intentos fal
 Ejecutadas fuera del servidor:
 
 - `python -m compileall -q app tests`: correcto.
-- Importación de `app.main`: correcta; 38 rutas registradas.
-- Análisis sintáctico de 18 plantillas Jinja2: correcto.
+- Importación de `app.main`: correcta; 41 rutas registradas.
+- Análisis sintáctico de 19 plantillas Jinja2: correcto.
 - Sintaxis de ambos scripts de despliegue: correcta.
-- 17 pruebas automatizadas: superadas.
-- Cobertura nueva: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, acceso a Sistema y permiso de Búsqueda.
+- 21 pruebas automatizadas: superadas.
+- Cobertura nueva: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, acceso a Sistema, permiso de Búsqueda y perfil de autoservicio.
 - GitHub Actions `NetDoc CI`: completado correctamente en el commit final de la rama.
 
 Pendiente: desplegar mediante systemd, validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.

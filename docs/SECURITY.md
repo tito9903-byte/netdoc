@@ -14,6 +14,7 @@
 - Los fallos repetidos del mismo usuario desde la misma IP producen un bloqueo temporal configurable.
 - La base local se excluye de Git y cada entorno debe usar almacenamiento independiente.
 - SQLite activa restricciones de claves foráneas.
+- Alembic versiona el esquema y rechaza bases heredadas parciales.
 
 ## Identidades, roles y sesiones
 
@@ -47,11 +48,13 @@ La búsqueda global utiliza únicamente solicitudes GET a NetBox y enlaces inter
 
 El módulo Sistema requiere `system.view` y solo realiza lecturas no privilegiadas del sistema operativo. No ejecuta comandos, no reinicia servicios y no muestra `.env`, argumentos sensibles ni secretos. La plataforma y el ejecutable pueden revelar información operativa, por lo que este permiso se reserva al Administrador por defecto.
 
-## Persistencia
+## Persistencia y migraciones
 
 `DATABASE_URL` permite seleccionar el motor. El valor inicial `sqlite:///./data/netdoc.db` es apropiado para el proceso único actual. El archivo debe pertenecer al usuario del servicio y tener permisos restrictivos. No debe copiarse entre desarrollo y producción. Antes de usar varios workers o una carga mayor debe evaluarse PostgreSQL.
 
-El esquema inicial se crea automáticamente. Todo cambio posterior de tablas debe realizarse mediante migraciones versionadas y respaldos previos; no se debe editar manualmente una base de producción.
+La revisión Alembic `20260724_0001` crea el esquema de identidad y auditoría. Una base vacía se migra; una base heredada que contiene exactamente todas las tablas esperadas se marca en la revisión actual sin recrearlas; una base parcial detiene el arranque. Este comportamiento evita que `create_all` oculte una instalación incompleta.
+
+Todo cambio posterior de tablas debe añadirse como una nueva revisión. Antes de ejecutar una migración real se requiere respaldo verificable. El rollback del código no restaura ni degrada automáticamente la base de datos; una restauración de datos es una operación separada y explícita.
 
 ## Reglas operativas
 
@@ -59,16 +62,18 @@ Proteja `.env`, la base de datos, hashes, claves SSH/deploy keys y certificados 
 
 Antes de desplegar el módulo de acceso:
 
-1. Respaldar cualquier base existente.
-2. Confirmar que desarrollo y producción usan rutas independientes.
-3. Verificar el administrador inicial sin exponer su hash.
-4. Probar roles, denegaciones, revocación inmediata, perfil y bloqueo de login en desarrollo.
-5. Confirmar que `data/` y los archivos de base están ignorados.
-6. Verificar que el archivo de base pertenece a `sshtelenord` y no es legible por usuarios innecesarios.
-7. Confirmar la IP observada por NetDoc cuando exista proxy inverso.
+1. Confirmar el `DATABASE_URL` sin imprimir credenciales.
+2. Respaldar cualquier base existente y comprobar que el respaldo no está vacío.
+3. Confirmar que desarrollo y producción usan rutas independientes.
+4. Verificar el administrador inicial sin exponer su hash.
+5. Revisar `alembic heads` y confirmar una sola cabeza.
+6. Probar roles, denegaciones, revocación inmediata, perfil y bloqueo de login en desarrollo.
+7. Confirmar que `data/` y los archivos de base están ignorados.
+8. Verificar que el archivo de base pertenece a `sshtelenord` y no es legible por usuarios innecesarios.
+9. Confirmar la IP observada por NetDoc cuando exista proxy inverso.
 
 ## Secretos e incidentes
 
 Rote tokens, secretos de sesión y credenciales de inmediato tras sospecha de exposición: revóquelos, sustitúyalos en el servidor, revise accesos y documente el incidente sin publicar el secreto. El token de NetBox expuesto previamente en capturas debe rotarse y reducirse al mínimo privilegio.
 
-Riesgos pendientes: ausencia de MFA, rate limiting distribuido pendiente, migraciones aún no versionadas, retención de auditoría sin definir, diferenciación de fallos de base, exposición operativa excesiva si se concede `system.view` sin criterio y pruebas de seguridad automatizadas todavía parciales.
+Riesgos pendientes: ausencia de MFA, rate limiting distribuido pendiente, retención de auditoría sin definir, diferenciación de fallos de base, estrategia de restauración aún manual, exposición operativa excesiva si se concede `system.view` sin criterio y pruebas de seguridad automatizadas todavía parciales.

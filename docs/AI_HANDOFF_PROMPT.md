@@ -61,9 +61,10 @@ El propietario verificó manualmente ambos servicios y scripts el 2026-07-24; de
 Trabajo actual:
 
 - Rama: `feature/access-control-audit`
-- Objetivo: usuarios, roles, permisos y auditoría.
-- Estado: implementación amplia creada y pendiente de revisión, PR y prueba manual en desarrollo.
-- No afirmar que esta rama está desplegada.
+- PR: `#3`, abierto como borrador hacia `develop`
+- Objetivo: usuarios, roles, permisos y auditoría
+- Estado: implementación amplia creada, pruebas automatizadas incorporadas y pendiente de supervisión y prueba manual en desarrollo
+- No afirmar que esta rama está desplegada
 
 ## Arquitectura y tecnologías
 
@@ -106,27 +107,16 @@ Estructura:
 - `app/templates/`: vistas Jinja2.
 - `app/static/`: CSS, JavaScript e imágenes.
 - `tests/`: pruebas automatizadas.
+- `.github/workflows/ci.yml`: integración continua.
 - `scripts/`: despliegue controlado.
 - `docs/`: documentación viva.
 - `.env`: configuración sensible; nunca se versiona ni se imprime.
 
 ## Datos y límites
 
-NetBox conserva:
+NetBox conserva dispositivos, interfaces, racks, cables, sitios y demás inventario técnico.
 
-- dispositivos;
-- interfaces;
-- racks;
-- cables;
-- sitios y demás inventario técnico.
-
-La base de NetDoc conserva únicamente:
-
-- usuarios;
-- roles;
-- permisos;
-- relaciones rol-permiso;
-- eventos de auditoría.
+La base de NetDoc conserva únicamente usuarios, roles, permisos, relaciones rol-permiso y eventos de auditoría.
 
 Valor inicial:
 
@@ -154,7 +144,7 @@ Cada entorno debe usar su propia base. `data/`, `*.db`, `*.sqlite` y `*.sqlite3`
 - Roles iniciales Administrador, Operador y Consulta.
 - Nueve permisos por módulo.
 - Creación y edición de usuarios.
-- Activación/desactivación de cuentas.
+- Activación y desactivación de cuentas.
 - Asignación de rol.
 - Restablecimiento de contraseña.
 - Creación y edición de roles personalizados.
@@ -162,24 +152,33 @@ Cada entorno debe usar su propia base. `data/`, `*.db`, `*.sqlite` y `*.sqlite3`
 - Protección para conservar un administrador activo.
 - Navegación condicionada por permisos.
 - Autorización en servidor para HTML y API.
+- Recarga de identidad y permisos antes de cada solicitud protegida.
+- Desactivación y cambios de rol efectivos en la siguiente solicitud.
 - Pantalla 403.
 - Auditoría de login correcto/fallido, logout, usuarios, roles y solicitudes de creación de inventario.
 - Filtros y paginación básica de auditoría.
-- Pruebas unitarias iniciales.
+- Pruebas unitarias y de rutas administrativas.
+- Workflow de CI.
 
 ## Validaciones ejecutadas en la rama
 
-Ejecutadas en un entorno aislado, no en el servidor:
+Ejecutadas fuera del servidor:
 
-- Compilación de sintaxis de módulos Python: correcta.
-- Inicialización SQLite en memoria: correcta.
+- Compilación de módulos Python: correcta.
+- Inicialización SQLite en memoria y archivo temporal: correcta.
 - Creación de nueve permisos y tres roles: correcta.
-- Creación y autenticación de usuario de prueba: correcta.
+- Creación y autenticación de usuarios de prueba: correcta.
+- Persistencia de permisos personalizados: correcta.
 - Carga sintáctica de plantillas Jinja2: correcta.
-- `python -m unittest tests.test_access_control -v`: cuatro pruebas superadas.
-- Middleware aislado: una solicitud no autenticada a `/` redirigió a `/login`.
+- Diez pruebas automatizadas: superadas localmente.
+- TestClient: login administrativo y páginas Usuarios/Roles/Auditoría: correctos.
+- TestClient: denegación del rol Consulta: correcta.
+- TestClient: login fallido visible en Auditoría: correcto.
+- TestClient: desactivación de cuenta invalida la sesión siguiente: correcto.
+- TestClient: cambio de rol se aplica en la solicitud siguiente: correcto.
+- Una ejecución anterior de `NetDoc CI` completó instalación, compilación, pruebas, importación, plantillas y scripts correctamente; confirmar que la ejecución del último commit también esté verde.
 
-No se probaron todavía systemd, 8101, navegador completo, base persistente del servidor ni integración real de esta rama con NetBox.
+No se probaron todavía systemd, el puerto 8101, el navegador completo, la base persistente del servidor ni la integración real de esta rama con NetBox.
 
 ## Seguridad
 
@@ -190,6 +189,8 @@ No se probaron todavía systemd, 8101, navegador completo, base persistente del 
 - Operaciones administrativas usan CSRF.
 - No registrar secretos en auditoría.
 - Mantener al menos un administrador activo.
+- Cada solicitud protegida consulta el estado actual del usuario y sus permisos.
+- Un fallo de identidad se trata de forma cerrada y exige login.
 - Desarrollo debe permanecer sin escritura NetBox.
 - Rotar el token de NetBox previamente expuesto y reducir sus permisos.
 - Respaldar la base antes de migraciones.
@@ -197,46 +198,34 @@ No se probaron todavía systemd, 8101, navegador completo, base persistente del 
 
 ## Despliegue
 
-Scripts:
-
 - `netdoc-deploy-dev`: actualiza solo `develop` y 8101.
 - `netdoc-deploy-prod`: actualiza solo `main` y 8100; exige `DESPLEGAR` o `--yes`.
 
-Los scripts:
+Los scripts se ejecutan como root para systemd, ejecutan Git/pip/Python como `sshtelenord`, validan entorno y propietarios, rechazan cambios locales, usan `flock`, instalan dependencias, compilan, importan, reinician solo su servicio, prueban `/login` con reintentos y restauran el commit anterior ante fallos.
 
-- se ejecutan como root para systemd;
-- ejecutan Git, pip y Python como `sshtelenord`;
-- validan rama, remoto, `.env`, `.venv`, propietario y árbol limpio;
-- rechazan `.env` versionado o no ignorado;
-- usan `flock`;
-- instalan dependencias;
-- compilan e importan la aplicación;
-- reinician solo el servicio correcto;
-- prueban `/login` con reintentos;
-- restauran el commit anterior ante fallos.
-
-No desplegar la rama actual directamente. Primero PR hacia `develop`, revisión, fusión autorizada y luego `netdoc-deploy-dev`.
+No desplegar la rama actual directamente. Primero revisar el PR #3, fusionar hacia `develop` solo con autorización y luego ejecutar `netdoc-deploy-dev`.
 
 ## Trabajo pendiente inmediato
 
-1. Revisar el diff completo de `feature/access-control-audit`.
+1. Revisar el diff completo del PR #3.
 2. Confirmar el ADR 0005.
-3. Validar importación del repositorio completo.
-4. Abrir o revisar PR hacia `develop` sin fusionarlo.
-5. Desplegar únicamente en desarrollo después de aprobación.
-6. Probar login y navegación con Administrador, Operador y Consulta.
-7. Probar usuarios, roles, contraseñas y denegaciones directas por URL.
-8. Revisar auditoría correcta/fallida.
-9. Verificar permisos del archivo de base y que Git lo ignore.
-10. Corregir incidencias antes de cualquier PR hacia `main`.
+3. Confirmar que la última ejecución de CI esté verde.
+4. No quitar el estado de borrador ni fusionar sin supervisión.
+5. Tras aprobación, fusionar únicamente hacia `develop`.
+6. Desplegar solo en desarrollo.
+7. Probar login y navegación con Administrador, Operador y Consulta.
+8. Probar usuarios, roles, contraseñas, desactivación y denegaciones directas por URL.
+9. Revisar auditoría correcta y fallida.
+10. Verificar permisos del archivo de base y que Git lo ignore.
+11. Corregir incidencias antes de cualquier PR hacia `main`.
 
-Después se planifican migraciones Alembic, respaldo/recuperación, revocación inmediata de sesiones, exportación/retención de auditoría, edición controlada de inventario, patch panels, búsqueda global, topologías, 3D, errores centralizados y observabilidad.
+Después se planifican migraciones Alembic, respaldo/recuperación, exportación y retención de auditoría, bloqueo de intentos repetidos, manejo diferenciado de fallos de base, edición controlada de inventario, patch panels, búsqueda global, topologías, 3D, errores centralizados y observabilidad.
 
 ## Validaciones obligatorias antes de terminar
 
 - Revisar diff completo.
 - `python -m compileall app tests`.
-- `python -m unittest tests.test_access_control -v`.
+- `python -m unittest discover -s tests -v`.
 - Importar `app.main`.
 - Cargar plantillas Jinja2.
 - Validar scripts modificados con `bash -n`.

@@ -61,6 +61,26 @@ class AccessControlTests(unittest.TestCase):
         self.assertEqual(9, len(permissions))
         self.assertEqual(9, len(roles["administrador"].permissions))
 
+    def test_seed_preserves_custom_system_role_permissions(self):
+        operator = self.session.scalar(
+            select(Role).where(Role.code == "operador")
+        )
+        operator.permissions = [
+            permission
+            for permission in operator.permissions
+            if permission.code != "devices.create"
+        ]
+        self.session.commit()
+
+        seed_access_control(self.session)
+        self.session.commit()
+        self.session.refresh(operator)
+
+        self.assertNotIn(
+            "devices.create",
+            {permission.code for permission in operator.permissions},
+        )
+
     def test_create_and_authenticate_user(self):
         role = self.session.scalar(
             select(Role).where(Role.code == "consulta")

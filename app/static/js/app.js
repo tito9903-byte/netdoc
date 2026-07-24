@@ -2,8 +2,13 @@ const menuButton = document.getElementById("menuToggle");
 const sidebar = document.getElementById("sidebar");
 
 if (menuButton && sidebar) {
+    const setOpen = (open) => {
+        sidebar.classList.toggle("open", open);
+        menuButton.setAttribute("aria-expanded", String(open));
+    };
+
     menuButton.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
+        setOpen(!sidebar.classList.contains("open"));
     });
 
     document.addEventListener("click", (event) => {
@@ -18,7 +23,26 @@ if (menuButton && sidebar) {
             !menuButton.contains(target);
 
         if (clickedOutside) {
-            sidebar.classList.remove("open");
+            setOpen(false);
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && sidebar.classList.contains("open")) {
+            setOpen(false);
+            menuButton.focus();
+        }
+    });
+
+    sidebar.addEventListener("click", (event) => {
+        const target = event.target;
+
+        if (
+            window.matchMedia("(max-width: 900px)").matches &&
+            target instanceof Element &&
+            target.closest("a.nav-item")
+        ) {
+            setOpen(false);
         }
     });
 }

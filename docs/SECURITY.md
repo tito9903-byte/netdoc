@@ -8,8 +8,9 @@
 - SessionMiddleware usa cookie, duración y opción `Secure` configurables por entorno.
 - Desarrollo mantiene `NETBOX_WRITE_ENABLED=false`.
 - Las rutas HTML y API se autorizan con permisos del rol en el servidor.
+- Antes de cada solicitud protegida se vuelve a consultar la cuenta y sus permisos en la base.
 - Las acciones administrativas y operaciones guiadas usan tokens CSRF.
-- La aplicación impide que un administrador desactive su propia cuenta o elimine el último administrador activo.
+- La aplicación impide que un administrador desactive su propia cuenta o deje el sistema sin un administrador activo.
 - La base local se excluye de Git y cada entorno debe usar almacenamiento independiente.
 - SQLite activa restricciones de claves foráneas.
 
@@ -17,7 +18,9 @@
 
 Los roles iniciales son Administrador, Operador y Consulta. Debe aplicarse mínimo privilegio y crear roles personalizados cuando los perfiles iniciales resulten demasiado amplios. El administrador conserva todos los permisos. Las variables `ADMIN_USERNAME` y `ADMIN_PASSWORD_HASH` solo crean la primera cuenta cuando la base está vacía.
 
-La sesión contiene ID de usuario, nombre, rol y permisos. Al modificar el rol de otro usuario, sus sesiones existentes pueden conservar permisos anteriores hasta que vuelva a iniciar sesión; para revocación urgente se debe desactivar la cuenta y reiniciar o invalidar sesiones mediante el procedimiento operativo que se defina.
+La cookie de sesión contiene identidad y datos de presentación, pero no es la autoridad final. En cada ruta protegida, NetDoc carga nuevamente el usuario activo, el rol y los permisos. Por ello, la desactivación de una cuenta y los cambios de rol o permisos se aplican en la siguiente solicitud sin esperar un nuevo inicio de sesión. Las sesiones antiguas que no contienen un identificador válido son enviadas al login.
+
+Un fallo de lectura de identidad se trata de forma cerrada: la sesión se limpia y se exige autenticación. Queda pendiente distinguir en la interfaz un fallo de base de datos de una sesión realmente revocada.
 
 ## Auditoría
 
@@ -40,11 +43,12 @@ Antes de desplegar el módulo de acceso:
 1. Respaldar cualquier base existente.
 2. Confirmar que desarrollo y producción usan rutas independientes.
 3. Verificar el administrador inicial sin exponer su hash.
-4. Probar roles y denegaciones en desarrollo.
+4. Probar roles, denegaciones y revocación inmediata en desarrollo.
 5. Confirmar que `data/` y los archivos de base están ignorados.
+6. Verificar que el archivo de base pertenece a `sshtelenord` y no es legible por usuarios innecesarios.
 
 ## Secretos e incidentes
 
 Rote tokens, secretos de sesión y credenciales de inmediato tras sospecha de exposición: revóquelos, sustitúyalos en el servidor, revise accesos y documente el incidente sin publicar el secreto. El token de NetBox expuesto previamente en capturas debe rotarse y reducirse al mínimo privilegio.
 
-Riesgos pendientes: revocación inmediata de sesiones, ausencia de MFA, falta de política de bloqueo por intentos fallidos, migraciones aún no versionadas, retención de auditoría sin definir y pruebas de seguridad automatizadas limitadas.
+Riesgos pendientes: ausencia de MFA, falta de política de bloqueo por intentos fallidos, migraciones aún no versionadas, retención de auditoría sin definir, diferenciación de fallos de base y pruebas de seguridad automatizadas todavía parciales.

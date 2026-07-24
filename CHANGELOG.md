@@ -27,12 +27,14 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Auditoría de inicio y cierre de sesión, fallos, bloqueos temporales, cambios administrativos y solicitudes de creación de equipos o conexiones.
 - Navegación y control de acceso por permiso, con respuestas 401/403 y pantalla de acceso restringido.
 - Pruebas unitarias y de rutas para inicialización, autenticación, permisos, auditoría, revocación, cambios de rol, perfil y bloqueo de login.
-- Workflow de GitHub Actions para dependencias, compilación, pruebas, importación, plantillas y scripts.
+- Workflow de GitHub Actions para dependencias, compilación, grafo de migraciones, pruebas, importación, plantillas y scripts.
 - Búsqueda global simultánea de dispositivos, interfaces, racks, sitios y cables.
 - Módulo Sistema de solo lectura con CPU, RAM, disco, red, uptime y datos del proceso.
 - Filtros de usuarios por texto, rol y estado, con eliminación controlada de cuentas.
 - Auditoría con filtros por recurso y fechas, paginación preservada y exportación CSV protegida.
-- Artefactos visuales y pruebas para búsqueda global, sistema y administración ampliada.
+- Migración inicial Alembic `20260724_0001` para permisos, roles, usuarios y auditoría.
+- Adopción segura de bases heredadas completas y rechazo de esquemas parciales.
+- Pruebas automatizadas de creación, actualización idempotente y adopción del esquema.
 
 ### Changed
 
@@ -44,6 +46,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La autenticación deja de depender de una única sesión administrativa y usa cuentas persistentes; las variables `ADMIN_*` sirven para crear el administrador inicial si la base está vacía.
 - La identidad, el estado de la cuenta, el rol y los permisos se recargan desde la base antes de cada solicitud protegida.
 - La desactivación de una cuenta y los cambios de permisos se aplican en la siguiente solicitud.
+- La inicialización del esquema deja de depender de `create_all` y utiliza Alembic durante el arranque.
 - La versión de aplicación por defecto avanza a `0.9.0`.
 
 ### Security
@@ -59,3 +62,4 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Base de datos local y directorio `data/` excluidos de Git; desarrollo y producción deben usar almacenamiento independiente.
 - Exportación CSV protegida contra fórmulas de hoja de cálculo y limitada a 10,000 eventos.
 - El módulo Sistema usa únicamente lecturas no privilegiadas y no ejecuta comandos de administración.
+- El arranque falla ante esquemas locales parciales en lugar de crear silenciosamente tablas faltantes.

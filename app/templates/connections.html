@@ -203,16 +203,30 @@
                 {% set b_term = (cable.get("b_terminations") or [{}])[0] %}
                 {% set a_object = a_term.get("object") or a_term %}
                 {% set b_object = b_term.get("object") or b_term %}
+                {% set a_label = a_object.get("display") or a_term.get("display") %}
+                {% set b_label = b_object.get("display") or b_term.get("display") %}
                 {% set type_data = cable.get("type") %}
                 {% set status_data = cable.get("status") %}
                 {% set unit_data = cable.get("length_unit") %}
                 <tr>
                     <td class="mono-value">{{ cable.get("id") or "—" }}</td>
                     <td>
-                        {{ a_object.get("display") or a_term.get("display") or ("Interfaz #" ~ a_term.get("object_id")) if a_term.get("object_id") else "—" }}
+                        {% if a_label %}
+                            {{ a_label }}
+                        {% elif a_term.get("object_id") %}
+                            Interfaz #{{ a_term.get("object_id") }}
+                        {% else %}
+                            —
+                        {% endif %}
                     </td>
                     <td>
-                        {{ b_object.get("display") or b_term.get("display") or ("Interfaz #" ~ b_term.get("object_id")) if b_term.get("object_id") else "—" }}
+                        {% if b_label %}
+                            {{ b_label }}
+                        {% elif b_term.get("object_id") %}
+                            Interfaz #{{ b_term.get("object_id") }}
+                        {% else %}
+                            —
+                        {% endif %}
                     </td>
                     <td>
                         {% if type_data is mapping %}

@@ -1,0 +1,405 @@
+.topology-intro {
+    background:
+        linear-gradient(120deg, rgba(32, 200, 210, 0.12), transparent 58%),
+        var(--surface);
+}
+
+.topology-summary {
+    margin-top: 18px;
+}
+
+.topology-toolbar {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-top: 18px;
+    padding: 16px;
+}
+
+.topology-site-filter,
+.topology-local-controls {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+}
+
+.topology-site-filter .field {
+    width: 250px;
+}
+
+.topology-search-control {
+    width: 270px;
+}
+
+.topology-toggle-group {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-soft);
+}
+
+.topology-toggle {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 7px;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+}
+
+.topology-toggle:hover,
+.topology-toggle:focus-visible {
+    color: var(--text);
+    background: var(--surface-hover);
+}
+
+.topology-toggle.active {
+    color: #041014;
+    background: var(--accent);
+}
+
+.topology-methodology {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 11px 14px;
+    border: 1px solid rgba(32, 200, 210, 0.2);
+    border-radius: 10px;
+    color: var(--muted);
+    background: rgba(32, 200, 210, 0.06);
+    font-size: 12px;
+}
+
+.topology-methodology strong {
+    flex: 0 0 auto;
+    color: var(--text);
+}
+
+.topology-sites {
+    margin-top: 18px;
+    perspective: 1500px;
+}
+
+.topology-site {
+    margin-bottom: 22px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface-soft);
+}
+
+.topology-site[hidden],
+.topology-rack-card[hidden],
+.topology-device[hidden] {
+    display: none !important;
+}
+
+.topology-site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.topology-site-header h2,
+.topology-site-header p {
+    margin: 0;
+}
+
+.topology-site-header h2 {
+    margin-top: 3px;
+    font-size: 18px;
+}
+
+.topology-site-header p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.topology-scene {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+    align-items: end;
+    gap: 30px 24px;
+    padding: 28px 24px 34px;
+    overflow: hidden;
+}
+
+.topology-rack-card {
+    min-width: 0;
+    transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.topology-rack-card.has-conflicts .topology-rack-heading {
+    border-color: rgba(255, 125, 134, 0.55);
+}
+
+.topology-rack-heading {
+    position: relative;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.topology-rack-heading a,
+.topology-rack-heading span,
+.topology-rack-heading div > span {
+    display: block;
+}
+
+.topology-rack-heading a {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topology-rack-heading a:hover {
+    color: var(--accent);
+}
+
+.topology-rack-heading div {
+    min-width: 0;
+}
+
+.topology-rack-heading div > span {
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topology-rack-heading > span {
+    flex: 0 0 auto;
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.topology-rack-perspective {
+    display: flex;
+    justify-content: center;
+    transform-style: preserve-3d;
+    transition: transform 260ms ease;
+}
+
+.topology-sites[data-view="isometric"] .topology-rack-perspective {
+    transform: rotateX(3deg) rotateY(-14deg) rotateZ(0.5deg);
+}
+
+.topology-rack-frame {
+    position: relative;
+    width: 190px;
+    height: 390px;
+    border: 9px solid #263847;
+    border-top-width: 15px;
+    border-bottom-width: 15px;
+    border-radius: 5px;
+    background: #070d13;
+    box-shadow: inset 0 0 0 1px #4a5e6e;
+    transform-style: preserve-3d;
+}
+
+.topology-sites[data-view="isometric"] .topology-rack-frame::after {
+    position: absolute;
+    top: -15px;
+    right: -29px;
+    width: 20px;
+    height: calc(100% + 30px);
+    border: 1px solid #4a5e6e;
+    background: #172633;
+    content: "";
+    transform: skewY(-35deg);
+    transform-origin: left center;
+}
+
+.topology-rack-units {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    opacity: 0.6;
+}
+
+.topology-rack-units span {
+    border-bottom: 1px solid #1d2b36;
+}
+
+.topology-device {
+    position: absolute;
+    right: 4px;
+    left: 4px;
+    z-index: 2;
+    display: flex;
+    min-height: 3px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(32, 200, 210, 0.52);
+    border-radius: 3px;
+    color: var(--text);
+    background: rgba(14, 75, 88, 0.94);
+    transition: border-color 120ms ease, filter 120ms ease, transform 120ms ease;
+}
+
+.topology-device:hover,
+.topology-device:focus-visible {
+    z-index: 5;
+    border-color: #7ff8ff;
+    outline: 2px solid rgba(32, 200, 210, 0.35);
+    filter: brightness(1.18);
+    transform: translateX(2px) scale(1.015);
+}
+
+.topology-device.conflict {
+    border-color: var(--danger);
+    background: rgba(116, 39, 49, 0.94);
+}
+
+.topology-device img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    opacity: 0.92;
+}
+
+.topology-device-label {
+    position: absolute;
+    right: 4px;
+    bottom: 2px;
+    left: 4px;
+    overflow: hidden;
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: #f2fbff;
+    background: rgba(4, 12, 18, 0.78);
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topology-device[style*="height: 1."] .topology-device-label,
+.topology-device[style*="height: 2."] .topology-device-label {
+    display: none;
+}
+
+.topology-rack-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 12px;
+    margin-top: 13px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.topology-unracked {
+    margin-top: 18px;
+}
+
+.topology-unracked summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    cursor: pointer;
+}
+
+.topology-unracked summary strong,
+.topology-unracked summary small {
+    display: block;
+}
+
+.topology-unracked summary small {
+    margin-top: 3px;
+    color: var(--muted);
+}
+
+.topology-unracked-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 8px;
+    padding: 0 18px 18px;
+}
+
+.topology-unracked-list a {
+    padding: 10px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    background: var(--surface-soft);
+}
+
+.topology-unracked-list a:hover {
+    border-color: rgba(32, 200, 210, 0.35);
+}
+
+.topology-unracked-list strong,
+.topology-unracked-list span {
+    display: block;
+}
+
+.topology-unracked-list span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+@media (max-width: 1180px) {
+    .topology-toolbar,
+    .topology-local-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .topology-toolbar {
+        align-items: stretch;
+    }
+
+    .topology-site-filter {
+        align-items: end;
+    }
+
+    .topology-search-control,
+    .topology-site-filter .field {
+        width: 100%;
+    }
+}
+
+@media (max-width: 720px) {
+    .topology-site-filter {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .topology-methodology {
+        flex-direction: column;
+    }
+
+    .topology-scene {
+        grid-template-columns: 1fr;
+        padding: 22px 14px 30px;
+    }
+
+    .topology-rack-frame {
+        width: 175px;
+        height: 360px;
+    }
+}

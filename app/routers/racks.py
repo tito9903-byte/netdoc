@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from app.core.auth import common_session_context
 from app.core.config import get_settings
 from app.services.rack_service import (
     RackService,
@@ -49,8 +50,8 @@ def context(
     **extra: object,
 ) -> dict[str, object]:
     return {
+        **common_session_context(request),
         "current_page": "racks",
-        "current_user": request.session.get("username", ""),
         "netbox_connected": True,
         "netbox_url": settings.netbox_url,
         "write_enabled": settings.netbox_write_enabled,

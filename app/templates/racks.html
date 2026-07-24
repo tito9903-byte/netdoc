@@ -18,7 +18,10 @@
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/device-types">Preparar modelos</a>
+        {% if "devices.create" in current_permissions %}
+        <a class="button secondary" href="/racks/actions/new">Crear rack</a>
         <a class="button primary" href="/devices/actions/new">Ubicar un equipo</a>
+        {% endif %}
     </div>
 </section>
 
@@ -39,7 +42,6 @@
             <label for="rack-site">Sitio</label>
             <select id="rack-site" name="site_id">
                 <option value="">Todos los sitios</option>
-
                 {% for site in sites %}
                 <option
                     value="{{ site.get('id') }}"
@@ -63,7 +65,6 @@
         <h2>Inventario de racks</h2>
         <p>{{ racks | length }} bastidores encontrados</p>
     </div>
-
     <span class="rack-result-badge">Vista 2D disponible</span>
 </section>
 
@@ -74,7 +75,6 @@
     <a class="rack-card" href="/racks/{{ rack.get('id') }}">
         <div class="rack-card-top">
             <div class="rack-card-icon">▥</div>
-
             <div class="rack-card-identity">
                 <h3>{{ rack.get("name") or rack.get("display") or "Sin nombre" }}</h3>
                 <p>
@@ -84,7 +84,6 @@
                     {% endif %}
                 </p>
             </div>
-
             <span class="rack-card-status">{{ rack.get("_status_label") }}</span>
         </div>
 

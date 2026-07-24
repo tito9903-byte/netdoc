@@ -3,13 +3,13 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 1.1.
+- **Versión documental:** 1.2.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/access-control-audit`.
 
 ## Resumen ejecutivo
 
-La consulta y documentación de inventario, las operaciones guiadas y los racks 2D están operativos en desarrollo y producción. La rama actual incorpora una primera versión integral de usuarios, roles, permisos y auditoría, pero todavía requiere revisión del propietario, prueba manual en el puerto 8101 y promoción mediante PR antes de llegar a producción.
+La consulta y documentación de inventario, las operaciones guiadas y los racks 2D están operativos en desarrollo y producción. La rama actual incorpora una primera versión integral de usuarios, roles, permisos y auditoría. El código y el workflow de CI pasan sus validaciones, pero todavía requiere supervisión del propietario y prueba manual en el puerto 8101 antes de fusionarse.
 
 ## Entornos y servicios
 
@@ -49,21 +49,24 @@ FastAPI sirve HTML Jinja2 y estáticos; routers y servicios consumen REST de Net
 - El administrador conserva acceso completo.
 - No se permite desactivar la propia cuenta ni dejar el sistema sin un administrador activo.
 - Los cambios de contraseña usan Argon2 y validación mínima de complejidad.
+- Las personalizaciones de permisos de Operador y Consulta no son reemplazadas al reiniciar.
 - Las sesiones almacenan identidad, rol y permisos; otros usuarios reciben cambios de rol al iniciar sesión nuevamente.
 - La base de datos y su directorio están excluidos de Git.
 
 ## Pruebas y validaciones de la rama actual
 
-Ejecutadas fuera del servidor sobre el código de la rama:
+Ejecutadas fuera del servidor:
 
-- Compilación de sintaxis de los módulos Python nuevos y modificados: correcta.
-- Inicialización de una base SQLite temporal y creación de roles/permisos iniciales: correcta.
-- Creación y autenticación de un usuario de prueba: correcta.
+- Compilación de los módulos Python nuevos y modificados: correcta.
+- Inicialización de SQLite en memoria y archivo temporal: correcta.
+- Creación de roles y permisos iniciales: correcta.
+- Creación y autenticación de usuarios: correcta.
 - Carga sintáctica de las nuevas plantillas Jinja2: correcta.
-- `python -m unittest tests.test_access_control -v`: cuatro pruebas superadas.
-- Comprobación aislada del middleware: una solicitud no autenticada a `/` fue redirigida a `/login`.
+- Ocho pruebas automatizadas locales: superadas.
+- TestClient: login administrativo, páginas de Usuarios/Roles/Auditoría, denegación del rol Consulta y auditoría de login fallido: correctos.
+- GitHub Actions `NetDoc CI`: completado correctamente; instalación, compilación, pruebas, importación de `app.main`, plantillas y scripts finalizaron con éxito.
 
-No se probaron todavía esta rama en systemd, el puerto 8101, una base persistente real ni la integración completa del navegador con NetBox.
+No se probaron todavía esta rama mediante systemd, el puerto 8101, la base persistente real del servidor ni el navegador con NetBox real.
 
 ## Deuda, problemas y riesgos
 
@@ -72,6 +75,7 @@ No se probaron todavía esta rama en systemd, el puerto 8101, una base persisten
 - El token de NetBox expuesto anteriormente debe rotarse y limitarse al mínimo privilegio.
 - Las sesiones abiertas antes de activar la nueva autenticación deberán iniciarse nuevamente.
 - Falta prueba manual de todos los roles y flujos de administración en desarrollo.
+- Falta definir revocación inmediata de sesiones, retención/exportación de auditoría y protección contra intentos repetidos de login.
 
 ## Decisiones y referencias
 
@@ -79,7 +83,7 @@ Los ADR aceptados cubren plataforma dedicada, separación de entornos, NetBox co
 
 ## Próximo objetivo
 
-**En progreso:** completar revisión técnica del módulo de acceso, abrir PR hacia `develop`, desplegar solo en desarrollo, validar inicio de sesión, usuarios, roles, permisos y auditoría; corregir incidencias antes de promover a `main`.
+**En progreso:** supervisar el PR #3, revisar el ADR 0005 y, tras aprobación, fusionar únicamente hacia `develop`; luego desplegar en 8101 y validar inicio de sesión, usuarios, roles, permisos y auditoría antes de cualquier promoción a `main`.
 
 ## Reglas de mantenimiento del documento
 

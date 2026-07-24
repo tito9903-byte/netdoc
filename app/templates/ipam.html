@@ -27,7 +27,7 @@
     <article class="summary-card">
         <span>Pools documentados</span>
         <strong>{{ summary.pools }}</strong>
-        <small>{{ summary.pools_with_capacity }} con capacidad calculada</small>
+        <small>{{ summary.pools_with_capacity }} con disponibilidad calculada</small>
     </article>
     <article class="summary-card {% if summary.critical_pools %}attention{% endif %}">
         <span>Pools críticos o llenos</span>
@@ -97,7 +97,7 @@
     <div class="panel-header compact-panel-header">
         <div>
             <h2>Pools de direcciones</h2>
-            <p>Capacidad calculada mediante los endpoints de disponibilidad de NetBox.</p>
+            <p>Disponibilidad estimada con la capacidad del bloque y la utilización que reporta NetBox.</p>
         </div>
         <span class="panel-badge">{{ pools | length }} pools</span>
     </div>
@@ -141,7 +141,9 @@
                     <td class="numeric-cell">{{ pool.get("_used_label") }}</td>
                     <td class="numeric-cell availability-value">
                         {{ pool.get("_available_label") }}
-                        {% if pool.get("_availability_error") %}
+                        {% if pool.get("_availability_estimated") %}
+                        <small>Según utilización</small>
+                        {% elif pool.get("_availability_error") %}
                         <small title="{{ pool.get('_availability_error') }}">No calculado</small>
                         {% endif %}
                     </td>
@@ -157,7 +159,7 @@
                             <strong>{{ pool.get("_utilization") }}%</strong>
                         </div>
                         {% else %}
-                        <span class="status-pill neutral">Pendiente</span>
+                        <span class="status-pill neutral" title="{{ pool.get('_availability_error') or 'NetBox no reportó utilización' }}">Pendiente</span>
                         {% endif %}
                     </td>
                 </tr>

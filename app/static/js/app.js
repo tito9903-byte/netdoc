@@ -46,3 +46,32 @@ if (menuButton && sidebar) {
         }
     });
 }
+
+const navGroups = document.querySelectorAll("details[data-nav-group]");
+
+navGroups.forEach((group) => {
+    const key = group.getAttribute("data-nav-group");
+    const isActive = group.getAttribute("data-active") === "true";
+
+    if (!key) {
+        return;
+    }
+
+    if (isActive) {
+        group.open = true;
+    } else {
+        const stored = window.localStorage.getItem(`netdoc-nav-${key}`);
+        if (stored === "open") {
+            group.open = true;
+        } else if (stored === "closed") {
+            group.open = false;
+        }
+    }
+
+    group.addEventListener("toggle", () => {
+        window.localStorage.setItem(
+            `netdoc-nav-${key}`,
+            group.open ? "open" : "closed",
+        );
+    });
+});

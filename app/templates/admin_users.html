@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="admin-alert success">{{ message }}</div>
+{% endif %}
+
+<section class="admin-summary">
+    <div class="summary-card">
+        <span>Total de usuarios</span>
+        <strong>{{ users | length }}</strong>
+    </div>
+    <div class="summary-card">
+        <span>Usuarios activos</span>
+        <strong>{{ users | selectattr("is_active") | list | length }}</strong>
+    </div>
+    <div class="summary-card">
+        <span>Roles utilizados</span>
+        <strong>{{ users | map(attribute="role.name") | unique | list | length }}</strong>
+    </div>
+    <a class="admin-primary" href="/admin/users/new">＋ Crear usuario</a>
+</section>
+
+<section class="admin-panel">
+    <div class="admin-panel-header">
+        <div>
+            <h2>Cuentas de acceso</h2>
+            <p>Administra identidad, rol, estado y contraseña.</p>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Último acceso</th>
+                    <th>Actualizado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <div class="identity-cell">
+                            <span class="identity-avatar">{{ user.username[0] | upper }}</span>
+                            <div>
+                                <strong>{{ user.full_name or user.username }}</strong>
+                                <span>{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="role-pill">{{ user.role.name }}</span></td>
+                    <td>
+                        <span class="state-pill {% if user.is_active %}active{% else %}inactive{% endif %}">
+                            {% if user.is_active %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if user.last_login_at %}
+                            {{ user.last_login_at.strftime("%Y-%m-%d %H:%M") }}
+                        {% else %}
+                            <span class="muted">Nunca</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.updated_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                    <td class="admin-actions">
+                        <a class="admin-secondary small" href="/admin/users/{{ user.id }}/edit">Editar</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-icon">◎</div>
+                            <h3>No hay usuarios</h3>
+                            <p>Crea la primera cuenta administrada.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

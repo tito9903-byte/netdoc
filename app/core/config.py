@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "NetDoc"
-    app_version: str = "0.6.0"
+    app_version: str = "0.8.0"
 
     netbox_url: str
     netbox_token: str
@@ -21,6 +21,9 @@ class Settings(BaseSettings):
 
     admin_username: str
     admin_password_hash: str
+
+    database_url: str = "sqlite:///./data/netdoc.db"
+    audit_page_size: int = 50
 
     model_config = SettingsConfigDict(
         env_file=".env",

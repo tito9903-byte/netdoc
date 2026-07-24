@@ -88,14 +88,13 @@ jobs:
             --exclude=data \
             --exclude='*.sqlite' \
             --exclude='*.sqlite3' \
-            --exclude=netdoc-source.tgz \
-            -czf netdoc-source.tgz \
+            -czf /tmp/netdoc-source.tgz \
             .
 
       - name: Upload validated source
         uses: actions/upload-artifact@v4
         with:
           name: netdoc-source-${{ github.sha }}
-          path: netdoc-source.tgz
+          path: /tmp/netdoc-source.tgz
           retention-days: 3
           if-no-files-found: error

@@ -80,5 +80,7 @@ async def search_api(request: Request, q: str = ""):
 
 
 from app.routers.documentation import router as documentation_router
+from app.routers.rack_create import router as rack_create_router
 
 router.include_router(documentation_router)
+router.include_router(rack_create_router)

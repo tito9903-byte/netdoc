@@ -22,27 +22,36 @@ def _label(value: Any, fallback: str = "—") -> str:
     return fallback
 
 
+def _safe_id(value: object) -> int | None:
+    return value if isinstance(value, int) and value > 0 else None
+
+
 def _device_result(item: dict[str, Any]) -> dict[str, str | int | None]:
+    device_id = _safe_id(item.get("id"))
     site = _label(item.get("site"))
     role = _label(item.get("role") or item.get("device_role"))
     model = _label(item.get("device_type"))
     return {
-        "id": item.get("id"),
+        "id": device_id,
         "title": _label(item, "Dispositivo sin nombre"),
         "subtitle": f"{role} · {model} · {site}",
-        "url": f"/devices/{item.get('id')}",
+        "url": f"/devices/{device_id}" if device_id else "/devices",
         "badge": "Dispositivo",
     }
 
 
 def _interface_result(item: dict[str, Any]) -> dict[str, str | int | None]:
     device = item.get("device") or {}
-    device_id = device.get("id") if isinstance(device, dict) else None
+    device_id = (
+        _safe_id(device.get("id"))
+        if isinstance(device, dict)
+        else None
+    )
     device_name = _label(device, "Dispositivo")
     interface_name = _label(item, "Interfaz")
     interface_type = _label(item.get("type"), "Sin tipo")
     return {
-        "id": item.get("id"),
+        "id": _safe_id(item.get("id")),
         "title": f"{device_name} · {interface_name}",
         "subtitle": interface_type,
         "url": f"/devices/{device_id}" if device_id else "/devices",
@@ -51,25 +60,27 @@ def _interface_result(item: dict[str, Any]) -> dict[str, str | int | None]:
 
 
 def _rack_result(item: dict[str, Any]) -> dict[str, str | int | None]:
+    rack_id = _safe_id(item.get("id"))
     site = _label(item.get("site"))
     location = _label(item.get("location"), "Sin ubicación")
     return {
-        "id": item.get("id"),
+        "id": rack_id,
         "title": _label(item, "Rack sin nombre"),
         "subtitle": f"{site} · {location}",
-        "url": f"/racks/{item.get('id')}",
+        "url": f"/racks/{rack_id}" if rack_id else "/racks",
         "badge": "Rack",
     }
 
 
 def _site_result(item: dict[str, Any]) -> dict[str, str | int | None]:
+    site_id = _safe_id(item.get("id"))
     region = _label(item.get("region"), "Sin región")
     status = _label(item.get("status"), "Sin estado")
     return {
-        "id": item.get("id"),
+        "id": site_id,
         "title": _label(item, "Sitio sin nombre"),
         "subtitle": f"{region} · {status}",
-        "url": f"/devices?site_id={item.get('id')}",
+        "url": f"/devices?site_id={site_id}" if site_id else "/devices",
         "badge": "Sitio",
     }
 
@@ -79,7 +90,7 @@ def _cable_result(item: dict[str, Any]) -> dict[str, str | int | None]:
     status = _label(item.get("status"), "Sin estado")
     cable_type = _label(item.get("type"), "Sin tipo")
     return {
-        "id": item.get("id"),
+        "id": _safe_id(item.get("id")),
         "title": label,
         "subtitle": f"{cable_type} · {status}",
         "url": "/connections",

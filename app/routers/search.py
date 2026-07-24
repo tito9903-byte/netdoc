@@ -77,3 +77,8 @@ async def search_api(request: Request, q: str = ""):
         "ok": True,
         **(await global_search(q)),
     }
+
+
+from app.routers.documentation import router as documentation_router
+
+router.include_router(documentation_router)

@@ -128,6 +128,15 @@
                 </a>
                 {% endif %}
 
+                <a
+                    class="nav-item
+                    {% if current_page == 'profile' %}active{% endif %}"
+                    href="/profile"
+                >
+                    <span class="nav-icon">◎</span>
+                    <span>Mi perfil</span>
+                </a>
+
                 {% if "users.manage" in permissions or "roles.manage" in permissions or "audit.view" in permissions or "system.view" in permissions %}
                 <div class="nav-section-label">Administración</div>
                 {% endif %}
@@ -224,7 +233,7 @@
                         {% if write_enabled | default(false) %}Escritura controlada{% else %}Solo lectura{% endif %}
                     </span>
 
-                    <div class="current-user">
+                    <a class="current-user" href="/profile" aria-label="Abrir mi perfil">
                         <span class="current-user-avatar">
                             {{ (current_user or "U")[0] | upper }}
                         </span>
@@ -233,7 +242,7 @@
                             <strong>{{ current_user }}</strong>
                             <span>{{ role_label }}</span>
                         </div>
-                    </div>
+                    </a>
 
                     <form
                         action="/logout"

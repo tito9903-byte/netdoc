@@ -661,12 +661,14 @@ from app.routers.admin import router as admin_router
 from app.routers.connections import router as connections_router
 from app.routers.device_create import router as device_create_router
 from app.routers.racks import router as racks_router
+from app.routers.profile import router as profile_router
 from app.routers.search import router as search_router
 from app.routers.system import router as system_router
 
 app.include_router(device_create_router)
 app.include_router(connections_router)
 app.include_router(racks_router)
+app.include_router(profile_router)
 app.include_router(search_router)
 app.include_router(system_router)
 app.include_router(admin_router)

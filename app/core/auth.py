@@ -322,6 +322,9 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         }:
             return "dashboard.view"
 
+        if path.startswith("/profile"):
+            return ""
+
         if path == "/search" or path.startswith("/api/search"):
             return "search.view"
 

@@ -118,6 +118,9 @@ def collect_system_health(
     except (AttributeError, OSError):
         load_1 = load_5 = load_15 = 0.0
 
+    load_1 = max(load_1, 0.0)
+    load_5 = max(load_5, 0.0)
+    load_15 = max(load_15, 0.0)
     load_percent = round((load_1 / cpu_count) * 100, 1)
     memory = _read_meminfo()
     memory_total = int(memory.get("MemTotal", 0))

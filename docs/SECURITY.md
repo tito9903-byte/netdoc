@@ -9,7 +9,7 @@
 - Desarrollo mantiene `NETBOX_WRITE_ENABLED=false`.
 - Las rutas HTML y API se autorizan con permisos del rol en el servidor.
 - Antes de cada solicitud protegida se vuelve a consultar la cuenta y sus permisos en la base.
-- Las acciones administrativas y operaciones guiadas usan tokens CSRF.
+- Las acciones administrativas, el perfil y las operaciones guiadas usan tokens CSRF.
 - La aplicación impide que un administrador desactive o elimine su propia cuenta, o deje el sistema sin un administrador activo.
 - La base local se excluye de Git y cada entorno debe usar almacenamiento independiente.
 - SQLite activa restricciones de claves foráneas.
@@ -22,9 +22,15 @@ La cookie de sesión contiene identidad y datos de presentación, pero no es la 
 
 Un fallo de lectura de identidad se trata de forma cerrada: la sesión se limpia y se exige autenticación. Queda pendiente distinguir en la interfaz un fallo de base de datos de una sesión realmente revocada.
 
+## Perfil y contraseña propia
+
+Toda cuenta autenticada puede abrir `/profile` sin recibir permisos administrativos adicionales. El usuario puede modificar únicamente su nombre completo, correo y contraseña propia; el nombre de usuario, estado y rol permanecen bajo administración.
+
+El cambio de contraseña exige el token CSRF del formulario, la contraseña actual correcta, confirmación coincidente y las reglas mínimas de complejidad. La contraseña nueva debe ser diferente de la actual. Los eventos de perfil registran resultado, usuario, IP y agente del navegador, pero nunca contraseñas ni hashes.
+
 ## Auditoría
 
-Se registran inicios de sesión correctos y fallidos, cierres de sesión, cambios de usuarios y roles, y solicitudes de creación de equipos o conexiones. Los eventos pueden incluir usuario, IP, agente del navegador, recurso, resultado y descripción. Nunca deben registrar contraseñas, hashes, token de NetBox, secreto de sesión ni contenido de `.env`.
+Se registran inicios de sesión correctos y fallidos, cierres de sesión, cambios de usuarios y roles, actualizaciones del perfil y solicitudes de creación de equipos o conexiones. Los eventos pueden incluir usuario, IP, agente del navegador, recurso, resultado y descripción. Nunca deben registrar contraseñas, hashes, token de NetBox, secreto de sesión ni contenido de `.env`.
 
 La auditoría de aplicación no sustituye los logs de systemd, NetBox ni del sistema operativo. La exportación CSV requiere `audit.view`, se limita a 10,000 eventos y antepone una comilla a valores que comienzan con `=`, `+`, `-` o `@` para reducir el riesgo de fórmulas. Falta definir retención y revisión periódica.
 
@@ -49,7 +55,7 @@ Antes de desplegar el módulo de acceso:
 1. Respaldar cualquier base existente.
 2. Confirmar que desarrollo y producción usan rutas independientes.
 3. Verificar el administrador inicial sin exponer su hash.
-4. Probar roles, denegaciones y revocación inmediata en desarrollo.
+4. Probar roles, denegaciones, revocación inmediata y perfil en desarrollo.
 5. Confirmar que `data/` y los archivos de base están ignorados.
 6. Verificar que el archivo de base pertenece a `sshtelenord` y no es legible por usuarios innecesarios.
 

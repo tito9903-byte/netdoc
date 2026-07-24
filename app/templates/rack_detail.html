@@ -5,6 +5,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/racks.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/rack_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -26,12 +27,8 @@
             <h2>{{ rack.get("name") or rack.get("display") or "Rack" }}</h2>
             <p>
                 {{ rack_site_label }}
-                {% if location %}
-                    · {{ location.get("display") or location.get("name") }}
-                {% endif %}
-                {% if rack.get("facility_id") %}
-                    · {{ rack.get("facility_id") }}
-                {% endif %}
+                {% if location %} · {{ location.get("display") or location.get("name") }}{% endif %}
+                {% if rack.get("facility_id") %} · {{ rack.get("facility_id") }}{% endif %}
             </p>
         </div>
     </div>
@@ -60,11 +57,7 @@
         <span>Utilización</span>
         <strong>{{ utilization }}%</strong>
         <small>
-            {% if has_conflicts %}
-                {{ overlap_count }} posiciones con conflicto
-            {% else %}
-                {{ positioned_devices | length }} equipos posicionados
-            {% endif %}
+            {% if has_conflicts %}{{ overlap_count }} posiciones con conflicto{% else %}{{ positioned_devices | length }} equipos posicionados{% endif %}
         </small>
     </article>
 </section>
@@ -106,18 +99,10 @@
         </div>
 
         <div class="rack-visual-scroll" id="rackVisualScroll">
-            <div
-                class="rack-visual"
-                id="rackVisual"
-                data-zoom="normal"
-                style="--rack-slots: {{ rack_slots }};"
-            >
+            <div class="rack-visual" id="rackVisual" data-zoom="normal" style="--rack-slots: {{ rack_slots }};">
                 <div class="rack-unit-labels">
                     {% for unit in unit_labels %}
-                    <div
-                        class="rack-unit-label"
-                        style="grid-row: {{ unit.grid_start }} / span {{ unit.span }};"
-                    >
+                    <div class="rack-unit-label" style="grid-row: {{ unit.grid_start }} / span {{ unit.span }};">
                         {{ unit.label }}
                     </div>
                     {% endfor %}
@@ -150,9 +135,7 @@
                             loading="lazy"
                         >
                         {% endif %}
-                        <span class="rack-device-name">
-                            {{ device.get("name") or device.get("display") or "Sin nombre" }}
-                        </span>
+                        <span class="rack-device-name">{{ device.get("name") or device.get("display") or "Sin nombre" }}</span>
                         <span class="rack-device-position">{{ device.get("_u_height_label") }}</span>
                     </a>
                     {% endfor %}

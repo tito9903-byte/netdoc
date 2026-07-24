@@ -2,6 +2,10 @@
 
 {% block title %}Crear rack | NetDoc{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_create.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="create-device-navigation">
     <a href="/racks">← Volver a racks</a>

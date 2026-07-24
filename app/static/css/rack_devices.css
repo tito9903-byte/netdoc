@@ -123,6 +123,38 @@
     background: rgba(32, 200, 210, 0.05);
 }
 
+.rack-card-capacity {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 10px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.rack-card-capacity span {
+    position: relative;
+}
+
+.rack-card-capacity span + span::before {
+    margin-right: 10px;
+    color: var(--border);
+    content: "•";
+}
+
+.rack-card-conflict {
+    border-color: rgba(255, 125, 134, 0.45);
+}
+
+.rack-card-conflict .rack-progress-fill {
+    background: var(--danger);
+}
+
+.rack-capacity-warning {
+    color: var(--danger);
+    font-weight: 700;
+}
+
 @media (max-width: 760px) {
     .rack-detail-navigation {
         align-items: flex-start;

@@ -184,7 +184,7 @@
     <div class="connection-panel-header">
         <div>
             <h2>Conexiones recientes</h2>
-            <p>Últimos cables registrados en NetBox.</p>
+            <p>Equipo e interfaz de cada extremo, datos físicos y estado documentado.</p>
         </div>
         <span class="result-count">{{ recent_cables | length }} mostrados</span>
     </div>
@@ -194,67 +194,29 @@
         <table class="connections-table">
             <thead>
                 <tr>
-                    <th>ID</th><th>Extremo A</th><th>Extremo B</th><th>Tipo</th><th>Etiqueta</th><th>Estado</th><th>Longitud</th>
+                    <th>ID</th>
+                    <th>Extremo A</th>
+                    <th>Extremo B</th>
+                    <th>Tipo</th>
+                    <th>Etiqueta</th>
+                    <th>Estado</th>
+                    <th>Longitud</th>
                 </tr>
             </thead>
             <tbody>
                 {% for cable in recent_cables %}
-                {% set a_term = (cable.get("a_terminations") or [{}])[0] %}
-                {% set b_term = (cable.get("b_terminations") or [{}])[0] %}
-                {% set a_object = a_term.get("object") or a_term %}
-                {% set b_object = b_term.get("object") or b_term %}
-                {% set a_label = a_object.get("display") or a_term.get("display") %}
-                {% set b_label = b_object.get("display") or b_term.get("display") %}
-                {% set type_data = cable.get("type") %}
-                {% set status_data = cable.get("status") %}
-                {% set unit_data = cable.get("length_unit") %}
                 <tr>
                     <td class="mono-value">{{ cable.get("id") or "—" }}</td>
-                    <td>
-                        {% if a_label %}
-                            {{ a_label }}
-                        {% elif a_term.get("object_id") %}
-                            Interfaz #{{ a_term.get("object_id") }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if b_label %}
-                            {{ b_label }}
-                        {% elif b_term.get("object_id") %}
-                            Interfaz #{{ b_term.get("object_id") }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if type_data is mapping %}
-                            {{ type_data.get("label") or type_data.get("value") or "—" }}
-                        {% else %}
-                            {{ type_data or "—" }}
-                        {% endif %}
-                    </td>
+                    <td><strong>{{ cable.get("_a_label") or "—" }}</strong></td>
+                    <td><strong>{{ cable.get("_b_label") or "—" }}</strong></td>
+                    <td>{{ cable.get("_type_label") or "—" }}</td>
                     <td>{{ cable.get("label") or "—" }}</td>
                     <td>
                         <span class="cable-status">
-                            {% if status_data is mapping %}
-                                {{ status_data.get("label") or status_data.get("value") or "—" }}
-                            {% else %}
-                                {{ status_data or "—" }}
-                            {% endif %}
+                            {{ cable.get("_status_label") or "—" }}
                         </span>
                     </td>
-                    <td>
-                        {% if cable.get("length") %}
-                            {{ cable.get("length") }}
-                            {% if unit_data is mapping %}
-                                {{ unit_data.get("label") or unit_data.get("value") or "" }}
-                            {% else %}
-                                {{ unit_data or "" }}
-                            {% endif %}
-                        {% else %}—{% endif %}
-                    </td>
+                    <td>{{ cable.get("_length_label") or "—" }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -262,7 +224,9 @@
     </div>
     {% else %}
     <div class="connections-empty">
-        <div>⇄</div><h3>No hay cables para mostrar</h3><p>Las conexiones creadas aparecerán aquí.</p>
+        <div>⇄</div>
+        <h3>No hay cables para mostrar</h3>
+        <p>Las conexiones creadas aparecerán aquí.</p>
     </div>
     {% endif %}
 </section>

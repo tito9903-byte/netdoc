@@ -25,12 +25,24 @@ jobs:
           ref: feature/access-control-audit
           fetch-depth: 0
 
+      - name: Restore exact source base
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout 82f21d16719a181c83bc9d4d8f09a7ee3fa232c0 -- \
+            .env.example \
+            app/core/config.py \
+            app/services/access_service.py \
+            app/main.py \
+            tests/test_access_control.py \
+            tests/test_admin_routes.py
+
       - name: Apply login throttle
         shell: bash
         run: |
           set -euo pipefail
           test -f .github/login-throttle.patch
-          git apply --check .github/login-throttle.patch
+          git apply --check --verbose .github/login-throttle.patch
           git apply .github/login-throttle.patch
           rm .github/login-throttle.patch
           git add \

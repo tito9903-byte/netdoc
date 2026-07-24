@@ -1,40 +1,51 @@
 # NetDoc
 
-NetDoc simplifica la consulta, creación guiada y visualización de infraestructura de red mediante NetBox como fuente oficial del inventario técnico.
+NetDoc simplifica la consulta, creación guiada y visualización de infraestructura de red mediante NetBox como fuente oficial del inventario técnico. Su objetivo es reducir los pasos repetitivos de NetBox sin duplicar ni sustituir su modelo de datos.
 
 ## Estado y funcionalidades
 
-El estado oficial está en [PROJECT_STATUS](docs/PROJECT_STATUS.md). El código estable incluye dashboard, dispositivos con búsqueda, filtros, paginación, detalle e interfaces, creación guiada, conexiones y cables, racks 2D y despliegue separado por entorno.
+El estado oficial está en [PROJECT_STATUS](docs/PROJECT_STATUS.md). `develop` incluye:
 
-La rama `feature/access-control-audit`, presentada en el PR #3 hacia `develop`, incorpora para revisión:
+- dashboard, dispositivos, interfaces, conexiones y racks 2D;
+- autenticación multiusuario, roles, permisos y auditoría;
+- perfil de autoservicio y protección temporal de login;
+- búsqueda global y estado del sistema;
+- persistencia local versionada con Alembic;
+- desarrollo y producción separados con despliegue controlado.
 
-- autenticación multiusuario persistente con Argon2;
-- roles Administrador, Operador y Consulta, además de roles personalizados;
-- 11 permisos separados por módulo;
-- administración y eliminación controlada de usuarios;
-- administración de roles y permisos;
-- perfil de autoservicio para nombre, correo y contraseña propia;
-- bloqueo temporal configurable tras intentos repetidos de login;
-- auditoría con filtros, paginación y exportación CSV;
-- búsqueda global de dispositivos, interfaces, racks, sitios y cables;
-- módulo Sistema de solo lectura para CPU, RAM, disco, red y uptime;
-- navegación, páginas y API protegidas por permiso;
-- esquema local versionado con Alembic y migración inicial `20260724_0001`.
+La rama `feature/documentation-workflows-ui`, presentada en el PR #4 hacia `develop`, incorpora para revisión:
 
-Esta rama no está desplegada todavía. Debe probarse únicamente en desarrollo, puerto 8101, antes de considerar `main`.
+- una navegación organizada por procesos de documentación;
+- un dashboard como punto de inicio operativo;
+- direccionamiento IP con prefijos, pools, localidad, VRF, capacidad y disponibilidad;
+- modelos de dispositivo con generación masiva de interfaces mediante patrones;
+- creación guiada de racks y mejoras en la instalación física de equipos;
+- correcciones visuales en racks, conexiones, búsqueda y administración;
+- foco visible, controles mayores y comportamiento accesible del menú móvil.
+
+Esta rama es la versión `0.10.0`, permanece como borrador y no está desplegada todavía. Debe validarse únicamente en desarrollo, puerto 8101, antes de fusionarse.
+
+## Principios de producto
+
+1. **NetBox sigue siendo la fuente oficial.** NetDoc no mantiene una copia paralela del inventario.
+2. **Los flujos frecuentes deben requerir menos pasos.** Modelos, interfaces, racks, pools y conexiones se presentan como procesos guiados.
+3. **Documentar una vez y reutilizar.** Los tipos de dispositivo y sus componentes se definen antes de crear equipos.
+4. **La ubicación debe ser explícita.** Sitio, localidad, rack, cara y posición U deben formar parte del alta física.
+5. **La capacidad debe ser visible.** Los pools IP y racks deben mostrar disponibilidad real o declarar claramente cuando todavía no está calculada.
+6. **Las escrituras son controladas.** Autenticación, permiso, CSRF, auditoría y `NETBOX_WRITE_ENABLED=true` son obligatorios.
 
 ## Arquitectura y tecnologías
 
 `Navegador → FastAPI/Jinja2 → servicios → NetBox REST / base local / métricas Linux`
 
-NetDoc usa Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, SQLAlchemy, Alembic, Uvicorn, HTML, CSS y JavaScript. NetBox mantiene el inventario; una base propia configurable conserva únicamente usuarios, roles, permisos y auditoría. Consulte [arquitectura](docs/ARCHITECTURE.md).
+NetDoc usa Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, SQLAlchemy, Alembic, Uvicorn, HTML, CSS y JavaScript. NetBox mantiene dispositivos, componentes, racks, cables e IPAM; una base propia configurable conserva únicamente usuarios, roles, permisos y auditoría. Consulte [arquitectura](docs/ARCHITECTURE.md).
 
 ## Estructura
 
 - `app/main.py`: aplicación, middleware y rutas base.
 - `app/core`: configuración, sesiones, seguridad, autorización, base de datos y migraciones.
 - `app/models`: entidades persistentes propias de NetDoc.
-- `app/routers`: rutas web y API.
+- `app/routers`: rutas web, API y flujos guiados.
 - `app/services`: reglas de negocio e integración NetBox.
 - `app/templates` y `app/static`: interfaz.
 - `migrations`: revisiones Alembic del esquema local.
@@ -49,15 +60,15 @@ NetDoc usa Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware,
 Durante el arranque, NetDoc ejecuta Alembic hasta `head`:
 
 - una base vacía recibe la migración inicial;
-- una base heredada con todas las tablas anteriores se marca en `head` sin borrar datos;
-- una base ya versionada se actualiza;
-- un esquema parcial provoca un error de arranque para no ocultar una instalación dañada.
+- una base heredada completa se marca en `head` sin borrar datos;
+- una base versionada se actualiza;
+- un esquema parcial provoca un error de arranque.
 
-Antes del primer despliegue de esta rama debe respaldarse la base indicada por `DATABASE_URL`. El rollback de código no revierte ni restaura automáticamente la base.
+Antes de una migración debe respaldarse la base. El rollback de código no revierte ni restaura automáticamente el archivo de datos.
 
 ## Entornos y ramas
 
-`feature/*` se crea desde `develop`; se abre PR a `develop`, se prueba en el puerto 8101 y después se promueve mediante otro PR hacia `main`. Producción usa 8100. No programe directamente en `main` ni modifique producción manualmente.
+`feature/*` se crea desde `develop`; se abre PR a `develop`, se prueba en 8101 y después se promueve mediante otro PR hacia `main`. Producción usa 8100. No programe directamente en `main` ni modifique producción manualmente.
 
 Desarrollo y producción deben usar `.env`, cookie de sesión y base de datos independientes. Desarrollo debe conservar `NETBOX_WRITE_ENABLED=false`.
 
@@ -71,7 +82,7 @@ cp .env.example .env  # sustituya solo en su entorno los marcadores seguros
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8101
 ```
 
-Pruebas y validaciones principales:
+Validaciones principales:
 
 ```bash
 python -m compileall -q app tests migrations
@@ -80,7 +91,7 @@ python -m unittest discover -s tests -v
 python -c 'from app.main import app; print(app.title, len(app.routes))'
 ```
 
-La rama registra 41 rutas, 19 plantillas y 27 pruebas automatizadas. GitHub Actions valida dependencias, compilación, grafo Alembic, pruebas, importación, plantillas y scripts.
+GitHub Actions valida dependencias, compilación, grafo Alembic, pruebas, importación, plantillas y scripts. Las pruebas contra NetBox real y systemd se realizan únicamente en el servidor autorizado.
 
 No versionar `.env`, bases de datos, tokens, contraseñas, hashes, secretos de sesión o claves. Para despliegues controlados consulte [DEPLOYMENT](docs/DEPLOYMENT.md); `git push` no despliega al servidor.
 

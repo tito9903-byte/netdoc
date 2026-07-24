@@ -21,6 +21,16 @@
 </div>
 {% endif %}
 
+{% if not write_enabled %}
+<div class="read-only-callout">
+    <span>◌</span>
+    <div>
+        <strong>Desarrollo está en modo de solo lectura.</strong>
+        <span>Puedes revisar el flujo y consultar cables, pero el botón de creación permanece bloqueado.</span>
+    </div>
+</div>
+{% endif %}
+
 <section class="connection-form-panel">
     <form id="connectionForm" method="post" action="/connections">
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
@@ -30,7 +40,9 @@
                 <h2>Nueva conexión</h2>
                 <p>Selecciona dos interfaces libres y documenta el cable.</p>
             </div>
-            <span class="write-badge">Escritura controlada</span>
+            <span class="write-badge">
+                {% if write_enabled %}Escritura controlada{% else %}Vista previa{% endif %}
+            </span>
         </div>
 
         <div class="endpoints-grid">
@@ -156,7 +168,13 @@
             </div>
             <div class="action-buttons">
                 <a class="secondary-connection-button" href="/devices">Cancelar</a>
-                <button class="primary-connection-button" type="submit">Crear conexión</button>
+                <button
+                    class="primary-connection-button"
+                    type="submit"
+                    {% if not write_enabled %}disabled{% endif %}
+                >
+                    Crear conexión
+                </button>
             </div>
         </div>
     </form>
@@ -185,18 +203,42 @@
                 {% set b_term = (cable.get("b_terminations") or [{}])[0] %}
                 {% set a_object = a_term.get("object") or a_term %}
                 {% set b_object = b_term.get("object") or b_term %}
-                {% set type_data = cable.get("type") or {} %}
-                {% set status_data = cable.get("status") or {} %}
+                {% set type_data = cable.get("type") %}
+                {% set status_data = cable.get("status") %}
+                {% set unit_data = cable.get("length_unit") %}
                 <tr>
                     <td class="mono-value">{{ cable.get("id") or "—" }}</td>
-                    <td>{{ a_object.get("display") or a_term.get("display") or a_term.get("object_id") or "—" }}</td>
-                    <td>{{ b_object.get("display") or b_term.get("display") or b_term.get("object_id") or "—" }}</td>
-                    <td>{{ type_data.get("label") or type_data.get("value") or "—" }}</td>
+                    <td>
+                        {{ a_object.get("display") or a_term.get("display") or ("Interfaz #" ~ a_term.get("object_id")) if a_term.get("object_id") else "—" }}
+                    </td>
+                    <td>
+                        {{ b_object.get("display") or b_term.get("display") or ("Interfaz #" ~ b_term.get("object_id")) if b_term.get("object_id") else "—" }}
+                    </td>
+                    <td>
+                        {% if type_data is mapping %}
+                            {{ type_data.get("label") or type_data.get("value") or "—" }}
+                        {% else %}
+                            {{ type_data or "—" }}
+                        {% endif %}
+                    </td>
                     <td>{{ cable.get("label") or "—" }}</td>
-                    <td><span class="cable-status">{{ status_data.get("label") or status_data.get("value") or "—" }}</span></td>
+                    <td>
+                        <span class="cable-status">
+                            {% if status_data is mapping %}
+                                {{ status_data.get("label") or status_data.get("value") or "—" }}
+                            {% else %}
+                                {{ status_data or "—" }}
+                            {% endif %}
+                        </span>
+                    </td>
                     <td>
                         {% if cable.get("length") %}
-                            {{ cable.get("length") }} {{ (cable.get("length_unit") or {}).get("value", "") }}
+                            {{ cable.get("length") }}
+                            {% if unit_data is mapping %}
+                                {{ unit_data.get("label") or unit_data.get("value") or "" }}
+                            {% else %}
+                                {{ unit_data or "" }}
+                            {% endif %}
                         {% else %}—{% endif %}
                     </td>
                 </tr>

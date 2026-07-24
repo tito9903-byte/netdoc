@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_images.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -26,7 +27,7 @@
         <span class="eyebrow">Biblioteca de hardware</span>
         <h2>Modelos de equipos</h2>
         <p>
-            Consulta fabricante, dimensiones y componentes reutilizables sin
+            Consulta fabricante, altura U, profundidad e imágenes reutilizables sin
             mezclar la ficha física con la creación de puertos.
         </p>
     </div>
@@ -44,23 +45,14 @@
     <form class="model-filter-bar" method="get" action="/device-types">
         <div class="field model-search-field">
             <label for="model-q">Buscar modelo</label>
-            <input
-                id="model-q"
-                name="q"
-                type="search"
-                value="{{ query }}"
-                placeholder="Fabricante, modelo o part number..."
-            >
+            <input id="model-q" name="q" type="search" value="{{ query }}" placeholder="Fabricante, modelo o part number...">
         </div>
         <div class="field model-filter-field">
             <label for="model-manufacturer">Fabricante</label>
             <select id="model-manufacturer" name="manufacturer_id">
                 <option value="">Todos los fabricantes</option>
                 {% for manufacturer in manufacturers %}
-                <option
-                    value="{{ manufacturer.get('id') }}"
-                    {% if selected_manufacturer_id == manufacturer.get('id') %}selected{% endif %}
-                >
+                <option value="{{ manufacturer.get('id') }}" {% if selected_manufacturer_id == manufacturer.get('id') %}selected{% endif %}>
                     {{ manufacturer.get("display") or manufacturer.get("name") or "Sin nombre" }}
                 </option>
                 {% endfor %}
@@ -99,9 +91,7 @@
                         {% if item.get("part_number") %} · {{ item.get("part_number") }}{% endif %}
                     </small>
                 </span>
-                <span class="model-index-count" title="Plantillas de interfaz">
-                    {{ item.get("_interface_count") or 0 }}
-                </span>
+                <span class="model-index-count" title="Plantillas de interfaz">{{ item.get("_interface_count") or 0 }}</span>
             </a>
             {% endfor %}
         </div>
@@ -118,33 +108,22 @@
         {% if selected_device_type %}
         {% set manufacturer = selected_device_type.get("manufacturer") or {} %}
         {% set manufacturer_name = manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" %}
+        {% set model_name = selected_device_type.get("model") or selected_device_type.get("display") or "Sin modelo" %}
         <section class="panel model-profile-panel">
             <div class="model-profile-heading">
                 <span class="model-profile-avatar">{{ manufacturer_name[:1] | upper }}</span>
                 <div>
                     <span class="eyebrow">Modelo seleccionado</span>
-                    <h2>{{ selected_device_type.get("model") or selected_device_type.get("display") or "Sin modelo" }}</h2>
+                    <h2>{{ model_name }}</h2>
                     <p>{{ manufacturer_name }}</p>
                 </div>
             </div>
 
             <div class="model-profile-facts">
-                <div>
-                    <span>Part number</span>
-                    <strong>{{ selected_device_type.get("part_number") or "—" }}</strong>
-                </div>
-                <div>
-                    <span>Altura</span>
-                    <strong>{{ selected_device_type.get("u_height") or 0 }}U</strong>
-                </div>
-                <div>
-                    <span>Profundidad</span>
-                    <strong>{% if selected_device_type.get("is_full_depth") %}Completa{% else %}Parcial{% endif %}</strong>
-                </div>
-                <div>
-                    <span>Slug</span>
-                    <strong>{{ selected_device_type.get("slug") or "—" }}</strong>
-                </div>
+                <div><span>Part number</span><strong>{{ selected_device_type.get("part_number") or "—" }}</strong></div>
+                <div><span>Altura</span><strong>{{ selected_device_type.get("u_height") or 0 }}U</strong></div>
+                <div><span>Profundidad</span><strong>{% if selected_device_type.get("is_full_depth") %}Completa{% else %}Parcial{% endif %}</strong></div>
+                <div><span>Slug</span><strong>{{ selected_device_type.get("slug") or "—" }}</strong></div>
             </div>
 
             {% if selected_device_type.get("description") %}
@@ -153,6 +132,34 @@
                 <p>{{ selected_device_type.get("description") }}</p>
             </div>
             {% endif %}
+        </section>
+
+        <section class="panel model-catalog-images">
+            <div class="panel-header compact-panel-header">
+                <div>
+                    <h2>Imágenes para racks</h2>
+                    <p>Se reutilizan en la elevación 2D y en la Topología 3D.</p>
+                </div>
+                <a class="button secondary" href="/device-types/{{ selected_device_type_id }}/images">Administrar imágenes</a>
+            </div>
+            <div class="model-catalog-image-grid">
+                <div>
+                    <span>Frente</span>
+                    {% if selected_device_type.get("front_image") %}
+                    <img src="/media/device-types/{{ selected_device_type_id }}/front" alt="Frente del modelo {{ model_name }}" loading="lazy">
+                    {% else %}
+                    <div class="model-catalog-image-empty">Sin imagen frontal</div>
+                    {% endif %}
+                </div>
+                <div>
+                    <span>Parte trasera</span>
+                    {% if selected_device_type.get("rear_image") %}
+                    <img src="/media/device-types/{{ selected_device_type_id }}/rear" alt="Parte trasera del modelo {{ model_name }}" loading="lazy">
+                    {% else %}
+                    <div class="model-catalog-image-empty">Sin imagen trasera</div>
+                    {% endif %}
+                </div>
+            </div>
         </section>
 
         <section class="model-component-grid">
@@ -177,15 +184,10 @@
             <div>
                 <span class="eyebrow">Siguiente paso</span>
                 <h2>Prepara los puertos del modelo</h2>
-                <p>
-                    Las plantillas se administran en una pantalla separada para
-                    evitar mezclar el catálogo con la creación masiva.
-                </p>
+                <p>Las plantillas se administran en una pantalla separada para evitar mezclar procesos.</p>
             </div>
             <div class="model-next-actions">
-                <a class="button primary" href="/interface-templates?device_type_id={{ selected_device_type_id }}">
-                    Administrar plantillas
-                </a>
+                <a class="button primary" href="/interface-templates?device_type_id={{ selected_device_type_id }}">Administrar plantillas</a>
                 <a class="button secondary" href="/devices/actions/new">Crear equipo</a>
             </div>
         </section>

@@ -190,6 +190,7 @@ def seed_access_control(session: Session) -> None:
 
     for code, name, description, codes in role_definitions:
         role = session.scalar(select(Role).where(Role.code == code))
+        created = role is None
 
         if role is None:
             role = Role(
@@ -201,14 +202,15 @@ def seed_access_control(session: Session) -> None:
             session.add(role)
             session.flush()
 
-        role.name = name
-        role.description = description
         role.is_system = True
-        role.permissions = [
-            permissions_by_code[item]
-            for item in sorted(codes)
-            if item in permissions_by_code
-        ]
+
+        if created or code == "administrador":
+            role.permissions = [
+                permissions_by_code[item]
+                for item in sorted(codes)
+                if item in permissions_by_code
+            ]
+
         roles_by_code[code] = role
 
     admin_username = normalize_username(settings.admin_username)
@@ -277,16 +279,32 @@ def get_identity(
     return identity_from_user(user)
 
 
-def list_users(session: Session) -> list[User]:
-    return list(
-        session.scalars(
-            select(User)
-            .options(
-                selectinload(User.role).selectinload(Role.permissions)
-            )
-            .order_by(User.username)
-        ).all()
+def list_users(
+    session: Session,
+    *,
+    query: str = "",
+    role_id: int | None = None,
+) -> list[User]:
+    statement = (
+        select(User)
+        .options(
+            selectinload(User.role).selectinload(Role.permissions)
+        )
+        .order_by(User.username)
     )
+
+    if query.strip():
+        pattern = f"%{query.strip()}%"
+        statement = statement.where(
+            User.username.ilike(pattern)
+            | User.full_name.ilike(pattern)
+            | User.email.ilike(pattern)
+        )
+
+    if role_id is not None:
+        statement = statement.where(User.role_id == role_id)
+
+    return list(session.scalars(statement).all())
 
 
 def get_user(session: Session, user_id: int) -> User | None:
@@ -351,6 +369,25 @@ def validate_password(password: str) -> None:
         )
 
 
+def validate_username(username: str) -> str:
+    normalized = normalize_username(username)
+
+    if not normalized:
+        raise AccessServiceError("El nombre de usuario es obligatorio.")
+
+    if len(normalized) < 3:
+        raise AccessServiceError(
+            "El nombre de usuario debe tener al menos 3 caracteres."
+        )
+
+    if not re.fullmatch(r"[a-z0-9._-]+", normalized):
+        raise AccessServiceError(
+            "El usuario solo puede contener letras, números, punto, guion y guion bajo."
+        )
+
+    return normalized
+
+
 def create_user(
     session: Session,
     *,
@@ -361,21 +398,8 @@ def create_user(
     role_id: int,
     is_active: bool = True,
 ) -> User:
-    normalized_username = normalize_username(username)
+    normalized_username = validate_username(username)
     normalized_email = normalize_email(email)
-
-    if not normalized_username:
-        raise AccessServiceError("El nombre de usuario es obligatorio.")
-
-    if len(normalized_username) < 3:
-        raise AccessServiceError(
-            "El nombre de usuario debe tener al menos 3 caracteres."
-        )
-
-    if not re.fullmatch(r"[a-z0-9._-]+", normalized_username):
-        raise AccessServiceError(
-            "El usuario solo puede contener letras, números, punto, guion y guion bajo."
-        )
 
     if _username_exists(session, normalized_username):
         raise AccessServiceError("Ya existe un usuario con ese nombre.")
@@ -412,11 +436,8 @@ def update_user(
     role_id: int,
     is_active: bool,
 ) -> User:
-    normalized_username = normalize_username(username)
+    normalized_username = validate_username(username)
     normalized_email = normalize_email(email)
-
-    if not normalized_username:
-        raise AccessServiceError("El nombre de usuario es obligatorio.")
 
     if _username_exists(session, normalized_username, user.id):
         raise AccessServiceError("Ya existe un usuario con ese nombre.")
@@ -447,6 +468,11 @@ def set_user_password(
     user.password_hash = hash_password(password)
     user.password_changed_at = utc_now()
     user.updated_at = utc_now()
+    session.flush()
+
+
+def delete_user(session: Session, user: User) -> None:
+    session.delete(user)
     session.flush()
 
 

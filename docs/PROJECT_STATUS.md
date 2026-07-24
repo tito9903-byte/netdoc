@@ -3,14 +3,14 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 1.5.
+- **Versión documental:** 1.6.
 - **Versión de aplicación de la rama:** 0.9.0.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/access-control-audit`.
 
 ## Resumen ejecutivo
 
-La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, búsqueda global, salud del sistema, administración ampliada y un perfil de autoservicio para cada usuario. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
+La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, búsqueda global, salud del sistema, administración ampliada, perfil de autoservicio y protección temporal contra intentos repetidos de inicio de sesión. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
 
 ## Entornos y servicios
 
@@ -31,6 +31,7 @@ El propietario verificó el 2026-07-24 ambos servicios con HTTP 200 y ejecutó c
 - SQLite es el valor inicial de `DATABASE_URL`; cada entorno debe tener su propia base.
 - `PermissionMiddleware` recarga la identidad activa y los permisos antes de cada solicitud protegida.
 - Las métricas de Sistema se obtienen mediante lecturas no privilegiadas de Python y `/proc`; no ejecutan comandos ni modifican servicios.
+- Los intentos fallidos de login se consultan en Auditoría por usuario e IP dentro de una ventana configurable.
 
 ## Módulos
 
@@ -46,7 +47,8 @@ Dashboard, dispositivos e interfaces, filtros y paginación, creación guiada de
 - Perfil de autoservicio para actualizar nombre, correo y contraseña propia.
 - Verificación de la contraseña actual antes del cambio y auditoría sin registrar secretos.
 - Protección de la propia cuenta y del último administrador activo.
-- Auditoría de accesos, fallos, cambios administrativos y operaciones guiadas.
+- Bloqueo temporal tras fallos repetidos del mismo usuario desde la misma IP, con respuesta HTTP 429 y `Retry-After`.
+- Auditoría de accesos, fallos, bloqueos, cambios administrativos y operaciones guiadas.
 - Filtros de auditoría por texto, acción, recurso, resultado y rango de fechas.
 - Exportación CSV de hasta 10,000 eventos, con mitigación de fórmulas de hoja de cálculo.
 - Búsqueda global simultánea de dispositivos, interfaces, racks, sitios y cables.
@@ -56,7 +58,7 @@ Dashboard, dispositivos e interfaces, filtros y paginación, creación guiada de
 
 ### Planificado
 
-Migraciones Alembic, respaldo/retención de auditoría, bloqueo por intentos fallidos, recuperación ante fallo de base, edición/eliminación de inventario, desconexión de cables, patch panels, topologías, 3D, métricas históricas y alertas.
+Migraciones Alembic, respaldo/retención de auditoría, recuperación ante fallo de base, edición/eliminación de inventario, desconexión de cables, patch panels, topologías, 3D, métricas históricas, alertas y controles distribuidos de rate limiting para escenarios con varios workers.
 
 ## Validaciones de la rama
 
@@ -66,8 +68,8 @@ Ejecutadas fuera del servidor:
 - Importación de `app.main`: correcta; 41 rutas registradas.
 - Análisis sintáctico de 19 plantillas Jinja2: correcto.
 - Sintaxis de ambos scripts de despliegue: correcta.
-- 21 pruebas automatizadas: superadas.
-- Cobertura nueva: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, acceso a Sistema, permiso de Búsqueda y perfil de autoservicio.
+- 24 pruebas automatizadas: superadas.
+- Cobertura nueva: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, Sistema, Búsqueda, perfil y bloqueo temporal de login.
 - GitHub Actions `NetDoc CI`: completado correctamente en el commit final de la rama.
 
 Pendiente: desplegar mediante systemd, validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.
@@ -76,6 +78,7 @@ Pendiente: desplegar mediante systemd, validar la base persistente de desarrollo
 
 - El esquema inicial aún usa `create_all`; cambios posteriores deben usar Alembic.
 - SQLite debe reevaluarse antes de varios workers o mayor concurrencia.
+- El bloqueo actual usa Auditoría y alcance usuario/IP; para despliegues distribuidos debe validarse una estrategia centralizada.
 - El token de NetBox previamente expuesto debe rotarse y reducirse a mínimo privilegio.
 - Las búsquedas dependen de los filtros `q` disponibles en NetBox y deben validarse con los datos reales.
 - Las métricas actuales son instantáneas y acumuladas desde el arranque; no sustituyen una plataforma histórica de monitoreo.

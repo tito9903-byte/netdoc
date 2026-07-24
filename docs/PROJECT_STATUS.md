@@ -56,7 +56,7 @@ Dashboard, dispositivos e interfaces, filtros y paginación, creación guiada de
 
 Migraciones Alembic, respaldo/retención de auditoría, bloqueo por intentos fallidos, recuperación ante fallo de base, edición/eliminación de inventario, desconexión de cables, patch panels, topologías, 3D, métricas históricas y alertas.
 
-## Validaciones locales de la rama
+## Validaciones de la rama
 
 Ejecutadas fuera del servidor:
 
@@ -66,8 +66,9 @@ Ejecutadas fuera del servidor:
 - Sintaxis de ambos scripts de despliegue: correcta.
 - 17 pruebas automatizadas: superadas.
 - Cobertura nueva: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, acceso a Sistema y permiso de Búsqueda.
+- GitHub Actions `NetDoc CI`: completado correctamente en el commit final de la rama.
 
-Pendiente: confirmar GitHub Actions en el commit final, desplegar mediante systemd, validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.
+Pendiente: desplegar mediante systemd, validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.
 
 ## Riesgos y deuda
 
@@ -80,7 +81,7 @@ Pendiente: confirmar GitHub Actions en el commit final, desplegar mediante syste
 
 ## Próximo objetivo
 
-**En progreso:** mantener el PR #3 como borrador, confirmar CI, supervisar el diff y el ADR 0005, y después fusionar únicamente hacia `develop`. La prueba operativa se realizará solo en 8101 antes de considerar `main`.
+**En progreso:** mantener el PR #3 como borrador, supervisar el diff y el ADR 0005, y después fusionar únicamente hacia `develop`. La prueba operativa se realizará solo en 8101 antes de considerar `main`.
 
 ## Reglas de mantenimiento
 

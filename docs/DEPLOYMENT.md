@@ -32,12 +32,11 @@ solo en automatización controlada.
 
 ## Flujo, verificación y rollback
 
-Los scripts verifican directorio, Git, rama, `.env`, `.venv`, servicio y remoto;
-hacen `fetch` y `reset --hard` a la rama remota, instalan desde
+Los scripts verifican directorio, Git, rama, árbol de trabajo limpio, `.env`, `.venv`, archivo de dependencias, servicio y remoto;
+hacen `fetch` y `reset --hard` a la rama remota solo después de esas comprobaciones, instalan desde
 `requirements-lock.txt`, compilan, importan, reinician solo su servicio y
 aceptan HTTP 200/3xx en `/login`. No usan `git clean` ni muestran/modifican
-`.env`. Ante fallo restauran el commit previo, reinstalan dependencias y
-reinician. Revise `systemctl status`, `journalctl` y el HTTP final.
+`.env`. Ante fallo posterior a la actualización restauran el commit previo, reinstalan dependencias, reinician y señalan si el rollback requiere revisión manual. Revise `systemctl status`, `journalctl` y el HTTP final.
 
 Rollback manual: en el directorio del entorno, identifique el commit previo,
 `git reset --hard <commit>`, reinstale dependencias, reinicie **solo** el

@@ -58,7 +58,7 @@ cambios no probados; las mitigaciones están en [seguridad](SECURITY.md) y
 Los ADR aceptados cubren plataforma dedicada, separación de entornos, NetBox
 como fuente oficial y documentación como código. Seguridad: configuración
 sensible fuera de Git y escritura deshabilitada en desarrollo. Despliegue:
-scripts con validación y rollback documentados, sin ejecución verificada aquí.
+scripts con validación, rechazo de árbol Git no limpio y rollback documentados, sin ejecución verificada aquí.
 Pruebas: no se identificó suite automatizada versionada; consulte
 [TESTING](TESTING.md). Documentación: Completado para esta base.
 

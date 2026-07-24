@@ -41,8 +41,10 @@ backups/
 Thumbs.db
 
 # Bases de datos locales
+*.db
 *.sqlite
 *.sqlite3
+data/
 
 # Claves y certificados
 .ssh/

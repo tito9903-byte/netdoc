@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     session_max_age: int = 28800
 
+    login_max_attempts: int = 5
+    login_window_seconds: int = 900
+
     admin_username: str
     admin_password_hash: str
 

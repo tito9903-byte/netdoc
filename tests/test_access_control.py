@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import datetime, timedelta, timezone
 
 from argon2 import PasswordHasher
 
@@ -24,6 +25,7 @@ from app.services.access_service import (
     create_role,
     create_user,
     list_permissions,
+    login_throttle_status,
     record_audit,
     seed_access_control,
 )
@@ -120,6 +122,67 @@ class AccessControlTests(unittest.TestCase):
                 password="debil",
                 role_id=role.id,
             )
+
+    def test_login_throttle_blocks_recent_failures(self):
+        now = datetime(2026, 7, 24, 12, 0, tzinfo=timezone.utc)
+
+        for index in range(5):
+            self.session.add(AuditEvent(
+                created_at=now - timedelta(minutes=4, seconds=index),
+                username="bloqueado",
+                action="LOGIN_FAILED",
+                resource="session",
+                success=False,
+                ip_address="192.0.2.10",
+            ))
+        self.session.commit()
+
+        status = login_throttle_status(
+            self.session,
+            username="Bloqueado",
+            ip_address="192.0.2.10",
+            max_attempts=5,
+            window_seconds=900,
+            now=now,
+        )
+
+        self.assertTrue(status.blocked)
+        self.assertEqual(5, status.attempts)
+        self.assertGreater(status.retry_after_seconds, 0)
+
+    def test_login_throttle_is_scoped_by_ip_and_window(self):
+        now = datetime(2026, 7, 24, 12, 0, tzinfo=timezone.utc)
+
+        for index in range(5):
+            self.session.add(AuditEvent(
+                created_at=now - timedelta(hours=1, seconds=index),
+                username="consulta",
+                action="LOGIN_FAILED",
+                resource="session",
+                success=False,
+                ip_address="192.0.2.11",
+            ))
+        self.session.commit()
+
+        expired = login_throttle_status(
+            self.session,
+            username="consulta",
+            ip_address="192.0.2.11",
+            max_attempts=5,
+            window_seconds=900,
+            now=now,
+        )
+        other_ip = login_throttle_status(
+            self.session,
+            username="consulta",
+            ip_address="192.0.2.12",
+            max_attempts=5,
+            window_seconds=900,
+            now=now,
+        )
+
+        self.assertFalse(expired.blocked)
+        self.assertFalse(other_ip.blocked)
 
     def test_custom_role_and_audit_event(self):
         permissions = list_permissions(self.session)

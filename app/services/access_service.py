@@ -108,6 +108,13 @@ class AccessServiceError(ValueError):
 
 
 @dataclass(frozen=True)
+class LoginThrottleStatus:
+    blocked: bool
+    attempts: int
+    retry_after_seconds: int
+
+
+@dataclass(frozen=True)
 class AuthenticatedIdentity:
     id: int
     username: str
@@ -242,6 +249,84 @@ def seed_access_control(session: Session) -> None:
         )
         session.add(admin)
 
+
+
+def login_throttle_status(
+    session: Session,
+    *,
+    username: str,
+    ip_address: str | None,
+    max_attempts: int,
+    window_seconds: int,
+    now: datetime | None = None,
+) -> LoginThrottleStatus:
+    normalized = normalize_username(username)
+    safe_max_attempts = min(max(max_attempts, 1), 100)
+    safe_window_seconds = min(max(window_seconds, 60), 86400)
+    current_time = now or utc_now()
+    cutoff = current_time - timedelta(seconds=safe_window_seconds)
+
+    conditions = [
+        AuditEvent.username == normalized,
+        AuditEvent.ip_address == ip_address,
+        AuditEvent.created_at >= cutoff,
+    ]
+
+    latest_success = session.scalar(
+        select(func.max(AuditEvent.created_at)).where(
+            *conditions,
+            AuditEvent.action == "LOGIN_SUCCESS",
+            AuditEvent.success.is_(True),
+        )
+    )
+
+    failure_conditions = [
+        *conditions,
+        AuditEvent.action == "LOGIN_FAILED",
+        AuditEvent.success.is_(False),
+    ]
+
+    if latest_success is not None:
+        failure_conditions.append(AuditEvent.created_at > latest_success)
+
+    failures = list(
+        session.scalars(
+            select(AuditEvent.created_at)
+            .where(*failure_conditions)
+            .order_by(AuditEvent.created_at.asc())
+        ).all()
+    )
+    attempts = len(failures)
+
+    if attempts < safe_max_attempts:
+        return LoginThrottleStatus(
+            blocked=False,
+            attempts=attempts,
+            retry_after_seconds=0,
+        )
+
+    oldest = failures[0]
+    if oldest.tzinfo is None:
+        oldest = oldest.replace(tzinfo=timezone.utc)
+    if current_time.tzinfo is None:
+        current_time = current_time.replace(tzinfo=timezone.utc)
+
+    retry_after = max(
+        1,
+        int(
+            (
+                oldest
+                + timedelta(seconds=safe_window_seconds)
+                - current_time
+            ).total_seconds()
+        ),
+    )
+
+    return LoginThrottleStatus(
+        blocked=True,
+        attempts=attempts,
+        retry_after_seconds=retry_after,
+    )
 
 def authenticate_user(
     session: Session,

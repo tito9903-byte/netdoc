@@ -15,11 +15,11 @@ os.environ.setdefault(
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.core.database import session_scope
 from app.main import app
-from app.models.access import Role, User
+from app.models.access import AuditEvent, Role, User
 from app.services.access_service import (
     create_user,
     set_user_password,
@@ -101,6 +101,31 @@ class AdminRouteTests(unittest.TestCase):
         )
         self.assertEqual(303, denied.status_code)
         self.assertEqual("/forbidden", denied.headers["location"])
+
+    def test_repeated_failed_logins_are_temporarily_blocked(self):
+        self.ensure_user("bloqueo.test", "consulta")
+
+        for _ in range(5):
+            failed = self.login("bloqueo.test", "incorrect-password")
+            self.assertEqual(401, failed.status_code)
+
+        blocked = self.login("bloqueo.test", "Password123")
+        self.assertEqual(429, blocked.status_code)
+        self.assertIn("Retry-After", blocked.headers)
+        self.assertIn("Demasiados intentos", blocked.text)
+
+        with session_scope() as session:
+            actions = set(session.scalars(
+                select(AuditEvent.action).where(
+                    AuditEvent.username == "bloqueo.test"
+                )
+            ).all())
+            self.assertIn("LOGIN_BLOCKED", actions)
+            session.execute(
+                delete(AuditEvent).where(
+                    AuditEvent.username == "bloqueo.test"
+                )
+            )
 
     def test_invalid_login_is_audited(self):
         response = self.login("admin", "incorrect-password")

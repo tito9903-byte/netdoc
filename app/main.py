@@ -27,6 +27,7 @@ from app.core.database import initialize_database, session_scope
 from app.core.security import normalize_next_url
 from app.services.access_service import (
     authenticate_user,
+    login_throttle_status,
     record_audit,
 )
 from app.services.netbox_client import (
@@ -173,6 +174,45 @@ async def login_submit(
     ip_address, user_agent = request_client_data(request)
 
     with session_scope() as session:
+        throttle = login_throttle_status(
+            session,
+            username=username,
+            ip_address=ip_address,
+            max_attempts=settings.login_max_attempts,
+            window_seconds=settings.login_window_seconds,
+        )
+
+        if throttle.blocked:
+            record_audit(
+                session,
+                action="LOGIN_BLOCKED",
+                resource="session",
+                username=username.strip().lower() or "desconocido",
+                detail=(
+                    "Intento temporalmente bloqueado por exceso "
+                    "de fallos recientes."
+                ),
+                success=False,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            return templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                status_code=429,
+                headers={
+                    "Retry-After": str(throttle.retry_after_seconds),
+                },
+                context={
+                    "page_title": "Iniciar sesión",
+                    "next_url": normalize_next_url(next_url),
+                    "error": (
+                        "Demasiados intentos fallidos. "
+                        "Espera unos minutos e inténtalo nuevamente."
+                    ),
+                },
+            )
+
         identity = authenticate_user(
             session,
             username=username,

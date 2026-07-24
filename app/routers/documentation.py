@@ -24,6 +24,7 @@ from app.services.device_type_service import (
     DeviceTypeServiceError,
     build_interface_names,
 )
+from app.services.ipam_presentation import prepare_ipam_view
 from app.services.ipam_service import IPAMService, IPAMServiceError
 
 
@@ -126,6 +127,10 @@ async def ipam_page(
     status: str = "",
     family: str = "",
     role_id: str = "",
+    scope: str = "",
+    health: str = "",
+    order: str = "utilization_desc",
+    page: str = "1",
 ):
     redirect = access_redirect(request, "search.view")
     if redirect:
@@ -135,13 +140,21 @@ async def ipam_page(
     if selected_family not in {4, 6}:
         selected_family = None
     selected_role_id = parse_optional_int(role_id)
+    selected_page = parse_optional_int(page) or 1
 
     try:
-        data = await IPAMService().overview(
+        raw_data = await IPAMService().overview(
             query=q,
             status=status,
             family=selected_family,
             role_id=selected_role_id,
+        )
+        data = prepare_ipam_view(
+            raw_data,
+            scope=scope,
+            health=health,
+            order=order,
+            page=selected_page,
         )
     except IPAMServiceError as exc:
         return templates.TemplateResponse(
@@ -179,11 +192,11 @@ async def ipam_page(
     )
 
 
-@router.get("/api/ipam/pools")
+@router.get("/api/ipam/pools", response_class=JSONResponse)
 async def ipam_pools_api(request: Request):
-    unauthorized = api_access_response(request, "search.view")
-    if unauthorized:
-        return unauthorized
+    denied = api_access_response(request, "search.view")
+    if denied:
+        return denied
 
     try:
         data = await IPAMService().overview()
@@ -193,44 +206,41 @@ async def ipam_pools_api(request: Request):
             content={"ok": False, "error": exc.message},
         )
 
-    return {
-        "ok": True,
-        "summary": data["summary"],
-        "pools": data["pools"],
-    }
+    return JSONResponse(
+        content={
+            "ok": True,
+            "summary": data["summary"],
+            "pools": data["pools"],
+        }
+    )
 
 
-async def load_device_type_page(
+@router.get("/device-types", response_class=HTMLResponse)
+async def device_types_page(
     request: Request,
-    *,
-    query: str,
-    manufacturer_id: int | None,
-    selected_device_type_id: int | None,
-    pattern: str,
-    start: int,
-    count: int,
-    notice: str,
-    error: str,
+    q: str = "",
+    manufacturer_id: str = "",
+    device_type_id: str = "",
+    notice: str = "",
+    error: str = "",
 ):
+    redirect = access_redirect(request, "devices.view")
+    if redirect:
+        return redirect
+
+    selected_manufacturer_id = parse_optional_int(manufacturer_id)
+    selected_device_type_id = parse_optional_int(device_type_id)
     service = DeviceTypeService()
 
     try:
         manufacturers, device_types, interface_types = await asyncio.gather(
             service.list_manufacturers(),
             service.list_device_types(
-                query=query,
-                manufacturer_id=manufacturer_id,
+                query=q,
+                manufacturer_id=selected_manufacturer_id,
             ),
-            service.interface_type_choices(),
+            service.get_interface_type_choices(),
         )
-
-        selected_device_type = None
-        interface_templates: list[dict] = []
-        if selected_device_type_id:
-            selected_device_type, interface_templates = await asyncio.gather(
-                service.get_device_type(selected_device_type_id),
-                service.list_interface_templates(selected_device_type_id),
-            )
     except DeviceTypeServiceError as exc:
         return templates.TemplateResponse(
             request=request,
@@ -247,16 +257,29 @@ async def load_device_type_page(
             ),
         )
 
-    preview: list[str] = []
-    preview_error = ""
-    try:
-        preview = build_interface_names(
-            pattern,
-            start=start,
-            count=count,
+    selected_device_type = None
+    interfaces: list[dict[str, object]] = []
+
+    if device_types:
+        selected_device_type = next(
+            (
+                item
+                for item in device_types
+                if item.get("id") == selected_device_type_id
+            ),
+            device_types[0],
         )
-    except DeviceTypeServiceError as exc:
-        preview_error = exc.message
+        selected_device_type_id = parse_optional_int(
+            selected_device_type.get("id")
+        )
+
+    if selected_device_type_id:
+        try:
+            interfaces = await service.list_interface_templates(
+                selected_device_type_id
+            )
+        except DeviceTypeServiceError as exc:
+            error = exc.message
 
     return templates.TemplateResponse(
         request=request,
@@ -268,116 +291,61 @@ async def load_device_type_page(
             page_subtitle=(
                 "Crea modelos reutilizables y sus interfaces en pocos pasos"
             ),
+            query=q,
             manufacturers=manufacturers,
+            selected_manufacturer_id=selected_manufacturer_id,
             device_types=device_types,
             selected_device_type=selected_device_type,
             selected_device_type_id=selected_device_type_id,
-            interface_templates=interface_templates,
+            interface_templates=interfaces,
             interface_types=interface_types,
-            query=query,
-            selected_manufacturer_id=manufacturer_id,
-            pattern=pattern,
-            start=start,
-            count=count,
-            preview=preview,
-            preview_error=preview_error,
+            csrf_token=csrf_token(request),
             notice=notice,
             error=error,
-            csrf_token=csrf_token(request, "device_types"),
         ),
     )
 
 
-@router.get("/device-types", response_class=HTMLResponse)
-async def device_types_page(
+@router.post("/device-types/actions/create")
+async def create_device_type_action(
     request: Request,
-    q: str = "",
-    manufacturer_id: str = "",
-    device_type_id: str = "",
-    pattern: str = "GigabitEthernet0/{n}",
-    start: int = 1,
-    count: int = 24,
-    notice: str = "",
-    error: str = "",
-):
-    redirect = access_redirect(request, "devices.view")
-    if redirect:
-        return redirect
-
-    return await load_device_type_page(
-        request,
-        query=q,
-        manufacturer_id=parse_optional_int(manufacturer_id),
-        selected_device_type_id=parse_optional_int(device_type_id),
-        pattern=pattern,
-        start=max(0, start),
-        count=min(max(count, 1), 256),
-        notice=notice,
-        error=error,
-    )
-
-
-@router.get("/api/device-types/interface-preview")
-async def interface_preview_api(
-    request: Request,
-    pattern: str,
-    start: int = 1,
-    count: int = 24,
-):
-    unauthorized = api_access_response(request, "devices.view")
-    if unauthorized:
-        return unauthorized
-
-    try:
-        names = build_interface_names(
-            pattern,
-            start=start,
-            count=count,
-        )
-    except DeviceTypeServiceError as exc:
-        return JSONResponse(
-            status_code=400,
-            content={"ok": False, "error": exc.message},
-        )
-
-    return {"ok": True, "names": names}
-
-
-@router.post("/device-types/new")
-async def create_device_type(
-    request: Request,
-    csrf: str = Form(...),
+    csrf: str = Form(""),
     manufacturer_id: int = Form(...),
     model: str = Form(...),
     slug: str = Form(""),
     part_number: str = Form(""),
     u_height: float = Form(1),
-    is_full_depth: str = Form(""),
+    full_depth: str = Form(""),
     description: str = Form(""),
 ):
     redirect = access_redirect(request, "devices.create")
     if redirect:
         return redirect
 
-    if not verify_csrf(request, csrf, "device_types"):
+    if not verify_csrf(request, csrf):
+        audit_event(
+            request,
+            action="DEVICE_TYPE_CREATE",
+            resource="device_type",
+            detail="Creación rechazada por token CSRF inválido.",
+            success=False,
+        )
         return redirect_with_message(
             "/device-types",
             error="La sesión del formulario expiró. Recarga la página.",
         )
 
     if not settings.netbox_write_enabled:
-        return redirect_with_message(
-            "/device-types",
-            error=(
-                "La escritura está desactivada en este entorno. "
-                "Puedes revisar y preparar los datos sin modificar NetBox."
-            ),
+        audit_event(
+            request,
+            action="DEVICE_TYPE_CREATE",
+            resource="device_type",
+            detail="Creación rechazada porque la escritura está deshabilitada.",
+            success=False,
         )
-
-    if not model.strip():
         return redirect_with_message(
             "/device-types",
-            error="El nombre del modelo es obligatorio.",
+            error="La escritura en NetBox está deshabilitada.",
         )
 
     try:
@@ -386,9 +354,10 @@ async def create_device_type(
             model=model,
             slug=slug,
             part_number=part_number,
-            u_height=max(0.0, u_height),
-            is_full_depth=is_full_depth == "on",
+            u_height=u_height,
+            full_depth=full_depth == "true",
             description=description,
+            username=str(request.session.get("username") or "desconocido"),
         )
     except DeviceTypeServiceError as exc:
         audit_event(
@@ -403,104 +372,112 @@ async def create_device_type(
             error=exc.message,
         )
 
-    created_id = created.get("id")
+    object_id = str(created.get("id") or "")
     audit_event(
         request,
         action="DEVICE_TYPE_CREATE",
         resource="device_type",
-        object_id=str(created_id) if created_id else None,
-        detail=f"Modelo creado: {model.strip()}.",
+        detail=f"Modelo {model.strip()} creado en NetBox.",
         success=True,
+        object_id=object_id or None,
     )
     return redirect_with_message(
         "/device-types",
-        device_type_id=created_id,
         notice="Modelo creado correctamente.",
+        device_type_id=object_id,
     )
 
 
-@router.post("/device-types/interface-templates/bulk")
-async def create_interface_templates(
+@router.post("/device-types/actions/interfaces/bulk")
+async def bulk_interface_templates_action(
     request: Request,
-    csrf: str = Form(...),
+    csrf: str = Form(""),
     device_type_id: int = Form(...),
-    pattern: str = Form(...),
+    name_pattern: str = Form(...),
     start: int = Form(1),
-    count: int = Form(24),
+    count: int = Form(...),
     interface_type: str = Form(...),
-    label_pattern: str = Form(""),
-    description: str = Form(""),
-    mgmt_only: str = Form(""),
+    enabled: str = Form(""),
+    description_prefix: str = Form(""),
+    management_only: str = Form(""),
 ):
     redirect = access_redirect(request, "devices.create")
     if redirect:
         return redirect
 
-    if not verify_csrf(request, csrf, "device_types"):
+    if not verify_csrf(request, csrf):
+        audit_event(
+            request,
+            action="INTERFACE_TEMPLATE_BULK_CREATE",
+            resource="interface_template",
+            detail="Creación rechazada por token CSRF inválido.",
+            success=False,
+            object_id=str(device_type_id),
+        )
         return redirect_with_message(
             "/device-types",
-            device_type_id=device_type_id,
             error="La sesión del formulario expiró. Recarga la página.",
+            device_type_id=device_type_id,
         )
 
     if not settings.netbox_write_enabled:
+        audit_event(
+            request,
+            action="INTERFACE_TEMPLATE_BULK_CREATE",
+            resource="interface_template",
+            detail="Creación rechazada porque la escritura está deshabilitada.",
+            success=False,
+            object_id=str(device_type_id),
+        )
         return redirect_with_message(
             "/device-types",
+            error="La escritura en NetBox está deshabilitada.",
             device_type_id=device_type_id,
-            pattern=pattern,
-            start=start,
-            count=count,
-            error=(
-                "La escritura está desactivada. La vista previa no modificó "
-                "el modelo en NetBox."
-            ),
         )
 
     try:
         names = build_interface_names(
-            pattern,
+            name_pattern,
             start=start,
             count=count,
         )
-        created = await DeviceTypeService().create_interface_templates(
+        created = await DeviceTypeService().bulk_create_interfaces(
             device_type_id=device_type_id,
             names=names,
             interface_type=interface_type,
-            label_pattern=label_pattern,
-            description=description,
-            mgmt_only=mgmt_only == "on",
+            enabled=enabled == "true",
+            management_only=management_only == "true",
+            description_prefix=description_prefix,
+            username=str(request.session.get("username") or "desconocido"),
         )
     except DeviceTypeServiceError as exc:
         audit_event(
             request,
             action="INTERFACE_TEMPLATE_BULK_CREATE",
             resource="interface_template",
-            object_id=str(device_type_id),
             detail=exc.message,
             success=False,
+            object_id=str(device_type_id),
         )
         return redirect_with_message(
             "/device-types",
-            device_type_id=device_type_id,
-            pattern=pattern,
-            start=start,
-            count=count,
             error=exc.message,
+            device_type_id=device_type_id,
         )
 
     audit_event(
         request,
         action="INTERFACE_TEMPLATE_BULK_CREATE",
         resource="interface_template",
-        object_id=str(device_type_id),
-        detail=f"Se crearon {len(created)} plantillas de interfaz.",
+        detail=(
+            f"Se crearon {len(created)} interfaces en el modelo "
+            f"#{device_type_id}."
+        ),
         success=True,
+        object_id=str(device_type_id),
     )
     return redirect_with_message(
         "/device-types",
+        notice=f"Se crearon {len(created)} interfaces correctamente.",
         device_type_id=device_type_id,
-        pattern=pattern,
-        start=start,
-        count=count,
-        notice=f"Se crearon {len(created)} interfaces en el modelo.",
     )

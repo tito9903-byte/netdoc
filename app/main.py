@@ -1,8 +1,7 @@
 import asyncio
-from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 from math import ceil
-import secrets
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import (
@@ -14,10 +13,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.core.auth import (
+    access_redirect,
+    api_access_response,
+    apply_identity_to_session,
+    common_session_context,
+    is_authenticated,
+    PermissionMiddleware,
+    request_client_data,
+)
 from app.core.config import get_settings
-from app.core.security import (
-    normalize_next_url,
-    verify_password,
+from app.core.database import initialize_database, session_scope
+from app.core.security import normalize_next_url
+from app.services.access_service import (
+    authenticate_user,
+    record_audit,
 )
 from app.services.netbox_client import (
     NetBoxClient,
@@ -27,13 +37,23 @@ from app.services.netbox_client import (
 
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    initialize_database()
+    yield
+
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+    lifespan=lifespan,
 )
+
+app.add_middleware(PermissionMiddleware)
 
 app.add_middleware(
     SessionMiddleware,
@@ -66,61 +86,14 @@ DEVICE_STATUSES = [
 ]
 
 
-def is_authenticated(request: Request) -> bool:
-    return (
-        request.session.get("authenticated") is True
-        and bool(request.session.get("username"))
-    )
-
-
-def html_login_redirect(
-    request: Request,
-) -> RedirectResponse | None:
-    if is_authenticated(request):
-        return None
-
-    next_url = request.url.path
-
-    if request.url.query:
-        next_url = f"{next_url}?{request.url.query}"
-
-    encoded_next = quote(
-        next_url,
-        safe="",
-    )
-
-    return RedirectResponse(
-        url=f"/login?next={encoded_next}",
-        status_code=303,
-    )
-
-
-def api_unauthorized(
-    request: Request,
-) -> JSONResponse | None:
-    if is_authenticated(request):
-        return None
-
-    return JSONResponse(
-        status_code=401,
-        content={
-            "ok": False,
-            "error": "Debes iniciar sesión.",
-        },
-    )
-
-
 def common_context(
     request: Request,
     current_page: str,
     netbox_connected: bool = True,
 ) -> dict:
     return {
+        **common_session_context(request),
         "current_page": current_page,
-        "current_user": request.session.get(
-            "username",
-            "",
-        ),
         "netbox_connected": netbox_connected,
         "netbox_url": settings.netbox_url,
         "write_enabled": settings.netbox_write_enabled,
@@ -197,40 +170,53 @@ async def login_submit(
     password: str = Form(...),
     next_url: str = Form("/"),
 ):
-    username_matches = secrets.compare_digest(
-        username.strip(),
-        settings.admin_username,
-    )
+    ip_address, user_agent = request_client_data(request)
 
-    password_matches = False
-
-    if username_matches:
-        password_matches = verify_password(
-            settings.admin_password_hash,
-            password,
+    with session_scope() as session:
+        identity = authenticate_user(
+            session,
+            username=username,
+            password=password,
         )
 
-    if not username_matches or not password_matches:
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            status_code=401,
-            context={
-                "page_title": "Iniciar sesión",
-                "next_url": normalize_next_url(next_url),
-                "error": (
-                    "El usuario o la contraseña "
-                    "no son correctos."
-                ),
-            },
+        if identity is None:
+            record_audit(
+                session,
+                action="LOGIN_FAILED",
+                resource="session",
+                username=username.strip().lower() or "desconocido",
+                detail="Credenciales inválidas o cuenta inactiva.",
+                success=False,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+
+            return templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                status_code=401,
+                context={
+                    "page_title": "Iniciar sesión",
+                    "next_url": normalize_next_url(next_url),
+                    "error": (
+                        "El usuario o la contraseña "
+                        "no son correctos."
+                    ),
+                },
+            )
+
+        record_audit(
+            session,
+            action="LOGIN_SUCCESS",
+            resource="session",
+            user_id=identity.id,
+            username=identity.username,
+            detail=f"Inicio de sesión con rol {identity.role_name}.",
+            ip_address=ip_address,
+            user_agent=user_agent,
         )
 
-    request.session.clear()
-    request.session["authenticated"] = True
-    request.session["username"] = settings.admin_username
-    request.session["login_at"] = datetime.now(
-        timezone.utc,
-    ).isoformat()
+    apply_identity_to_session(request, identity)
 
     return RedirectResponse(
         url=normalize_next_url(next_url),
@@ -240,6 +226,28 @@ async def login_submit(
 
 @app.post("/logout")
 async def logout(request: Request):
+    if is_authenticated(request):
+        ip_address, user_agent = request_client_data(request)
+
+        with session_scope() as session:
+            user_id = request.session.get("user_id")
+            record_audit(
+                session,
+                action="LOGOUT",
+                resource="session",
+                user_id=(
+                    user_id
+                    if isinstance(user_id, int)
+                    else None
+                ),
+                username=str(
+                    request.session.get("username") or "desconocido"
+                ),
+                detail="Cierre de sesión.",
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+
     request.session.clear()
 
     return RedirectResponse(
@@ -248,9 +256,35 @@ async def logout(request: Request):
     )
 
 
+@app.get(
+    "/forbidden",
+    response_class=HTMLResponse,
+)
+async def forbidden_page(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="forbidden.html",
+        status_code=403,
+        context={
+            **common_context(
+                request=request,
+                current_page="forbidden",
+            ),
+            "page_title": "Acceso restringido",
+            "page_subtitle": "El rol asignado no incluye este permiso",
+        },
+    )
+
+
 @app.get("/netbox/status")
 async def netbox_status(request: Request):
-    unauthorized = api_unauthorized(request)
+    unauthorized = api_access_response(
+        request,
+        "dashboard.view",
+    )
 
     if unauthorized:
         return unauthorized
@@ -277,7 +311,10 @@ async def netbox_status(request: Request):
 
 @app.get("/api/dashboard")
 async def dashboard_api(request: Request):
-    unauthorized = api_unauthorized(request)
+    unauthorized = api_access_response(
+        request,
+        "dashboard.view",
+    )
 
     if unauthorized:
         return unauthorized
@@ -296,7 +333,10 @@ async def dashboard_api(request: Request):
     response_class=HTMLResponse,
 )
 async def dashboard(request: Request):
-    redirect = html_login_redirect(request)
+    redirect = access_redirect(
+        request,
+        "dashboard.view",
+    )
 
     if redirect:
         return redirect
@@ -355,7 +395,10 @@ async def devices(
     role_id: int | None = None,
     page: int = 1,
 ):
-    redirect = html_login_redirect(request)
+    redirect = access_redirect(
+        request,
+        "devices.view",
+    )
 
     if redirect:
         return redirect
@@ -524,7 +567,10 @@ async def device_detail(
     request: Request,
     device_id: int,
 ):
-    redirect = html_login_redirect(request)
+    redirect = access_redirect(
+        request,
+        "devices.view",
+    )
 
     if redirect:
         return redirect
@@ -610,14 +656,13 @@ async def device_detail(
         context=context,
     )
 
-from app.routers.device_create import router as device_create_router
-app.include_router(device_create_router)
 
-
-
+from app.routers.admin import router as admin_router
 from app.routers.connections import router as connections_router
-app.include_router(connections_router)
-
-
+from app.routers.device_create import router as device_create_router
 from app.routers.racks import router as racks_router
+
+app.include_router(device_create_router)
+app.include_router(connections_router)
 app.include_router(racks_router)
+app.include_router(admin_router)

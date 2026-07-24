@@ -3,105 +3,134 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 1.7.
-- **Versión de aplicación de la rama:** 0.9.0.
+- **Versión documental:** 1.8.
+- **Versión de aplicación de la rama:** 0.10.0.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/access-control-audit`.
+- **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/documentation-workflows-ui`.
 
 ## Resumen ejecutivo
 
-La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, búsqueda global, salud del sistema, administración ampliada, perfil de autoservicio, protección temporal contra intentos repetidos de login y una base versionada mediante Alembic. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
+`develop` contiene la versión 0.9.0 validada en el puerto 8101 con autenticación multiusuario, roles, auditoría, perfil, búsqueda global, Sistema y Alembic. El PR #4 permanece como borrador e inicia la siguiente etapa: convertir NetDoc en una capa de documentación más rápida que la interfaz general de NetBox, con flujos dirigidos para IPAM, modelos de equipos, interfaces en lote, racks y altas físicas.
+
+La rama 0.10.0 incorpora una primera revisión visual basada en las pantallas reales suministradas por el propietario, además de nuevas funciones operativas. No ha sido fusionada ni desplegada en el servidor.
 
 ## Entornos y servicios
 
 | Entorno | Estado conocido | Ruta | Rama | Servicio | Puerto | Sesión |
 |---|---|---|---|---|---:|---|
 | Producción | Verificado manualmente por el propietario | `/opt/netdoc-prod` | `main` | `netdoc-prod` | 8100 | independiente |
-| Desarrollo | Verificado manualmente por el propietario | `/opt/netdoc-dev` | `develop` | `netdoc-dev` | 8101 | `netdoc_dev_session` |
+| Desarrollo | Verificado manualmente por el propietario con versión 0.9.0 | `/opt/netdoc-dev` | `develop` | `netdoc-dev` | 8101 | `netdoc_dev_session` |
 
-Servidor dedicado: `192.168.10.93`; NetBox: `https://192.168.10.95`. Desarrollo debe usar `NETBOX_WRITE_ENABLED=false`. El respaldo `/opt/netbox-documental` continúa diferido y no es producción activa.
+Servidor dedicado: `192.168.10.93`; NetBox: `https://192.168.10.95`, versión documentada 4.4.2. Desarrollo debe conservar `NETBOX_WRITE_ENABLED=false`. El respaldo `/opt/netbox-documental` no es producción activa.
 
-El propietario verificó el 2026-07-24 ambos servicios con HTTP 200 y ejecutó correctamente `netdoc-deploy-dev` y `netdoc-deploy-prod`. Esa evidencia corresponde a las ramas estables y no valida todavía el PR #3.
-
-## Arquitectura actual de la rama
+## Arquitectura vigente
 
 - FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware y Uvicorn.
-- NetBox conserva dispositivos, interfaces, racks, sitios, cables y demás inventario.
+- NetBox conserva dispositivos, tipos de dispositivo, componentes, racks, sitios, cables, prefijos, direcciones y demás inventario.
 - SQLAlchemy conserva únicamente usuarios, roles, permisos y auditoría de NetDoc.
-- Alembic mantiene el historial versionado del esquema local.
+- Alembic mantiene el historial versionado del esquema local; la cabeza actual es `20260724_0001`.
 - SQLite es el valor inicial de `DATABASE_URL`; cada entorno debe tener su propia base.
 - `PermissionMiddleware` recarga la identidad activa y los permisos antes de cada solicitud protegida.
-- Las métricas de Sistema se obtienen mediante lecturas no privilegiadas de Python y `/proc`; no ejecutan comandos ni modifican servicios.
-- Los intentos fallidos de login se consultan en Auditoría por usuario e IP dentro de una ventana configurable.
+- Las escrituras nuevas exigen autenticación, permiso, CSRF y `NETBOX_WRITE_ENABLED=true`.
+- Los nuevos servicios de IPAM, modelos y racks consumen la API REST de NetBox y no duplican inventario en la base local.
 
-## Inicialización y migraciones
+## Completado en `develop`
 
-La revisión inicial `20260724_0001` crea permisos, roles, asociaciones, usuarios y auditoría. Al arrancar:
-
-- una base vacía se migra hasta `head`;
-- una base completa creada por la versión anterior con `create_all` se marca en `head` sin recrear tablas ni borrar datos;
-- una base que ya contiene `alembic_version` se actualiza hasta `head`;
-- un esquema parcial se rechaza para evitar ocultar corrupción o una instalación incompleta.
-
-Antes del primer despliegue de esta rama debe respaldarse el archivo indicado por `DATABASE_URL`. Los scripts de despliegue no restauran automáticamente la base de datos.
-
-## Módulos
-
-### Completado en `develop` y `main`
-
-Dashboard, dispositivos e interfaces, filtros y paginación, creación guiada de equipos, conexiones y cables, racks 2D, integración NetBox, sesiones separadas y despliegue controlado.
-
-### En progreso en `feature/access-control-audit`
-
-- Autenticación multiusuario y contraseñas Argon2.
-- Roles Administrador, Operador y Consulta, roles personalizados y 11 permisos.
-- Creación, edición, activación, cambio de rol, contraseña y eliminación controlada de usuarios.
-- Perfil de autoservicio para actualizar nombre, correo y contraseña propia.
-- Verificación de la contraseña actual antes del cambio y auditoría sin registrar secretos.
-- Protección de la propia cuenta y del último administrador activo.
-- Bloqueo temporal tras fallos repetidos del mismo usuario desde la misma IP, con respuesta HTTP 429 y `Retry-After`.
-- Auditoría de accesos, fallos, bloqueos, cambios administrativos y operaciones guiadas.
-- Filtros de auditoría por texto, acción, recurso, resultado y rango de fechas.
-- Exportación CSV de hasta 10,000 eventos, con mitigación de fórmulas de hoja de cálculo.
-- Búsqueda global simultánea de dispositivos, interfaces, racks, sitios y cables.
-- Módulo Sistema: CPU, carga, RAM, disco, red, uptime, plataforma y proceso.
-- API JSON para búsqueda y sistema.
-- Navegación y rutas protegidas por permisos.
+- Dashboard, dispositivos e interfaces, filtros y paginación.
+- Creación guiada de equipos.
+- Consulta y creación de conexiones y cables.
+- Racks con listado, detalle, inspector y elevación 2D.
+- Autenticación multiusuario, roles Administrador, Operador y Consulta, roles personalizados y 11 permisos.
+- Administración de usuarios, perfil de autoservicio y cambio de contraseña.
+- Auditoría con filtros y exportación CSV.
+- Protección temporal contra intentos repetidos de login.
+- Búsqueda global y módulo Sistema de solo lectura.
 - Migración inicial Alembic y adopción controlada de bases heredadas completas.
+- Despliegue separado y validado para desarrollo y producción.
 
-### Planificado
+## En progreso en `feature/documentation-workflows-ui`
 
-Respaldo y retención automatizados de auditoría, recuperación operativa ante fallo de base, edición/eliminación de inventario, desconexión de cables, patch panels, topologías, 3D, métricas históricas, alertas y controles distribuidos de rate limiting para escenarios con varios workers.
+### Experiencia visual y navegación
+
+- Navegación agrupada por General, Documentación, Acciones rápidas y Administración.
+- Foco visible, objetivos táctiles mayores, estados activos y cierre accesible del menú móvil.
+- Dashboard convertido en punto de inicio para los principales procesos de documentación.
+- Búsqueda global con accesos directos a dispositivos, IPAM, racks y modelos.
+- Jerarquía visual común para formularios, filtros, avisos, estados y tablas.
+- Ajustes responsivos para pantallas medianas y móviles.
+- Botones administrativos alineados y tablas con estados de interacción más claros.
+
+### Direccionamiento IP
+
+- Nueva pantalla `/ipam` para prefijos y pools.
+- Filtros por texto, familia IP, estado y rol.
+- Localidad o alcance, VRF, rol y estado visibles por prefijo.
+- Consulta de direcciones disponibles por pool mediante la API de NetBox.
+- Cálculo de capacidad, usadas, disponibles y porcentaje de ocupación.
+- Clasificación visual de pools saludables, en advertencia, críticos y llenos.
+- API interna de solo lectura `/api/ipam/pools`.
+
+### Modelos y plantillas
+
+- Nueva pantalla `/device-types` para consultar modelos y componentes.
+- Creación guiada de tipos de dispositivo cuando la escritura está habilitada.
+- Generación de hasta 256 plantillas de interfaz en una operación.
+- Patrones como `GigabitEthernet0/{n}` y `Gi1/0/{n:02}`.
+- Vista previa interactiva antes de enviar el lote.
+- Descubrimiento de tipos de interfaz mediante `OPTIONS` con opciones seguras de respaldo.
+- Auditoría de creación de modelos y plantillas.
+- El alta de equipos enlaza directamente al catálogo de modelos.
+
+### Racks y altas físicas
+
+- Corrección del ancho de rack cuando NetBox devuelve una opción estructurada.
+- Ocupación desconocida mostrada como pendiente en lugar de `0.0%` engañoso.
+- Alta de equipos orientada a modelo, sitio, rack, posición U y cara.
+- Nuevo formulario `/racks/actions/new` para crear racks con sitio, ubicación, capacidad, ancho, unidad inicial, estado, rol e identificadores.
+- Filtrado de ubicaciones por sitio.
+- Acciones directas desde el inventario de racks.
+
+### Conexiones
+
+- Aviso explícito cuando desarrollo está en solo lectura.
+- Botón de creación bloqueado visual y funcionalmente sin escritura.
+- Presentación defensiva de extremos, tipos, estados y unidades devueltos por NetBox.
 
 ## Validaciones de la rama
 
 Ejecutadas fuera del servidor:
 
-- `python -m compileall -q app tests migrations`: correcto.
-- `alembic heads`: correcto; una sola cabeza `20260724_0001`.
-- Importación de `app.main`: correcta; 41 rutas registradas.
-- Análisis sintáctico de 19 plantillas Jinja2: correcto.
-- Sintaxis de ambos scripts de despliegue: correcta.
-- 27 pruebas automatizadas: superadas.
-- Cobertura de migraciones: base vacía, adopción de esquema heredado completo, actualización idempotente y rechazo de esquema parcial.
-- Cobertura funcional: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, Sistema, Búsqueda, perfil y bloqueo temporal de login.
-- GitHub Actions `NetDoc CI`: compilación, grafo de migraciones, pruebas, importación, plantillas y scripts completados correctamente.
+- Compilación de Python: correcta.
+- Grafo Alembic: correcto.
+- Suite automatizada completa: correcta.
+- Siete pruebas nuevas para patrones de interfaces, slug y capacidad/localidad IPAM: correctas.
+- Importación de la aplicación: correcta.
+- Análisis de todas las plantillas Jinja2: correcto.
+- Sintaxis de scripts de despliegue: correcta.
+- GitHub Actions `NetDoc CI` completó todas las etapas correctamente en el último conjunto funcional validado.
 
-Pendiente: desplegar mediante systemd, respaldar y validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.
+Pendiente:
+
+- Validar los endpoints nuevos con NetBox 4.4.2 y datos reales.
+- Revisar rendimiento cuando existan muchos pools, pues la disponibilidad se consulta por pool con concurrencia limitada.
+- Probar creación real de modelo, interfaces y rack en un entorno autorizado para escritura.
+- Revisar visualmente todas las pantallas en el puerto 8101.
+- Confirmar que los campos opcionales de racks coinciden con las personalizaciones del NetBox instalado.
 
 ## Riesgos y deuda
 
+- La rama reutiliza permisos existentes (`search.view`, `devices.view` y `devices.create`); se evaluarán permisos específicos de IPAM, modelos y racks después de validar el flujo.
+- La consulta de disponibilidad IPAM realiza una solicitud adicional por pool; puede requerir caché o resumen progresivo con inventarios muy grandes.
+- La creación masiva de interfaces depende de la validación atómica de NetBox; cualquier error debe presentarse de manera clara antes de reintentar.
+- La ocupación completa de todos los racks no se calcula todavía en el listado para evitar una consulta costosa por cada rack.
 - SQLite debe reevaluarse antes de varios workers o mayor concurrencia.
-- El rollback del código no revierte automáticamente cambios de esquema ni restaura el archivo de base.
-- El bloqueo actual usa Auditoría y alcance usuario/IP; para despliegues distribuidos debe validarse una estrategia centralizada.
+- El rollback de código no revierte migraciones ni restaura automáticamente la base local.
 - El token de NetBox previamente expuesto debe rotarse y reducirse a mínimo privilegio.
-- Las búsquedas dependen de los filtros `q` disponibles en NetBox y deben validarse con los datos reales.
-- Las métricas actuales son instantáneas y acumuladas desde el arranque; no sustituyen una plataforma histórica de monitoreo.
 - Falta definir retención, respaldo y eliminación segura de eventos de auditoría.
 
 ## Próximo objetivo
 
-**En progreso:** mantener el PR #3 como borrador, supervisar el diff y el ADR 0005, y después fusionar únicamente hacia `develop`. La prueba operativa se realizará solo en 8101 y comenzará con un respaldo de la base antes de considerar `main`.
+**En progreso:** terminar la validación del PR #4, desplegarlo únicamente en desarrollo después de autorización, revisar las pantallas con datos reales y corregir incompatibilidades antes de cualquier fusión a `develop`. Las siguientes iteraciones cubrirán reservas y disponibilidad de unidades U, creación acelerada de otros componentes de modelos, VLAN/prefijos guiados, circuitos y documentación física avanzada.
 
 ## Reglas de mantenimiento
 

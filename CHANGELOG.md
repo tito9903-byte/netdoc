@@ -22,9 +22,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Persistencia local configurable con SQLAlchemy para identidades, roles, permisos y auditoría.
 - Gestión de usuarios: creación, edición, activación, asignación de rol y restablecimiento de contraseña.
 - Gestión de roles y permisos con perfiles iniciales Administrador, Operador y Consulta.
+- Perfil de autoservicio para editar nombre, correo y contraseña propia.
 - Auditoría de inicio y cierre de sesión, fallos de autenticación, cambios administrativos y solicitudes de creación de equipos o conexiones.
 - Navegación y control de acceso por permiso, con respuestas 401/403 y pantalla de acceso restringido.
-- Pruebas unitarias y de rutas para inicialización, autenticación, permisos, auditoría, revocación y cambios de rol.
+- Pruebas unitarias y de rutas para inicialización, autenticación, permisos, auditoría, revocación, cambios de rol y perfil.
 - Workflow de GitHub Actions para dependencias, compilación, pruebas, importación, plantillas y scripts.
 - Búsqueda global simultánea de dispositivos, interfaces, racks, sitios y cables.
 - Módulo Sistema de solo lectura con CPU, RAM, disco, red, uptime y datos del proceso.
@@ -50,6 +51,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Protección contra despliegues con `.env` versionado o no ignorado.
 - Rechazo de cambios locales, archivos no rastreados y propietarios inesperados antes de desplegar.
 - Contraseñas almacenadas únicamente como hashes Argon2 y reglas mínimas de complejidad para cuentas nuevas.
+- El cambio de contraseña propia exige verificar la contraseña actual y nunca registra credenciales en auditoría.
 - Protección para conservar al menos un administrador activo y evitar que un administrador desactive su propia cuenta.
 - Revocación efectiva de cuentas desactivadas sin esperar un nuevo inicio de sesión.
 - Base de datos local y directorio `data/` excluidos de Git; desarrollo y producción deben usar almacenamiento independiente.

@@ -6,6 +6,7 @@ on:
       - feature/access-control-audit
     paths:
       - .github/patches/apply.marker
+      - .github/workflows/apply-access-control-batch.yml
 
 permissions:
   contents: write

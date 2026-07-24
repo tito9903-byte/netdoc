@@ -3,14 +3,14 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 1.6.
+- **Versión documental:** 1.7.
 - **Versión de aplicación de la rama:** 0.9.0.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/access-control-audit`.
 
 ## Resumen ejecutivo
 
-La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, búsqueda global, salud del sistema, administración ampliada, perfil de autoservicio y protección temporal contra intentos repetidos de inicio de sesión. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
+La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, búsqueda global, salud del sistema, administración ampliada, perfil de autoservicio, protección temporal contra intentos repetidos de login y una base versionada mediante Alembic. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
 
 ## Entornos y servicios
 
@@ -28,10 +28,22 @@ El propietario verificó el 2026-07-24 ambos servicios con HTTP 200 y ejecutó c
 - FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware y Uvicorn.
 - NetBox conserva dispositivos, interfaces, racks, sitios, cables y demás inventario.
 - SQLAlchemy conserva únicamente usuarios, roles, permisos y auditoría de NetDoc.
+- Alembic mantiene el historial versionado del esquema local.
 - SQLite es el valor inicial de `DATABASE_URL`; cada entorno debe tener su propia base.
 - `PermissionMiddleware` recarga la identidad activa y los permisos antes de cada solicitud protegida.
 - Las métricas de Sistema se obtienen mediante lecturas no privilegiadas de Python y `/proc`; no ejecutan comandos ni modifican servicios.
 - Los intentos fallidos de login se consultan en Auditoría por usuario e IP dentro de una ventana configurable.
+
+## Inicialización y migraciones
+
+La revisión inicial `20260724_0001` crea permisos, roles, asociaciones, usuarios y auditoría. Al arrancar:
+
+- una base vacía se migra hasta `head`;
+- una base completa creada por la versión anterior con `create_all` se marca en `head` sin recrear tablas ni borrar datos;
+- una base que ya contiene `alembic_version` se actualiza hasta `head`;
+- un esquema parcial se rechaza para evitar ocultar corrupción o una instalación incompleta.
+
+Antes del primer despliegue de esta rama debe respaldarse el archivo indicado por `DATABASE_URL`. Los scripts de despliegue no restauran automáticamente la base de datos.
 
 ## Módulos
 
@@ -55,29 +67,32 @@ Dashboard, dispositivos e interfaces, filtros y paginación, creación guiada de
 - Módulo Sistema: CPU, carga, RAM, disco, red, uptime, plataforma y proceso.
 - API JSON para búsqueda y sistema.
 - Navegación y rutas protegidas por permisos.
+- Migración inicial Alembic y adopción controlada de bases heredadas completas.
 
 ### Planificado
 
-Migraciones Alembic, respaldo/retención de auditoría, recuperación ante fallo de base, edición/eliminación de inventario, desconexión de cables, patch panels, topologías, 3D, métricas históricas, alertas y controles distribuidos de rate limiting para escenarios con varios workers.
+Respaldo y retención automatizados de auditoría, recuperación operativa ante fallo de base, edición/eliminación de inventario, desconexión de cables, patch panels, topologías, 3D, métricas históricas, alertas y controles distribuidos de rate limiting para escenarios con varios workers.
 
 ## Validaciones de la rama
 
 Ejecutadas fuera del servidor:
 
-- `python -m compileall -q app tests`: correcto.
+- `python -m compileall -q app tests migrations`: correcto.
+- `alembic heads`: correcto; una sola cabeza `20260724_0001`.
 - Importación de `app.main`: correcta; 41 rutas registradas.
 - Análisis sintáctico de 19 plantillas Jinja2: correcto.
 - Sintaxis de ambos scripts de despliegue: correcta.
-- 24 pruebas automatizadas: superadas.
-- Cobertura nueva: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, Sistema, Búsqueda, perfil y bloqueo temporal de login.
-- GitHub Actions `NetDoc CI`: completado correctamente en el commit final de la rama.
+- 27 pruebas automatizadas: superadas.
+- Cobertura de migraciones: base vacía, adopción de esquema heredado completo, actualización idempotente y rechazo de esquema parcial.
+- Cobertura funcional: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, Sistema, Búsqueda, perfil y bloqueo temporal de login.
+- GitHub Actions `NetDoc CI`: compilación, grafo de migraciones, pruebas, importación, plantillas y scripts completados correctamente.
 
-Pendiente: desplegar mediante systemd, validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.
+Pendiente: desplegar mediante systemd, respaldar y validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.
 
 ## Riesgos y deuda
 
-- El esquema inicial aún usa `create_all`; cambios posteriores deben usar Alembic.
 - SQLite debe reevaluarse antes de varios workers o mayor concurrencia.
+- El rollback del código no revierte automáticamente cambios de esquema ni restaura el archivo de base.
 - El bloqueo actual usa Auditoría y alcance usuario/IP; para despliegues distribuidos debe validarse una estrategia centralizada.
 - El token de NetBox previamente expuesto debe rotarse y reducirse a mínimo privilegio.
 - Las búsquedas dependen de los filtros `q` disponibles en NetBox y deben validarse con los datos reales.
@@ -86,7 +101,7 @@ Pendiente: desplegar mediante systemd, validar la base persistente de desarrollo
 
 ## Próximo objetivo
 
-**En progreso:** mantener el PR #3 como borrador, supervisar el diff y el ADR 0005, y después fusionar únicamente hacia `develop`. La prueba operativa se realizará solo en 8101 antes de considerar `main`.
+**En progreso:** mantener el PR #3 como borrador, supervisar el diff y el ADR 0005, y después fusionar únicamente hacia `develop`. La prueba operativa se realizará solo en 8101 y comenzará con un respaldo de la base antes de considerar `main`.
 
 ## Reglas de mantenimiento
 

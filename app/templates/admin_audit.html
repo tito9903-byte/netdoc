@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoría | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="admin-panel audit-filters">
+    <form method="get" action="/admin/audit" class="form-grid audit">
+        <label>
+            <span>Buscar</span>
+            <input type="search" name="q" value="{{ query }}" placeholder="Usuario, recurso, detalle o ID">
+        </label>
+        <label>
+            <span>Acción</span>
+            <select name="action">
+                <option value="">Todas</option>
+                {% for item in actions %}
+                <option value="{{ item }}" {% if selected_action == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Resultado</span>
+            <select name="success">
+                <option value="">Todos</option>
+                <option value="true" {% if selected_success == "true" %}selected{% endif %}>Correcto</option>
+                <option value="false" {% if selected_success == "false" %}selected{% endif %}>Fallido</option>
+            </select>
+        </label>
+        <div class="form-actions compact">
+            <button class="admin-primary" type="submit">Filtrar</button>
+            <a class="admin-secondary" href="/admin/audit">Limpiar</a>
+        </div>
+    </form>
+</section>
+
+<section class="admin-panel">
+    <div class="admin-panel-header">
+        <div>
+            <h2>Eventos registrados</h2>
+            <p>{{ total }} eventos · página {{ page }} de {{ total_pages }}</p>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="admin-table audit-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Recurso</th>
+                    <th>Resultado</th>
+                    <th>Detalle</th>
+                    <th>Origen</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td>{{ event.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                    <td>{{ event.username }}</td>
+                    <td><code>{{ event.action }}</code></td>
+                    <td>{{ event.resource }}{% if event.resource_id %} #{{ event.resource_id }}{% endif %}</td>
+                    <td>
+                        <span class="state-pill {% if event.success %}active{% else %}inactive{% endif %}">
+                            {% if event.success %}Correcto{% else %}Fallido{% endif %}
+                        </span>
+                    </td>
+                    <td class="audit-detail">{{ event.detail or "—" }}</td>
+                    <td>{{ event.ip_address or "—" }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7"><div class="empty-state"><h3>Sin eventos</h3><p>No hay resultados para los filtros seleccionados.</p></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a class="admin-secondary small" href="/admin/audit?{{ {'q': query, 'action': selected_action, 'success': selected_success, 'page': page - 1} | urlencode }}">Anterior</a>
+        {% endif %}
+        <span>Página {{ page }} de {{ total_pages }}</span>
+        {% if page < total_pages %}
+        <a class="admin-secondary small" href="/admin/audit?{{ {'q': query, 'action': selected_action, 'success': selected_success, 'page': page + 1} | urlencode }}">Siguiente</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: feature/access-control-audit
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Apply staged patch
         shell: bash
@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
 
           test -f .github/patches/apply.marker
-          git checkout HEAD^ -- .github/workflows/ci.yml
+          git checkout 4810a81848ab065bf31f32bda2ad9525bca00863 -- .github/workflows/ci.yml
 
           cat .github/patches/chunk-* > /tmp/netdoc-patch.b64
           base64 --decode /tmp/netdoc-patch.b64 | gzip --decompress > /tmp/netdoc.patch

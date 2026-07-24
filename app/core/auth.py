@@ -38,11 +38,10 @@ def has_permission(request: Request, permission: str) -> bool:
     )
 
 
-def apply_identity_to_session(
+def refresh_identity_in_session(
     request: Request,
     identity: AuthenticatedIdentity,
 ) -> None:
-    request.session.clear()
     request.session["authenticated"] = True
     request.session["user_id"] = identity.id
     request.session["username"] = identity.username
@@ -51,6 +50,14 @@ def apply_identity_to_session(
     request.session["role_name"] = identity.role_name
     request.session["role_code"] = identity.role_code
     request.session["permissions"] = list(identity.permissions)
+
+
+def apply_identity_to_session(
+    request: Request,
+    identity: AuthenticatedIdentity,
+) -> None:
+    request.session.clear()
+    refresh_identity_in_session(request, identity)
 
 
 def access_redirect(
@@ -167,23 +174,15 @@ class PermissionMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if not is_authenticated(request):
-            if request.url.path.startswith("/api/"):
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "ok": False,
-                        "error": "Debes iniciar sesión.",
-                    },
-                )
+            return self._authentication_required(request)
 
-            next_url = request.url.path
-            if request.url.query:
-                next_url = f"{next_url}?{request.url.query}"
+        identity = self._load_identity(request)
 
-            return RedirectResponse(
-                url=f"/login?next={quote(next_url, safe='')}",
-                status_code=303,
-            )
+        if identity is None:
+            request.session.clear()
+            return self._authentication_required(request)
+
+        refresh_identity_in_session(request, identity)
 
         if permission and not has_permission(request, permission):
             if request.url.path.startswith("/api/"):
@@ -206,6 +205,46 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         self._audit_mutation(request, response)
         return response
+
+    @staticmethod
+    def _authentication_required(
+        request: StarletteRequest,
+    ) -> Response:
+        if request.url.path.startswith("/api/"):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "ok": False,
+                    "error": "Debes iniciar sesión.",
+                },
+            )
+
+        next_url = request.url.path
+        if request.url.query:
+            next_url = f"{next_url}?{request.url.query}"
+
+        return RedirectResponse(
+            url=f"/login?next={quote(next_url, safe='')}",
+            status_code=303,
+        )
+
+    @staticmethod
+    def _load_identity(
+        request: StarletteRequest,
+    ) -> AuthenticatedIdentity | None:
+        user_id = request.session.get("user_id")
+
+        if not isinstance(user_id, int):
+            return None
+
+        try:
+            from app.core.database import session_scope
+            from app.services.access_service import get_identity
+
+            with session_scope() as session:
+                return get_identity(session, user_id)
+        except Exception:
+            return None
 
     @staticmethod
     def _audit_mutation(

@@ -41,6 +41,16 @@
     </article>
 </section>
 
+{% if inventory_warning %}
+<div class="read-only-callout">
+    <span>!</span>
+    <div>
+        <strong>La disponibilidad no pudo calcularse completamente.</strong>
+        <span>{{ inventory_warning }}</span>
+    </div>
+</div>
+{% endif %}
+
 <section class="filter-panel">
     <form class="filter-grid ipam-filter-grid" method="get" action="/ipam">
         <div class="field field-wide">
@@ -97,7 +107,10 @@
     <div class="panel-header compact-panel-header">
         <div>
             <h2>Pools de direcciones</h2>
-            <p>Disponibilidad estimada con la capacidad del bloque y la utilización que reporta NetBox.</p>
+            <p>
+                Cálculo basado en direcciones registradas, rangos reservados y
+                prefijos hijos dentro de la misma VRF.
+            </p>
         </div>
         <span class="panel-badge">{{ pools | length }} pools</span>
     </div>
@@ -111,7 +124,7 @@
                     <th>Localidad</th>
                     <th>VRF / Rol</th>
                     <th>Capacidad</th>
-                    <th>Usadas</th>
+                    <th>Ocupadas</th>
                     <th>Disponibles</th>
                     <th>Ocupación</th>
                 </tr>
@@ -142,7 +155,7 @@
                     <td class="numeric-cell availability-value">
                         {{ pool.get("_available_label") }}
                         {% if pool.get("_availability_estimated") %}
-                        <small>Según utilización</small>
+                        <small>Calculado desde IPAM</small>
                         {% elif pool.get("_availability_error") %}
                         <small title="{{ pool.get('_availability_error') }}">No calculado</small>
                         {% endif %}
@@ -159,7 +172,7 @@
                             <strong>{{ pool.get("_utilization") }}%</strong>
                         </div>
                         {% else %}
-                        <span class="status-pill neutral" title="{{ pool.get('_availability_error') or 'NetBox no reportó utilización' }}">Pendiente</span>
+                        <span class="status-pill neutral" title="{{ pool.get('_availability_error') or 'Inventario IPAM incompleto' }}">Pendiente</span>
                         {% endif %}
                     </td>
                 </tr>

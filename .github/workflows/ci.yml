@@ -80,3 +80,21 @@ jobs:
           bash -n scripts/netdoc-deploy-prod
           test -x scripts/netdoc-deploy-dev
           test -x scripts/netdoc-deploy-prod
+
+      - name: Package validated source
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=data \
+            --exclude='*.sqlite' \
+            --exclude='*.sqlite3' \
+            -czf netdoc-source.tgz \
+            .
+
+      - name: Upload validated source
+        uses: actions/upload-artifact@v4
+        with:
+          name: netdoc-source-${{ github.sha }}
+          path: netdoc-source.tgz
+          retention-days: 3
+          if-no-files-found: error

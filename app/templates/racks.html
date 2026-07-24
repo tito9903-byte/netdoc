@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/racks.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -30,23 +31,14 @@
     <form method="get" action="/racks" class="rack-filters">
         <div class="rack-filter search">
             <label for="rack-search">Buscar rack</label>
-            <input
-                id="rack-search"
-                name="q"
-                type="search"
-                value="{{ query }}"
-                placeholder="Nombre, ubicación, etiqueta..."
-            >
+            <input id="rack-search" name="q" type="search" value="{{ query }}" placeholder="Nombre, ubicación, etiqueta...">
         </div>
         <div class="rack-filter">
             <label for="rack-site">Sitio</label>
             <select id="rack-site" name="site_id">
                 <option value="">Todos los sitios</option>
                 {% for site in sites %}
-                <option
-                    value="{{ site.get('id') }}"
-                    {% if selected_site_id == site.get('id') %}selected{% endif %}
-                >
+                <option value="{{ site.get('id') }}" {% if selected_site_id == site.get('id') %}selected{% endif %}>
                     {{ site.get("display") or site.get("name") or "Sin nombre" }}
                 </option>
                 {% endfor %}
@@ -85,18 +77,9 @@
         </div>
 
         <div class="rack-card-metrics">
-            <div>
-                <span>Altura</span>
-                <strong>{{ rack.get("_u_height") }}U</strong>
-            </div>
-            <div>
-                <span>Equipos</span>
-                <strong>{{ rack.get("_device_count") }}</strong>
-            </div>
-            <div>
-                <span>Ocupación</span>
-                <strong>{{ rack.get("_utilization") | round(1) }}%</strong>
-            </div>
+            <div><span>Altura</span><strong>{{ rack.get("_u_height") }}U</strong></div>
+            <div><span>Equipos</span><strong>{{ rack.get("_device_count") }}</strong></div>
+            <div><span>Ocupación</span><strong>{{ rack.get("_utilization") | round(1) }}%</strong></div>
         </div>
 
         <div class="rack-progress">
@@ -106,12 +89,8 @@
         <div class="rack-card-capacity">
             <span>{{ rack.get("_used_units_label") }}U ocupadas</span>
             <span>{{ rack.get("_free_units_label") }}U libres</span>
-            {% if rack.get("_zero_u_devices") %}
-            <span>{{ rack.get("_zero_u_devices") | length }} equipos de 0U</span>
-            {% endif %}
-            {% if rack.get("_has_conflicts") %}
-            <span class="rack-capacity-warning">Revisar superposición</span>
-            {% endif %}
+            {% if rack.get("_zero_u_devices") %}<span>{{ rack.get("_zero_u_devices") | length }} equipos de 0U</span>{% endif %}
+            {% if rack.get("_has_conflicts") %}<span class="rack-capacity-warning">Revisar superposición</span>{% endif %}
         </div>
 
         <div class="rack-card-footer">

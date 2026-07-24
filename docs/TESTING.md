@@ -7,8 +7,10 @@ El repositorio incluye pruebas de servicios de acceso y rutas administrativas en
 | Módulo | Cobertura actual | Pendiente |
 |---|---|---|
 | Autenticación y roles | Inicialización, usuario, contraseña, permisos, persistencia y actualización inmediata | bloqueo por intentos y concurrencia |
-| Usuarios administrativos | Login, acceso de administrador, denegación, desactivación y cambio de rol | formularios completos, último administrador y CSRF inválido |
-| Auditoría | Creación, persistencia y login fallido visible | filtros, retención, exportación y carga |
+| Usuarios administrativos | Login, acceso, denegación, desactivación, cambio de rol y eliminación de otra cuenta | último administrador, autoeliminación y CSRF inválido |
+| Auditoría | Creación, login fallido y exportación CSV | fechas extremas, retención y carga |
+| Búsqueda global | Agrupación, enlaces y consulta corta | integración real con filtros `q` de NetBox |
+| Sistema | Parsers de memoria/red y métricas seguras | valores de servidor real, umbrales y compatibilidad no Linux |
 | Dispositivos/interfaces | Manual | unitarias e integración con NetBox simulado |
 | Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
 | Racks | Manual | datos de borde y UI |
@@ -30,18 +32,22 @@ Se ejecutaron en un entorno aislado, no en el servidor:
 
 - Compilación de los módulos Python nuevos y modificados: correcta.
 - Inicialización de SQLite en memoria y archivo temporal: correcta.
-- Creación de nueve permisos y tres roles iniciales: correcta.
+- Creación de 11 permisos y tres roles iniciales: correcta.
 - Creación y autenticación de usuarios de prueba: correcta.
 - Rechazo de contraseña débil: correcto.
 - Creación de rol personalizado y evento de auditoría: correcta.
 - Persistencia de permisos personalizados del rol Operador tras repetir la inicialización: correcta.
 - Carga sintáctica de todas las plantillas administrativas: correcta.
-- Diez pruebas automatizadas: superadas localmente.
+- 17 pruebas automatizadas: superadas localmente.
 - TestClient: login administrativo y acceso a Usuarios, Roles y Auditoría: correctos.
 - TestClient: rol Consulta redirigido a `/forbidden` al intentar administrar usuarios: correcto.
 - TestClient: intento de login fallido visible en Auditoría: correcto.
 - TestClient: la desactivación invalida una sesión existente en la siguiente solicitud: correcto.
 - TestClient: el cambio de rol actualiza permisos en la siguiente solicitud: correcto.
+- TestClient: eliminación controlada de otra cuenta y exportación CSV: correctas.
+- TestClient: Consulta puede usar Búsqueda y no puede abrir Sistema: correcto.
+- Búsqueda: agrupación de resultados y enlaces internos con cliente simulado: correcta.
+- Sistema: parsers de `/proc` y recolección de métricas: correctos.
 
 ## Integración continua
 
@@ -55,14 +61,16 @@ Estos resultados no validan systemd, el puerto 8101, la base persistente real de
 2. Desplegar únicamente `develop` en el puerto 8101.
 3. Iniciar sesión con la cuenta administrativa existente.
 4. Crear usuarios de los roles Administrador, Operador y Consulta.
-5. Confirmar que cada menú y URL respeta sus permisos.
+5. Confirmar que cada menú y URL respeta sus permisos, incluyendo Búsqueda y Sistema.
 6. Probar creación, edición, activación y cambio de contraseña.
 7. Confirmar que la desactivación y los cambios de rol se aplican sin volver a iniciar sesión.
 8. Crear y editar un rol personalizado.
-9. Verificar eventos correctos y fallidos en Auditoría.
-10. Confirmar que desarrollo sigue sin escritura hacia NetBox.
-11. Revisar logs, permisos del archivo de base y que Git lo ignore.
+9. Verificar filtros por fecha/recurso y exportar un CSV de Auditoría.
+10. Probar Búsqueda con dispositivos, interfaces, racks, sitios y cables reales.
+11. Revisar CPU, RAM, disco, red y uptime en Sistema sin acciones de escritura.
+12. Confirmar que desarrollo sigue sin escritura hacia NetBox.
+13. Revisar logs, permisos del archivo de base y que Git lo ignore.
 
 ## Estrategia siguiente
 
-Agregar pruebas de formularios completos, CSRF inválido, protección del último administrador, filtros de auditoría, fallos de base, integración simulada con NetBox y migraciones. Antes de `main`: diff y documentación revisados, pruebas existentes, despliegue en desarrollo, revisión de permisos y validación manual del propietario sin inventar resultados.
+Agregar pruebas de formularios completos, CSRF inválido, protección del último administrador, rangos de fecha, fallos de base, más integración simulada con NetBox y migraciones. Antes de `main`: diff y documentación revisados, pruebas existentes, despliegue en desarrollo, revisión de permisos y validación manual del propietario sin inventar resultados.

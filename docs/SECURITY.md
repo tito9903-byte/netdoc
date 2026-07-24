@@ -10,7 +10,7 @@
 - Las rutas HTML y API se autorizan con permisos del rol en el servidor.
 - Antes de cada solicitud protegida se vuelve a consultar la cuenta y sus permisos en la base.
 - Las acciones administrativas y operaciones guiadas usan tokens CSRF.
-- La aplicación impide que un administrador desactive su propia cuenta o deje el sistema sin un administrador activo.
+- La aplicación impide que un administrador desactive o elimine su propia cuenta, o deje el sistema sin un administrador activo.
 - La base local se excluye de Git y cada entorno debe usar almacenamiento independiente.
 - SQLite activa restricciones de claves foráneas.
 
@@ -26,7 +26,13 @@ Un fallo de lectura de identidad se trata de forma cerrada: la sesión se limpia
 
 Se registran inicios de sesión correctos y fallidos, cierres de sesión, cambios de usuarios y roles, y solicitudes de creación de equipos o conexiones. Los eventos pueden incluir usuario, IP, agente del navegador, recurso, resultado y descripción. Nunca deben registrar contraseñas, hashes, token de NetBox, secreto de sesión ni contenido de `.env`.
 
-La auditoría de aplicación no sustituye los logs de systemd, NetBox ni del sistema operativo. Falta definir retención, exportación protegida y revisión periódica.
+La auditoría de aplicación no sustituye los logs de systemd, NetBox ni del sistema operativo. La exportación CSV requiere `audit.view`, se limita a 10,000 eventos y antepone una comilla a valores que comienzan con `=`, `+`, `-` o `@` para reducir el riesgo de fórmulas. Falta definir retención y revisión periódica.
+
+## Búsqueda y métricas del sistema
+
+La búsqueda global utiliza únicamente solicitudes GET a NetBox y enlaces internos. Los errores de un módulo se presentan sin degradar los demás y no se muestran tokens ni cabeceras de autorización.
+
+El módulo Sistema requiere `system.view` y solo realiza lecturas no privilegiadas del sistema operativo. No ejecuta comandos, no reinicia servicios y no muestra `.env`, argumentos sensibles ni secretos. La plataforma y el ejecutable pueden revelar información operativa, por lo que este permiso se reserva al Administrador por defecto.
 
 ## Persistencia
 
@@ -51,4 +57,4 @@ Antes de desplegar el módulo de acceso:
 
 Rote tokens, secretos de sesión y credenciales de inmediato tras sospecha de exposición: revóquelos, sustitúyalos en el servidor, revise accesos y documente el incidente sin publicar el secreto. El token de NetBox expuesto previamente en capturas debe rotarse y reducirse al mínimo privilegio.
 
-Riesgos pendientes: ausencia de MFA, falta de política de bloqueo por intentos fallidos, migraciones aún no versionadas, retención de auditoría sin definir, diferenciación de fallos de base y pruebas de seguridad automatizadas todavía parciales.
+Riesgos pendientes: ausencia de MFA, falta de política de bloqueo por intentos fallidos, migraciones aún no versionadas, retención de auditoría sin definir, diferenciación de fallos de base, exposición operativa excesiva si se concede `system.view` sin criterio y pruebas de seguridad automatizadas todavía parciales.

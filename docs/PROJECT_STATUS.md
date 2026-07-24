@@ -3,13 +3,14 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 1.3.
+- **Versión documental:** 1.4.
+- **Versión de aplicación de la rama:** 0.9.0.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/access-control-audit`.
 
 ## Resumen ejecutivo
 
-La consulta y documentación de inventario, las operaciones guiadas y los racks 2D están operativos en desarrollo y producción. La rama actual incorpora una primera versión integral de usuarios, roles, permisos y auditoría. El código y el workflow de CI pasan sus validaciones, pero todavía requiere supervisión del propietario y prueba manual en el puerto 8101 antes de fusionarse.
+La versión estable mantiene dashboard, inventario, conexiones, racks 2D y despliegue separado. El PR #3 incorpora identidad multiusuario, RBAC y auditoría, además de una segunda ola de funcionalidades: búsqueda global, salud del sistema, eliminación controlada de usuarios, filtros administrativos y exportación CSV. La rama requiere todavía supervisión y despliegue exclusivo en el puerto 8101 antes de fusionarse.
 
 ## Entornos y servicios
 
@@ -18,76 +19,69 @@ La consulta y documentación de inventario, las operaciones guiadas y los racks 
 | Producción | Verificado manualmente por el propietario | `/opt/netdoc-prod` | `main` | `netdoc-prod` | 8100 | independiente |
 | Desarrollo | Verificado manualmente por el propietario | `/opt/netdoc-dev` | `develop` | `netdoc-dev` | 8101 | `netdoc_dev_session` |
 
-Servidor dedicado: `192.168.10.93`; NetBox configurado: `https://192.168.10.95`. Desarrollo debe usar `NETBOX_WRITE_ENABLED=false`. El respaldo temporal `/opt/netbox-documental` no es producción activa y requiere decisión formal antes de eliminarse.
+Servidor dedicado: `192.168.10.93`; NetBox: `https://192.168.10.95`. Desarrollo debe usar `NETBOX_WRITE_ENABLED=false`. El respaldo `/opt/netbox-documental` continúa diferido y no es producción activa.
 
-### Evidencia operativa conocida
+El propietario verificó el 2026-07-24 ambos servicios con HTTP 200 y ejecutó correctamente `netdoc-deploy-dev` y `netdoc-deploy-prod`. Esa evidencia corresponde a las ramas estables y no valida todavía el PR #3.
 
-El propietario verificó manualmente el 2026-07-24:
+## Arquitectura actual de la rama
 
-- Producción: servicio `netdoc-prod` activo y `/login` en el puerto 8100 respondió HTTP 200.
-- Desarrollo: servicio `netdoc-dev` activo y `/login` en el puerto 8101 respondió HTTP 200.
-- Los comandos `netdoc-deploy-prod` y `netdoc-deploy-dev` fueron ejecutados en el servidor y finalizaron con HTTP 200.
-
-Estas verificaciones corresponden a la versión actualmente fusionada en `main` y `develop`; no validan todavía la rama `feature/access-control-audit`.
-
-## Arquitectura, tecnologías e integración
-
-FastAPI sirve HTML Jinja2 y estáticos; routers y servicios consumen REST de NetBox con HTTPX. Pydantic Settings carga configuración, SessionMiddleware mantiene sesiones y Argon2 protege contraseñas. El nuevo módulo usa SQLAlchemy para identidades, roles, permisos y eventos de auditoría; por defecto cada entorno crea su propia base SQLite en `data/netdoc.db`, configurable mediante `DATABASE_URL`. NetBox continúa siendo la fuente oficial del inventario técnico.
+- FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware y Uvicorn.
+- NetBox conserva dispositivos, interfaces, racks, sitios, cables y demás inventario.
+- SQLAlchemy conserva únicamente usuarios, roles, permisos y auditoría de NetDoc.
+- SQLite es el valor inicial de `DATABASE_URL`; cada entorno debe tener su propia base.
+- `PermissionMiddleware` recarga la identidad activa y los permisos antes de cada solicitud protegida.
+- Las métricas de Sistema se obtienen mediante lecturas no privilegiadas de Python y `/proc`; no ejecutan comandos ni modifican servicios.
 
 ## Módulos
 
-- **Completado en `develop`/`main`:** dashboard, consulta, búsqueda, filtros, paginación y detalle de dispositivos e interfaces; creación guiada de equipos; consulta y creación de cables; listado y elevación 2D de racks; integración REST con NetBox; sesiones separadas; despliegue controlado para ambos entornos.
-- **En progreso en `feature/access-control-audit`:** cuentas persistentes, autenticación multiusuario, roles, permisos, navegación por privilegios, administración de usuarios, restablecimiento de contraseñas y auditoría.
-- **Planificado:** edición/eliminación controlada de inventario, patch panels y puertos, edición/desconexión de cables, búsqueda global, topologías, 3D, manejo centralizado de errores, observabilidad, exportación de auditoría y migraciones formales de esquema.
-- **Bloqueado:** ninguno registrado.
-- **Diferido:** eliminación del respaldo temporal.
+### Completado en `develop` y `main`
 
-## Controles del módulo de acceso
+Dashboard, dispositivos e interfaces, filtros y paginación, creación guiada de equipos, conexiones y cables, racks 2D, integración NetBox, sesiones separadas y despliegue controlado.
 
-- Roles iniciales: Administrador, Operador y Consulta.
-- Nueve permisos separados por dashboard, dispositivos, conexiones, racks y administración.
-- El administrador conserva acceso completo.
-- No se permite desactivar la propia cuenta ni dejar el sistema sin un administrador activo.
-- Los cambios de contraseña usan Argon2 y validación mínima de complejidad.
-- Las personalizaciones de permisos de Operador y Consulta no son reemplazadas al reiniciar.
-- Cada solicitud protegida vuelve a cargar el usuario, su rol y sus permisos desde la base.
-- La desactivación de una cuenta y los cambios de rol se aplican en la siguiente solicitud.
-- La base de datos y su directorio están excluidos de Git.
+### En progreso en `feature/access-control-audit`
 
-## Pruebas y validaciones de la rama actual
+- Autenticación multiusuario y contraseñas Argon2.
+- Roles Administrador, Operador y Consulta, roles personalizados y 11 permisos.
+- Creación, edición, activación, cambio de rol, contraseña y eliminación controlada de usuarios.
+- Protección de la propia cuenta y del último administrador activo.
+- Auditoría de accesos, fallos, cambios administrativos y operaciones guiadas.
+- Filtros de auditoría por texto, acción, recurso, resultado y rango de fechas.
+- Exportación CSV de hasta 10,000 eventos, con mitigación de fórmulas de hoja de cálculo.
+- Búsqueda global simultánea de dispositivos, interfaces, racks, sitios y cables.
+- Módulo Sistema: CPU, carga, RAM, disco, red, uptime, plataforma y proceso.
+- API JSON para búsqueda y sistema.
+- Navegación y rutas protegidas por permisos.
+
+### Planificado
+
+Migraciones Alembic, respaldo/retención de auditoría, bloqueo por intentos fallidos, recuperación ante fallo de base, edición/eliminación de inventario, desconexión de cables, patch panels, topologías, 3D, métricas históricas y alertas.
+
+## Validaciones locales de la rama
 
 Ejecutadas fuera del servidor:
 
-- Compilación de los módulos Python nuevos y modificados: correcta.
-- Inicialización de SQLite en memoria y archivo temporal: correcta.
-- Creación de roles y permisos iniciales: correcta.
-- Creación y autenticación de usuarios: correcta.
-- Carga sintáctica de las nuevas plantillas Jinja2: correcta.
-- Diez pruebas automatizadas locales: superadas.
-- TestClient: login administrativo, páginas de Usuarios/Roles/Auditoría, denegación del rol Consulta y auditoría de login fallido: correctos.
-- TestClient: una cuenta desactivada pierde su sesión en la siguiente solicitud: correcto.
-- TestClient: un cambio de rol actualiza los permisos en la siguiente solicitud: correcto.
-- GitHub Actions `NetDoc CI`: la ejecución anterior del PR completó correctamente instalación, compilación, pruebas, importación de `app.main`, plantillas y scripts. La ejecución correspondiente al último commit debe permanecer verde antes de fusionar.
+- `python -m compileall -q app tests`: correcto.
+- Importación de `app.main`: correcta; 38 rutas registradas.
+- Análisis sintáctico de 18 plantillas Jinja2: correcto.
+- Sintaxis de ambos scripts de despliegue: correcta.
+- 17 pruebas automatizadas: superadas.
+- Cobertura nueva: búsqueda agrupada, parsers de `/proc`, métricas del sistema, eliminación de usuario, exportación CSV, acceso a Sistema y permiso de Búsqueda.
 
-No se probaron todavía esta rama mediante systemd, el puerto 8101, la base persistente real del servidor ni el navegador con NetBox real.
+Pendiente: confirmar GitHub Actions en el commit final, desplegar mediante systemd, validar la base persistente de desarrollo, probar con navegador y datos reales de NetBox, y revisar todos los roles en 8101.
 
-## Deuda, problemas y riesgos
+## Riesgos y deuda
 
-- La primera versión crea el esquema automáticamente; antes de cambios futuros de tablas debe adoptarse una migración formal con Alembic.
-- SQLite es apropiado para la etapa y el proceso actual, pero debe reevaluarse si aumenta la concurrencia o se ejecutan varios workers.
-- El token de NetBox expuesto anteriormente debe rotarse y limitarse al mínimo privilegio.
-- Las sesiones antiguas previas al nuevo esquema deberán iniciar sesión nuevamente.
-- Falta prueba manual de todos los roles y flujos de administración en desarrollo.
-- Falta definir retención/exportación de auditoría, bloqueo por intentos repetidos y una respuesta diferenciada ante fallos de la base.
-
-## Decisiones y referencias
-
-Los ADR aceptados cubren plataforma dedicada, separación de entornos, NetBox como fuente oficial y documentación como código. El [ADR 0005](adr/0005-local-identity-rbac-audit.md) propone la persistencia local para identidad y auditoría. Consulte también [arquitectura](ARCHITECTURE.md), [seguridad](SECURITY.md), [pruebas](TESTING.md) y [despliegue](DEPLOYMENT.md).
+- El esquema inicial aún usa `create_all`; cambios posteriores deben usar Alembic.
+- SQLite debe reevaluarse antes de varios workers o mayor concurrencia.
+- El token de NetBox previamente expuesto debe rotarse y reducirse a mínimo privilegio.
+- Las búsquedas dependen de los filtros `q` disponibles en NetBox y deben validarse con los datos reales.
+- Las métricas actuales son instantáneas y acumuladas desde el arranque; no sustituyen una plataforma histórica de monitoreo.
+- Falta definir retención, respaldo y eliminación segura de eventos de auditoría.
 
 ## Próximo objetivo
 
-**En progreso:** supervisar el PR #3, revisar el ADR 0005 y, tras aprobación, fusionar únicamente hacia `develop`; luego desplegar en 8101 y validar inicio de sesión, usuarios, roles, permisos y auditoría antes de cualquier promoción a `main`.
+**En progreso:** mantener el PR #3 como borrador, confirmar CI, supervisar el diff y el ADR 0005, y después fusionar únicamente hacia `develop`. La prueba operativa se realizará solo en 8101 antes de considerar `main`.
 
-## Reglas de mantenimiento del documento
+## Reglas de mantenimiento
 
-Actualice este documento en todo PR que modifique funcionalidades, arquitectura, seguridad, despliegues, dependencias, módulos, estado de pruebas, riesgos, prioridades, problemas conocidos o decisiones técnicas. Use solo: **Completado**, **En progreso**, **Planificado**, **Bloqueado**, **Diferido** o **Requiere verificación**.
+Actualizar este documento en todo PR que modifique funcionalidad, arquitectura, seguridad, despliegues, dependencias, pruebas, riesgos o prioridades. Estados permitidos: **Completado**, **En progreso**, **Planificado**, **Bloqueado**, **Diferido** y **Requiere verificación**.

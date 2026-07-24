@@ -1,0 +1,156 @@
+.system-overview {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.system-card,
+.system-panel {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+.system-card {
+    padding: 18px;
+}
+
+.system-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.system-card header span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.system-card header strong {
+    font-size: 23px;
+}
+
+.system-card p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.health-bar {
+    height: 7px;
+    margin-top: 15px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--background);
+}
+
+.health-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--success);
+}
+
+.system-card.warning .health-bar i {
+    background: var(--warning);
+}
+
+.system-card.critical .health-bar i {
+    background: var(--danger);
+}
+
+.network-values {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.network-values span {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 11px;
+    text-align: center;
+}
+
+.system-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.system-panel header {
+    padding: 17px 20px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.system-panel h2,
+.system-panel p {
+    margin: 0;
+}
+
+.system-panel h2 {
+    font-size: 15px;
+}
+
+.system-panel p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.system-panel dl {
+    margin: 0;
+}
+
+.system-panel dl > div {
+    display: grid;
+    grid-template-columns: minmax(140px, 0.7fr) minmax(0, 1.3fr);
+    gap: 15px;
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.system-panel dl > div:last-child {
+    border-bottom: 0;
+}
+
+.system-panel dt {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.system-panel dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+    text-align: right;
+}
+
+.system-note {
+    margin-top: 18px;
+    padding: 13px 16px;
+    border: 1px solid rgba(32, 200, 210, 0.18);
+    border-radius: 10px;
+    color: var(--muted);
+    background: var(--accent-soft);
+    font-size: 11px;
+}
+
+@media (max-width: 1180px) {
+    .system-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .system-overview,
+    .system-grid {
+        grid-template-columns: 1fr;
+    }
+}

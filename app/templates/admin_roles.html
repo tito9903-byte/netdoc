@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin_extras.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -33,7 +34,7 @@
         <p>{{ role.description or "Sin descripción." }}</p>
 
         <div class="role-stats">
-            <div><strong>{{ role.users | length }}</strong><span>usuarios</span></div>
+            <a class="role-stat-link" href="/admin/users?role_id={{ role.id }}"><strong>{{ role.users | length }}</strong><span>usuarios</span></a>
             <div><strong>{{ role.permissions | length }}</strong><span>permisos</span></div>
         </div>
 

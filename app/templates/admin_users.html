@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin_extras.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -14,24 +15,67 @@
 <section class="admin-summary">
     <div class="summary-card">
         <span>Total de usuarios</span>
-        <strong>{{ users | length }}</strong>
+        <strong>{{ total_users }}</strong>
     </div>
     <div class="summary-card">
         <span>Usuarios activos</span>
-        <strong>{{ users | selectattr("is_active") | list | length }}</strong>
+        <strong>{{ active_users }}</strong>
     </div>
     <div class="summary-card">
-        <span>Roles utilizados</span>
-        <strong>{{ users | map(attribute="role.name") | unique | list | length }}</strong>
+        <span>Resultados visibles</span>
+        <strong>{{ users | length }}</strong>
     </div>
     <a class="admin-primary" href="/admin/users/new">＋ Crear usuario</a>
+</section>
+
+<section class="admin-panel admin-filter-panel">
+    <form method="get" action="/admin/users" class="form-grid user-filters">
+        <label>
+            <span>Buscar</span>
+            <input
+                type="search"
+                name="q"
+                value="{{ query }}"
+                placeholder="Usuario, nombre o correo"
+            >
+        </label>
+
+        <label>
+            <span>Rol</span>
+            <select name="role_id">
+                <option value="">Todos los roles</option>
+                {% for role in roles %}
+                <option
+                    value="{{ role.id }}"
+                    {% if selected_role_id == role.id %}selected{% endif %}
+                >
+                    {{ role.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            <span>Estado</span>
+            <select name="status">
+                <option value="">Todos</option>
+                <option value="active" {% if selected_status == "active" %}selected{% endif %}>Activos</option>
+                <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Inactivos</option>
+            </select>
+        </label>
+
+        <div class="form-actions compact">
+            <button class="admin-primary" type="submit">Filtrar</button>
+            <a class="admin-secondary" href="/admin/users">Limpiar</a>
+        </div>
+    </form>
 </section>
 
 <section class="admin-panel">
     <div class="admin-panel-header">
         <div>
             <h2>Cuentas de acceso</h2>
-            <p>Administra identidad, rol, estado y contraseña.</p>
+            <p>Administra identidad, rol, estado, contraseña y eliminación controlada.</p>
         </div>
     </div>
 
@@ -73,8 +117,20 @@
                         {% endif %}
                     </td>
                     <td>{{ user.updated_at.strftime("%Y-%m-%d %H:%M") }}</td>
-                    <td class="admin-actions">
+                    <td class="admin-actions row-actions">
                         <a class="admin-secondary small" href="/admin/users/{{ user.id }}/edit">Editar</a>
+                        {% if current_user_id != user.id %}
+                        <form
+                            method="post"
+                            action="/admin/users/{{ user.id }}/delete"
+                            onsubmit="return confirm('¿Eliminar definitivamente al usuario {{ user.username }}?');"
+                        >
+                            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                            <button class="danger-button small" type="submit">Eliminar</button>
+                        </form>
+                        {% else %}
+                        <span class="self-account-label">Cuenta actual</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
@@ -82,8 +138,8 @@
                     <td colspan="6">
                         <div class="empty-state">
                             <div class="empty-icon">◎</div>
-                            <h3>No hay usuarios</h3>
-                            <p>Crea la primera cuenta administrada.</p>
+                            <h3>No hay resultados</h3>
+                            <p>Ajusta los filtros o crea una cuenta nueva.</p>
                         </div>
                     </td>
                 </tr>

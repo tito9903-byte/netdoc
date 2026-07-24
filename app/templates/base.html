@@ -65,6 +65,18 @@
                 </a>
                 {% endif %}
 
+
+                {% if "search.view" in permissions %}
+                <a
+                    class="nav-item
+                    {% if current_page == 'search' %}active{% endif %}"
+                    href="/search"
+                >
+                    <span class="nav-icon">⌕</span>
+                    <span>Búsqueda global</span>
+                </a>
+                {% endif %}
+
                 {% if "devices.view" in permissions %}
                 <a
                     class="nav-item
@@ -116,7 +128,7 @@
                 </a>
                 {% endif %}
 
-                {% if "users.manage" in permissions or "roles.manage" in permissions or "audit.view" in permissions %}
+                {% if "users.manage" in permissions or "roles.manage" in permissions or "audit.view" in permissions or "system.view" in permissions %}
                 <div class="nav-section-label">Administración</div>
                 {% endif %}
 
@@ -150,6 +162,17 @@
                 >
                     <span class="nav-icon">≣</span>
                     <span>Auditoría</span>
+                </a>
+                {% endif %}
+
+                {% if "system.view" in permissions %}
+                <a
+                    class="nav-item
+                    {% if current_page == 'system' %}active{% endif %}"
+                    href="/system"
+                >
+                    <span class="nav-icon">◉</span>
+                    <span>Sistema</span>
                 </a>
                 {% endif %}
             </nav>

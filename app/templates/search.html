@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Búsqueda global | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/search.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="global-search-hero">
+    <form action="/search" method="get" class="global-search-form">
+        <label for="global-search-input">Buscar en la documentación</label>
+        <div>
+            <input
+                id="global-search-input"
+                type="search"
+                name="q"
+                value="{{ query }}"
+                minlength="2"
+                autofocus
+                placeholder="Equipo, interfaz, rack, sitio, cable, serial..."
+            >
+            <button type="submit">Buscar</button>
+        </div>
+        <p>La consulta se ejecuta en NetBox sin modificar el inventario.</p>
+    </form>
+</section>
+
+{% if not searched %}
+<section class="search-welcome">
+    <div class="search-welcome-icon">⌕</div>
+    <h2>Una búsqueda para toda la infraestructura</h2>
+    <p>Escribe al menos dos caracteres para consultar varios módulos a la vez.</p>
+</section>
+{% else %}
+<section class="search-overview">
+    <strong>{{ total }} resultados visibles</strong>
+    <span>para “{{ query }}”</span>
+</section>
+
+<div class="search-section-grid">
+    {% for section in sections %}
+    <section class="search-section">
+        <header>
+            <div>
+                <h2>{{ section.label }}</h2>
+                <p>{{ section.count }} coincidencias en NetBox</p>
+            </div>
+            <span>{{ section.results | length }}</span>
+        </header>
+
+        {% if section.error %}
+        <div class="search-error">{{ section.error }}</div>
+        {% elif section.results %}
+        <div class="search-results">
+            {% for item in section.results %}
+            <a class="search-result" href="{{ item.url }}">
+                <span class="search-result-icon">{{ item.title[0] | upper }}</span>
+                <div>
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.subtitle }}</small>
+                </div>
+                <em>{{ item.badge }}</em>
+                <b>→</b>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="search-empty">Sin coincidencias en este módulo.</div>
+        {% endif %}
+    </section>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

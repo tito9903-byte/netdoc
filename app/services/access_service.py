@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from math import ceil
 import re
 
@@ -25,6 +25,12 @@ PERMISSION_DEFINITIONS = [
         "dashboard.view",
         "Ver dashboard",
         "Consultar indicadores y estado general.",
+        "General",
+    ),
+    (
+        "search.view",
+        "Usar búsqueda global",
+        "Buscar dispositivos, interfaces, racks, sitios y cables.",
         "General",
     ),
     (
@@ -75,10 +81,17 @@ PERMISSION_DEFINITIONS = [
         "Consultar acciones administrativas y operativas.",
         "Administración",
     ),
+    (
+        "system.view",
+        "Ver estado del sistema",
+        "Consultar salud del servidor y del proceso de NetDoc.",
+        "Administración",
+    ),
 ]
 
 VIEW_PERMISSIONS = {
     "dashboard.view",
+    "search.view",
     "devices.view",
     "connections.view",
     "racks.view",
@@ -284,6 +297,7 @@ def list_users(
     *,
     query: str = "",
     role_id: int | None = None,
+    status: str = "",
 ) -> list[User]:
     statement = (
         select(User)
@@ -303,6 +317,11 @@ def list_users(
 
     if role_id is not None:
         statement = statement.where(User.role_id == role_id)
+
+    if status == "active":
+        statement = statement.where(User.is_active.is_(True))
+    elif status == "inactive":
+        statement = statement.where(User.is_active.is_(False))
 
     return list(session.scalars(statement).all())
 
@@ -706,19 +725,17 @@ def record_audit(
     return event
 
 
-def list_audit_events(
-    session: Session,
+def _audit_filters(
     *,
-    page: int = 1,
-    page_size: int = 50,
     query: str = "",
     action: str = "",
+    resource: str = "",
     success: str = "",
-) -> dict[str, object]:
-    page = max(1, page)
-    page_size = min(max(page_size, 10), 100)
-
+    date_from: str = "",
+    date_to: str = "",
+) -> tuple[list, list[str]]:
     filters = []
+    errors: list[str] = []
 
     if query.strip():
         pattern = f"%{query.strip()}%"
@@ -728,16 +745,81 @@ def list_audit_events(
                 | AuditEvent.resource.ilike(pattern)
                 | AuditEvent.detail.ilike(pattern)
                 | AuditEvent.resource_id.ilike(pattern)
+                | AuditEvent.ip_address.ilike(pattern)
             )
         )
 
     if action.strip():
         filters.append(AuditEvent.action == action.strip())
 
+    if resource.strip():
+        filters.append(AuditEvent.resource == resource.strip())
+
     if success == "true":
         filters.append(AuditEvent.success.is_(True))
     elif success == "false":
         filters.append(AuditEvent.success.is_(False))
+
+    if date_from.strip():
+        try:
+            parsed_from = date.fromisoformat(date_from.strip())
+            filters.append(
+                AuditEvent.created_at >= datetime.combine(
+                    parsed_from,
+                    time.min,
+                    tzinfo=timezone.utc,
+                )
+            )
+        except ValueError:
+            errors.append("La fecha inicial no es válida.")
+
+    if date_to.strip():
+        try:
+            parsed_to = date.fromisoformat(date_to.strip())
+            filters.append(
+                AuditEvent.created_at < datetime.combine(
+                    parsed_to + timedelta(days=1),
+                    time.min,
+                    tzinfo=timezone.utc,
+                )
+            )
+        except ValueError:
+            errors.append("La fecha final no es válida.")
+
+    if date_from.strip() and date_to.strip():
+        try:
+            if date.fromisoformat(date_from) > date.fromisoformat(date_to):
+                errors.append(
+                    "La fecha inicial no puede ser posterior a la final."
+                )
+        except ValueError:
+            pass
+
+    return filters, errors
+
+
+def list_audit_events(
+    session: Session,
+    *,
+    page: int = 1,
+    page_size: int = 50,
+    query: str = "",
+    action: str = "",
+    resource: str = "",
+    success: str = "",
+    date_from: str = "",
+    date_to: str = "",
+) -> dict[str, object]:
+    page = max(1, page)
+    page_size = min(max(page_size, 10), 100)
+    filters, filter_errors = _audit_filters(
+        query=query,
+        action=action,
+        resource=resource,
+        success=success,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
     total = int(
         session.scalar(
@@ -745,6 +827,9 @@ def list_audit_events(
         )
         or 0
     )
+
+    total_pages = max(1, ceil(total / page_size))
+    page = min(page, total_pages)
 
     events = list(
         session.scalars(
@@ -756,13 +841,18 @@ def list_audit_events(
         ).all()
     )
 
-    total_pages = max(1, ceil(total / page_size))
-
     actions = list(
         session.scalars(
             select(AuditEvent.action)
             .distinct()
             .order_by(AuditEvent.action)
+        ).all()
+    )
+    resources = list(
+        session.scalars(
+            select(AuditEvent.resource)
+            .distinct()
+            .order_by(AuditEvent.resource)
         ).all()
     )
 
@@ -773,4 +863,40 @@ def list_audit_events(
         "page_size": page_size,
         "total_pages": total_pages,
         "actions": actions,
+        "resources": resources,
+        "filter_errors": filter_errors,
     }
+
+
+def export_audit_events(
+    session: Session,
+    *,
+    query: str = "",
+    action: str = "",
+    resource: str = "",
+    success: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    limit: int = 10000,
+) -> list[AuditEvent]:
+    filters, errors = _audit_filters(
+        query=query,
+        action=action,
+        resource=resource,
+        success=success,
+        date_from=date_from,
+        date_to=date_to,
+    )
+
+    if errors:
+        raise AccessServiceError(" ".join(errors))
+
+    safe_limit = min(max(limit, 1), 10000)
+    return list(
+        session.scalars(
+            select(AuditEvent)
+            .where(*filters)
+            .order_by(AuditEvent.created_at.desc())
+            .limit(safe_limit)
+        ).all()
+    )

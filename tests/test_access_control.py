@@ -58,8 +58,8 @@ class AccessControlTests(unittest.TestCase):
             {"administrador", "operador", "consulta"},
             set(roles),
         )
-        self.assertEqual(9, len(permissions))
-        self.assertEqual(9, len(roles["administrador"].permissions))
+        self.assertEqual(11, len(permissions))
+        self.assertEqual(11, len(roles["administrador"].permissions))
 
     def test_seed_preserves_custom_system_role_permissions(self):
         operator = self.session.scalar(

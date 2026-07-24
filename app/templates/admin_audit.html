@@ -4,14 +4,21 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin_extras.css') }}">
 {% endblock %}
 
 {% block content %}
+{% if filter_errors %}
+<div class="admin-alert error">
+    {% for error in filter_errors %}<span>{{ error }}</span>{% endfor %}
+</div>
+{% endif %}
+
 <section class="admin-panel audit-filters">
-    <form method="get" action="/admin/audit" class="form-grid audit">
+    <form method="get" action="/admin/audit" class="form-grid audit advanced-audit-filters">
         <label>
             <span>Buscar</span>
-            <input type="search" name="q" value="{{ query }}" placeholder="Usuario, recurso, detalle o ID">
+            <input type="search" name="q" value="{{ query }}" placeholder="Usuario, detalle, ID o IP">
         </label>
         <label>
             <span>Acción</span>
@@ -23,6 +30,15 @@
             </select>
         </label>
         <label>
+            <span>Recurso</span>
+            <select name="resource">
+                <option value="">Todos</option>
+                {% for item in resources %}
+                <option value="{{ item }}" {% if selected_resource == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
             <span>Resultado</span>
             <select name="success">
                 <option value="">Todos</option>
@@ -30,9 +46,23 @@
                 <option value="false" {% if selected_success == "false" %}selected{% endif %}>Fallido</option>
             </select>
         </label>
-        <div class="form-actions compact">
+        <label>
+            <span>Desde</span>
+            <input type="date" name="date_from" value="{{ selected_date_from }}">
+        </label>
+        <label>
+            <span>Hasta</span>
+            <input type="date" name="date_to" value="{{ selected_date_to }}">
+        </label>
+        <div class="form-actions compact audit-actions">
             <button class="admin-primary" type="submit">Filtrar</button>
             <a class="admin-secondary" href="/admin/audit">Limpiar</a>
+            <a
+                class="admin-secondary"
+                href="/admin/audit/export.csv?{{ {'q': query, 'action': selected_action, 'resource': selected_resource, 'success': selected_success, 'date_from': selected_date_from, 'date_to': selected_date_to} | urlencode }}"
+            >
+                Exportar CSV
+            </a>
         </div>
     </form>
 </section>
@@ -43,6 +73,7 @@
             <h2>Eventos registrados</h2>
             <p>{{ total }} eventos · página {{ page }} de {{ total_pages }}</p>
         </div>
+        <span class="result-badge">UTC</span>
     </div>
 
     <div class="table-wrapper">
@@ -83,11 +114,11 @@
     {% if total_pages > 1 %}
     <div class="pagination">
         {% if page > 1 %}
-        <a class="admin-secondary small" href="/admin/audit?{{ {'q': query, 'action': selected_action, 'success': selected_success, 'page': page - 1} | urlencode }}">Anterior</a>
+        <a class="admin-secondary small" href="/admin/audit?{{ {'q': query, 'action': selected_action, 'resource': selected_resource, 'success': selected_success, 'date_from': selected_date_from, 'date_to': selected_date_to, 'page': page - 1} | urlencode }}">Anterior</a>
         {% endif %}
         <span>Página {{ page }} de {{ total_pages }}</span>
         {% if page < total_pages %}
-        <a class="admin-secondary small" href="/admin/audit?{{ {'q': query, 'action': selected_action, 'success': selected_success, 'page': page + 1} | urlencode }}">Siguiente</a>
+        <a class="admin-secondary small" href="/admin/audit?{{ {'q': query, 'action': selected_action, 'resource': selected_resource, 'success': selected_success, 'date_from': selected_date_from, 'date_to': selected_date_to, 'page': page + 1} | urlencode }}">Siguiente</a>
         {% endif %}
     </div>
     {% endif %}

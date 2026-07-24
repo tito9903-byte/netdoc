@@ -62,8 +62,8 @@ Trabajo actual:
 
 - Rama: `feature/access-control-audit`
 - PR: `#3`, abierto como borrador hacia `develop`
-- Objetivo: usuarios, roles, permisos y auditoría
-- Estado: implementación amplia creada, pruebas automatizadas incorporadas y pendiente de supervisión y prueba manual en desarrollo
+- Objetivo: usuarios, roles, permisos, auditoría, búsqueda global y estado del sistema
+- Estado: implementación amplia creada, segunda ola funcional incorporada, pruebas automatizadas ampliadas y pendiente de supervisión y prueba manual en desarrollo
 - No afirmar que esta rama está desplegada
 
 ## Arquitectura y tecnologías
@@ -102,8 +102,10 @@ Estructura:
 - `app/models/access.py`: usuarios, roles, permisos y auditoría.
 - `app/services/access_service.py`: reglas de identidad y autorización.
 - `app/services/`: integración NetBox y servicios especializados.
-- `app/routers/admin.py`: administración de acceso.
-- `app/routers/`: dispositivos, conexiones y racks.
+- `app/services/search_service.py`: búsqueda global concurrente.
+- `app/services/system_service.py`: métricas no privilegiadas del servidor.
+- `app/routers/admin.py`: administración de acceso y exportación de auditoría.
+- `app/routers/`: dispositivos, conexiones, racks, búsqueda y sistema.
 - `app/templates/`: vistas Jinja2.
 - `app/static/`: CSS, JavaScript e imágenes.
 - `tests/`: pruebas automatizadas.
@@ -142,8 +144,9 @@ Cada entorno debe usar su propia base. `data/`, `*.db`, `*.sqlite` y `*.sqlite3`
 - Autenticación multiusuario persistente.
 - Bootstrap del primer administrador desde `ADMIN_USERNAME` y `ADMIN_PASSWORD_HASH`.
 - Roles iniciales Administrador, Operador y Consulta.
-- Nueve permisos por módulo.
-- Creación y edición de usuarios.
+- Once permisos por módulo, incluyendo búsqueda global y sistema.
+- Creación, edición y eliminación controlada de usuarios.
+- Filtros de usuarios por texto, rol y estado.
 - Activación y desactivación de cuentas.
 - Asignación de rol.
 - Restablecimiento de contraseña.
@@ -155,9 +158,13 @@ Cada entorno debe usar su propia base. `data/`, `*.db`, `*.sqlite` y `*.sqlite3`
 - Recarga de identidad y permisos antes de cada solicitud protegida.
 - Desactivación y cambios de rol efectivos en la siguiente solicitud.
 - Pantalla 403.
-- Auditoría de login correcto/fallido, logout, usuarios, roles y solicitudes de creación de inventario.
-- Filtros y paginación básica de auditoría.
-- Pruebas unitarias y de rutas administrativas.
+- Auditoría de login correcto/fallido, logout, usuarios, roles, exportaciones y solicitudes de creación de inventario.
+- Filtros de auditoría por texto, acción, recurso, resultado y rango de fechas.
+- Exportación CSV de hasta 10,000 eventos con neutralización de fórmulas.
+- Búsqueda global de dispositivos, interfaces, racks, sitios y cables.
+- Módulo Sistema de solo lectura para CPU, RAM, disco, red, uptime y proceso.
+- API JSON para búsqueda y sistema.
+- Pruebas unitarias, de rutas administrativas, búsqueda y métricas.
 - Workflow de CI.
 
 ## Validaciones ejecutadas en la rama
@@ -166,16 +173,20 @@ Ejecutadas fuera del servidor:
 
 - Compilación de módulos Python: correcta.
 - Inicialización SQLite en memoria y archivo temporal: correcta.
-- Creación de nueve permisos y tres roles: correcta.
+- Creación de 11 permisos y tres roles: correcta.
 - Creación y autenticación de usuarios de prueba: correcta.
 - Persistencia de permisos personalizados: correcta.
 - Carga sintáctica de plantillas Jinja2: correcta.
-- Diez pruebas automatizadas: superadas localmente.
+- Diecisiete pruebas automatizadas: superadas localmente.
 - TestClient: login administrativo y páginas Usuarios/Roles/Auditoría: correctos.
 - TestClient: denegación del rol Consulta: correcta.
 - TestClient: login fallido visible en Auditoría: correcto.
 - TestClient: desactivación de cuenta invalida la sesión siguiente: correcto.
 - TestClient: cambio de rol se aplica en la solicitud siguiente: correcto.
+- TestClient: eliminación de otra cuenta y exportación CSV: correctas.
+- TestClient: Consulta usa Búsqueda y no puede abrir Sistema: correcto.
+- Búsqueda agrupada con cliente NetBox simulado: correcta.
+- Parsers de `/proc` y métricas del sistema: correctos.
 - Una ejecución anterior de `NetDoc CI` completó instalación, compilación, pruebas, importación, plantillas y scripts correctamente; confirmar que la ejecución del último commit también esté verde.
 
 No se probaron todavía systemd, el puerto 8101, el navegador completo, la base persistente del servidor ni la integración real de esta rama con NetBox.
@@ -188,7 +199,10 @@ No se probaron todavía systemd, el puerto 8101, el navegador completo, la base 
 - La seguridad real se aplica en servidor; ocultar menús no sustituye autorización.
 - Operaciones administrativas usan CSRF.
 - No registrar secretos en auditoría.
-- Mantener al menos un administrador activo.
+- Mantener al menos un administrador activo y prohibir autoeliminación.
+- Reservar `system.view` al Administrador por defecto.
+- El módulo Sistema no ejecuta comandos privilegiados.
+- La exportación CSV debe neutralizar valores que parezcan fórmulas.
 - Cada solicitud protegida consulta el estado actual del usuario y sus permisos.
 - Un fallo de identidad se trata de forma cerrada y exige login.
 - Desarrollo debe permanecer sin escritura NetBox.
@@ -214,12 +228,14 @@ No desplegar la rama actual directamente. Primero revisar el PR #3, fusionar hac
 5. Tras aprobación, fusionar únicamente hacia `develop`.
 6. Desplegar solo en desarrollo.
 7. Probar login y navegación con Administrador, Operador y Consulta.
-8. Probar usuarios, roles, contraseñas, desactivación y denegaciones directas por URL.
-9. Revisar auditoría correcta y fallida.
-10. Verificar permisos del archivo de base y que Git lo ignore.
-11. Corregir incidencias antes de cualquier PR hacia `main`.
+8. Probar usuarios, roles, contraseñas, desactivación, eliminación y denegaciones directas por URL.
+9. Revisar filtros y exportación de auditoría.
+10. Probar búsqueda global con datos reales.
+11. Revisar métricas de Sistema y confirmar que no realiza acciones.
+12. Verificar permisos del archivo de base y que Git lo ignore.
+13. Corregir incidencias antes de cualquier PR hacia `main`.
 
-Después se planifican migraciones Alembic, respaldo/recuperación, exportación y retención de auditoría, bloqueo de intentos repetidos, manejo diferenciado de fallos de base, edición controlada de inventario, patch panels, búsqueda global, topologías, 3D, errores centralizados y observabilidad.
+Después se planifican migraciones Alembic, respaldo/recuperación, retención de auditoría, bloqueo de intentos repetidos, manejo diferenciado de fallos de base, edición controlada de inventario, patch panels, topologías, 3D, errores centralizados, métricas históricas y alertas.
 
 ## Validaciones obligatorias antes de terminar
 

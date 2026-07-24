@@ -26,6 +26,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Navegación y control de acceso por permiso, con respuestas 401/403 y pantalla de acceso restringido.
 - Pruebas unitarias y de rutas para inicialización, autenticación, permisos, auditoría, revocación y cambios de rol.
 - Workflow de GitHub Actions para dependencias, compilación, pruebas, importación, plantillas y scripts.
+- Búsqueda global simultánea de dispositivos, interfaces, racks, sitios y cables.
+- Módulo Sistema de solo lectura con CPU, RAM, disco, red, uptime y datos del proceso.
+- Filtros de usuarios por texto, rol y estado, con eliminación controlada de cuentas.
+- Auditoría con filtros por recurso y fechas, paginación preservada y exportación CSV protegida.
+- Artefactos visuales y pruebas para búsqueda global, sistema y administración ampliada.
 
 ### Changed
 
@@ -37,7 +42,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La autenticación deja de depender de una única sesión administrativa y usa cuentas persistentes; las variables `ADMIN_*` sirven para crear el administrador inicial si la base está vacía.
 - La identidad, el estado de la cuenta, el rol y los permisos se recargan desde la base antes de cada solicitud protegida.
 - La desactivación de una cuenta y los cambios de permisos se aplican en la siguiente solicitud.
-- La versión de aplicación por defecto avanza a `0.8.0`.
+- La versión de aplicación por defecto avanza a `0.9.0`.
 
 ### Security
 
@@ -48,3 +53,5 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Protección para conservar al menos un administrador activo y evitar que un administrador desactive su propia cuenta.
 - Revocación efectiva de cuentas desactivadas sin esperar un nuevo inicio de sesión.
 - Base de datos local y directorio `data/` excluidos de Git; desarrollo y producción deben usar almacenamiento independiente.
+- Exportación CSV protegida contra fórmulas de hoja de cálculo y limitada a 10,000 eventos.
+- El módulo Sistema usa únicamente lecturas no privilegiadas y no ejecuta comandos de administración.

@@ -82,6 +82,8 @@ class AdminRouteTests(unittest.TestCase):
             "/admin/users",
             "/admin/roles",
             "/admin/audit",
+            "/search",
+            "/system",
         ):
             with self.subTest(path=path):
                 page = self.client.get(path)
@@ -159,6 +161,47 @@ class AdminRouteTests(unittest.TestCase):
                 select(Role).where(Role.code == "consulta")
             )
             user.role = consultation_role
+
+
+    def test_read_only_user_can_search_but_cannot_view_system(self):
+        self.ensure_user("consulta.search", "consulta")
+        self.login("consulta.search", "Password123")
+
+        search_page = self.client.get("/search")
+        self.assertEqual(200, search_page.status_code)
+
+        system_page = self.client.get(
+            "/system",
+            follow_redirects=False,
+        )
+        self.assertEqual(303, system_page.status_code)
+        self.assertEqual("/forbidden", system_page.headers["location"])
+
+    def test_admin_can_delete_another_user(self):
+        user_id = self.ensure_user("delete.test", "consulta")
+        self.login("admin", "AdminPassword123")
+
+        users_page = self.client.get("/admin/users")
+        csrf_marker = 'name="csrf" value="'
+        start = users_page.text.index(csrf_marker) + len(csrf_marker)
+        csrf = users_page.text[start:users_page.text.index('"', start)]
+
+        response = self.client.post(
+            f"/admin/users/{user_id}/delete",
+            data={"csrf": csrf},
+            follow_redirects=False,
+        )
+        self.assertEqual(303, response.status_code)
+
+        with session_scope() as session:
+            self.assertIsNone(session.get(User, user_id))
+
+    def test_audit_export_returns_csv(self):
+        self.login("admin", "AdminPassword123")
+        response = self.client.get("/admin/audit/export.csv")
+        self.assertEqual(200, response.status_code)
+        self.assertIn("text/csv", response.headers["content-type"])
+        self.assertIn("fecha_utc", response.text)
 
 
 if __name__ == "__main__":

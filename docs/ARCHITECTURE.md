@@ -36,6 +36,9 @@ flowchart TB
 - `app/services/access_service.py`: reglas de negocio del control de acceso.
 - `app/routers/admin.py`: pantallas y acciones administrativas.
 - `app/services/netbox_client.py` y servicios especializados: integración con NetBox.
+- `app/services/search_service.py`: búsqueda concurrente y normalización de resultados de varios módulos.
+- `app/services/system_service.py`: métricas no privilegiadas del host y del proceso.
+- `app/routers/search.py` y `app/routers/system.py`: vistas y API JSON de búsqueda y salud.
 - `app/templates` y `app/static`: presentación.
 - `scripts`: despliegue operativo, sin lógica de negocio.
 
@@ -56,7 +59,7 @@ Roles iniciales:
 
 - **Administrador:** todos los permisos y gestión completa.
 - **Operador:** consulta y operaciones guiadas de dispositivos y conexiones.
-- **Consulta:** acceso de solo lectura a dashboard, dispositivos, conexiones y racks.
+- **Consulta:** acceso de solo lectura a dashboard, búsqueda global, dispositivos, conexiones y racks.
 
 ## Persistencia
 
@@ -68,7 +71,15 @@ SQLite habilita claves foráneas. El diseño actual supone un único proceso Uvi
 
 ## Auditoría
 
-Los eventos registran fecha, usuario, acción, recurso, identificador, resultado, descripción, IP y agente del navegador. Se registran accesos correctos y fallidos, cierre de sesión, administración de usuarios y roles, y solicitudes de creación de dispositivos o conexiones. Nunca deben incluirse contraseñas, hashes, tokens ni contenido de `.env`.
+Los eventos registran fecha, usuario, acción, recurso, identificador, resultado, descripción, IP y agente del navegador. Se registran accesos correctos y fallidos, cierre de sesión, administración de usuarios y roles, eliminación de cuentas, exportaciones y solicitudes de creación de dispositivos o conexiones. La vista permite filtrar por acción, recurso, resultado y fechas. La exportación CSV se limita a 10,000 filas y neutraliza celdas que podrían convertirse en fórmulas. Nunca deben incluirse contraseñas, hashes, tokens ni contenido de `.env`.
+
+## Búsqueda global
+
+`search_service` consulta en paralelo dispositivos, interfaces, racks, sitios y cables mediante el filtro `q` de NetBox. Cada sección falla de forma independiente, por lo que un endpoint no disponible no impide mostrar los demás resultados. Los enlaces conducen a vistas internas de NetDoc y la operación es siempre de solo lectura.
+
+## Estado del sistema
+
+`system_service` usa `os`, `shutil`, `platform`, `socket` y lecturas de `/proc` para presentar CPU, carga, memoria, disco, red y uptime. No invoca shell, `systemctl`, sudo ni comandos privilegiados. Las métricas son instantáneas o acumuladas desde el arranque y no sustituyen monitoreo histórico.
 
 ## Integración con NetBox
 
@@ -81,7 +92,7 @@ Dependencias principales: Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, Ses
 ## Limitaciones y trabajo futuro
 
 - Falta prueba integral del módulo en el servidor de desarrollo.
-- Falta exportación y retención configurable de auditoría.
+- Falta retención configurable y respaldo automatizado de auditoría.
 - El fallo de base actualmente invalida la sesión en lugar de mostrar una página operativa diferenciada.
 - Antes de cambiar el esquema debe incorporarse Alembic.
-- Continúan planificados búsqueda global, edición controlada, patch panels, topologías, 3D y observabilidad.
+- Continúan planificados edición controlada de inventario, patch panels, topologías, 3D, métricas históricas y alertas.

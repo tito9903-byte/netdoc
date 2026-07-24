@@ -15,11 +15,15 @@ La rama `feature/access-control-audit` incorpora para revisión:
 - activación de cuentas y restablecimiento de contraseña;
 - creación y edición de roles;
 - auditoría de accesos y cambios;
+- filtros y eliminación controlada de usuarios;
+- exportación CSV y filtros por fecha/recurso en auditoría;
+- búsqueda global de inventario;
+- estado de CPU, RAM, disco, red y uptime;
 - navegación y rutas protegidas por permiso.
 
 ## Arquitectura y tecnologías
 
-`Navegador → FastAPI/Jinja2 → servicios → NetBox REST`
+`Navegador → FastAPI/Jinja2 → servicios → NetBox REST / base local / métricas Linux`
 
 NetDoc usa Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, SQLAlchemy, Uvicorn, HTML, CSS y JavaScript. NetBox mantiene el inventario; una base propia configurable conserva únicamente usuarios, roles, permisos y auditoría. Consulte [arquitectura](docs/ARCHITECTURE.md).
 
@@ -53,7 +57,7 @@ cp .env.example .env  # sustituya solo en su entorno los marcadores seguros
 Pruebas actuales:
 
 ```bash
-python -m unittest tests.test_access_control -v
+python -m unittest discover -s tests -v
 ```
 
 No versionar `.env`, bases de datos, tokens, contraseñas, hashes, secretos de sesión o claves. Para despliegues controlados consulte [DEPLOYMENT](docs/DEPLOYMENT.md); `git push` no despliega al servidor.

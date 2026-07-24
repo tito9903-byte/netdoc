@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Modelos y plantillas | NetDoc{% endblock %}
+
+{% block content %}
+{% if notice %}
+<div class="notice success-notice">
+    <strong>Operación completada.</strong>
+    <span>{{ notice }}</span>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible completar la operación.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="workflow-intro">
+    <div>
+        <span class="eyebrow">Catálogo reutilizable</span>
+        <h2>Documenta el modelo una vez y reutilízalo en todos los equipos</h2>
+        <p>
+            Los tipos de dispositivo definen altura, fabricante y componentes.
+            Las plantillas de interfaz se crean automáticamente cuando se
+            registra un equipo nuevo con ese modelo.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/devices/actions/new">Crear equipo</a>
+        <a class="button primary" href="#interface-builder">Generar interfaces</a>
+    </div>
+</section>
+
+<section class="documentation-path">
+    <article>
+        <span>1</span>
+        <div>
+            <strong>Crear el modelo</strong>
+            <small>Fabricante, nombre, altura y profundidad.</small>
+        </div>
+    </article>
+    <article>
+        <span>2</span>
+        <div>
+            <strong>Agregar componentes</strong>
+            <small>Interfaces, puertos de energía y bahías.</small>
+        </div>
+    </article>
+    <article>
+        <span>3</span>
+        <div>
+            <strong>Crear dispositivos</strong>
+            <small>NetBox instancia automáticamente las plantillas.</small>
+        </div>
+    </article>
+</section>
+
+<section class="filter-panel">
+    <form class="filter-grid model-filter-grid" method="get" action="/device-types">
+        <div class="field field-wide">
+            <label for="model-q">Buscar modelo</label>
+            <input
+                id="model-q"
+                name="q"
+                type="search"
+                value="{{ query }}"
+                placeholder="Fabricante, modelo, part number..."
+            >
+        </div>
+        <div class="field">
+            <label for="model-manufacturer">Fabricante</label>
+            <select id="model-manufacturer" name="manufacturer_id">
+                <option value="">Todos los fabricantes</option>
+                {% for manufacturer in manufacturers %}
+                <option
+                    value="{{ manufacturer.get('id') }}"
+                    {% if selected_manufacturer_id == manufacturer.get('id') %}selected{% endif %}
+                >
+                    {{ manufacturer.get("display") or manufacturer.get("name") or "Sin nombre" }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="button primary" type="submit">Buscar</button>
+            <a class="button secondary" href="/device-types">Limpiar</a>
+        </div>
+    </form>
+</section>
+
+<section class="model-workspace">
+    <div class="panel workflow-panel model-catalog-panel">
+        <div class="panel-header compact-panel-header">
+            <div>
+                <h2>Modelos documentados</h2>
+                <p>Selecciona un modelo para revisar o ampliar sus interfaces.</p>
+            </div>
+            <span class="panel-badge">{{ device_types | length }} modelos</span>
+        </div>
+
+        {% if device_types %}
+        <div class="model-list">
+            {% for item in device_types %}
+            <a
+                class="model-list-item {% if selected_device_type_id == item.get('id') %}active{% endif %}"
+                href="/device-types?device_type_id={{ item.get('id') }}&q={{ query | urlencode }}{% if selected_manufacturer_id %}&manufacturer_id={{ selected_manufacturer_id }}{% endif %}"
+            >
+                <span class="model-avatar">{{ item.get("_manufacturer_label")[0] | upper }}</span>
+                <div class="model-list-identity">
+                    <strong>{{ item.get("_model_label") }}</strong>
+                    <small>
+                        {{ item.get("_manufacturer_label") }}
+                        {% if item.get("part_number") %} · {{ item.get("part_number") }}{% endif %}
+                    </small>
+                </div>
+                <div class="model-list-stats">
+                    <span>{{ item.get("_interface_count") }}</span>
+                    <small>interfaces</small>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state compact-empty-state">
+            <div class="empty-icon">▣</div>
+            <h3>No se encontraron modelos</h3>
+            <p>Cambia los filtros o crea el primer tipo de dispositivo.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="model-detail-column">
+        {% if selected_device_type %}
+        {% set manufacturer = selected_device_type.get("manufacturer") or {} %}
+        <section class="panel workflow-panel selected-model-card">
+            <div class="selected-model-heading">
+                <div class="selected-model-avatar">
+                    {{ (manufacturer.get("display") or manufacturer.get("name") or "M")[0] | upper }}
+                </div>
+                <div>
+                    <span class="eyebrow">Modelo seleccionado</span>
+                    <h2>{{ selected_device_type.get("model") or selected_device_type.get("display") }}</h2>
+                    <p>{{ manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" }}</p>
+                </div>
+                <span class="status-pill accent">
+                    {{ interface_templates | length }} interfaces
+                </span>
+            </div>
+            <div class="model-facts">
+                <div><span>Part number</span><strong>{{ selected_device_type.get("part_number") or "—" }}</strong></div>
+                <div><span>Altura</span><strong>{{ selected_device_type.get("u_height") or 0 }}U</strong></div>
+                <div><span>Profundidad</span><strong>{% if selected_device_type.get("is_full_depth") %}Completa{% else %}Parcial{% endif %}</strong></div>
+                <div><span>Slug</span><strong>{{ selected_device_type.get("slug") or "—" }}</strong></div>
+            </div>
+        </section>
+
+        <section class="panel workflow-panel" id="interface-builder">
+            <div class="panel-header compact-panel-header">
+                <div>
+                    <h2>Generador rápido de interfaces</h2>
+                    <p>Convierte un patrón en hasta 256 plantillas en una sola operación.</p>
+                </div>
+                {% if write_enabled and can_manage_device_types %}
+                <span class="status-pill healthy">Listo para escribir</span>
+                {% else %}
+                <span class="status-pill neutral">Vista previa</span>
+                {% endif %}
+            </div>
+
+            <form class="builder-form" method="post" action="/device-types/interface-templates/bulk">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <input type="hidden" name="device_type_id" value="{{ selected_device_type.get('id') }}">
+
+                <div class="builder-grid">
+                    <div class="field field-wide">
+                        <label for="interface-pattern">Patrón de nombre</label>
+                        <input
+                            id="interface-pattern"
+                            name="pattern"
+                            type="text"
+                            value="{{ pattern }}"
+                            placeholder="Ejemplo: ge-0/0/{n} o Gi1/0/{n:02}"
+                            data-preview-pattern
+                            required
+                        >
+                        <small>Usa <code>{n}</code> para el número y <code>{n:02}</code> para completar con cero.</small>
+                    </div>
+                    <div class="field">
+                        <label for="interface-start">Inicio</label>
+                        <input id="interface-start" name="start" type="number" min="0" value="{{ start }}" data-preview-start required>
+                    </div>
+                    <div class="field">
+                        <label for="interface-count">Cantidad</label>
+                        <input id="interface-count" name="count" type="number" min="1" max="256" value="{{ count }}" data-preview-count required>
+                    </div>
+                    <div class="field field-wide">
+                        <label for="interface-type">Tipo de interfaz</label>
+                        <select id="interface-type" name="interface_type" required>
+                            {% for item in interface_types %}
+                            <option value="{{ item.value }}">{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="label-pattern">Patrón de etiqueta</label>
+                        <input id="label-pattern" name="label_pattern" type="text" placeholder="Opcional: Puerto {n}">
+                    </div>
+                    <div class="field">
+                        <label for="interface-description">Descripción común</label>
+                        <input id="interface-description" name="description" type="text" placeholder="Opcional">
+                    </div>
+                    <label class="checkbox-field">
+                        <input type="checkbox" name="mgmt_only">
+                        <span>
+                            <strong>Solo administración</strong>
+                            <small>Marca todas como interfaces de gestión.</small>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="interface-preview">
+                    <div class="interface-preview-header">
+                        <div>
+                            <strong>Vista previa</strong>
+                            <span data-preview-count-label>{{ preview | length }} nombres generados</span>
+                        </div>
+                        <small>Se muestran los primeros 24</small>
+                    </div>
+                    <div class="interface-chip-list" data-interface-preview>
+                        {% for name in preview[:24] %}
+                        <span>{{ name }}</span>
+                        {% endfor %}
+                    </div>
+                    <p class="preview-error" data-preview-error>{{ preview_error }}</p>
+                </div>
+
+                <div class="builder-actions">
+                    <div>
+                        <strong>Creación atómica en NetBox</strong>
+                        <span>Si una plantilla falla, el lote completo debe revisarse.</span>
+                    </div>
+                    <button
+                        class="button primary"
+                        type="submit"
+                        {% if not write_enabled or not can_manage_device_types %}disabled{% endif %}
+                    >
+                        Crear {{ count }} interfaces
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel workflow-panel">
+            <div class="panel-header compact-panel-header">
+                <div>
+                    <h2>Interfaces del modelo</h2>
+                    <p>Plantillas que se copiarán a cada dispositivo nuevo.</p>
+                </div>
+                <span class="panel-badge">{{ interface_templates | length }}</span>
+            </div>
+            {% if interface_templates %}
+            <div class="table-wrapper compact-table-wrapper">
+                <table class="data-table">
+                    <thead><tr><th>Nombre</th><th>Tipo</th><th>Etiqueta</th><th>Gestión</th></tr></thead>
+                    <tbody>
+                        {% for interface in interface_templates %}
+                        <tr>
+                            <td><strong>{{ interface.get("name") or "—" }}</strong></td>
+                            <td>{{ interface.get("_type_label") }}</td>
+                            <td>{{ interface.get("label") or "—" }}</td>
+                            <td>{% if interface.get("mgmt_only") %}<span class="status-pill accent">Sí</span>{% else %}<span class="muted">No</span>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state compact-empty-state">
+                <div class="empty-icon">⇆</div>
+                <h3>Este modelo todavía no tiene interfaces</h3>
+                <p>Usa el generador para preparar el lote completo.</p>
+            </div>
+            {% endif %}
+        </section>
+        {% else %}
+        <section class="panel workflow-panel model-placeholder">
+            <div class="empty-icon">▣</div>
+            <h2>Selecciona un modelo</h2>
+            <p>Al elegirlo podrás revisar sus componentes y generar interfaces rápidamente.</p>
+        </section>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel workflow-panel new-model-panel">
+    <div class="panel-header compact-panel-header">
+        <div>
+            <h2>Crear un modelo nuevo</h2>
+            <p>Registra la ficha base antes de agregar interfaces y otros componentes.</p>
+        </div>
+        {% if not write_enabled %}<span class="status-pill neutral">Solo preparación</span>{% endif %}
+    </div>
+    <form class="new-model-form" method="post" action="/device-types/new">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <div class="builder-grid new-model-grid">
+            <div class="field">
+                <label for="new-manufacturer">Fabricante</label>
+                <select id="new-manufacturer" name="manufacturer_id" required>
+                    <option value="">Seleccionar fabricante</option>
+                    {% for manufacturer in manufacturers %}
+                    <option value="{{ manufacturer.get('id') }}">
+                        {{ manufacturer.get("display") or manufacturer.get("name") or "Sin nombre" }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field field-wide">
+                <label for="new-model">Modelo</label>
+                <input id="new-model" name="model" type="text" placeholder="Ejemplo: C600" required>
+            </div>
+            <div class="field">
+                <label for="new-slug">Slug</label>
+                <input id="new-slug" name="slug" type="text" placeholder="Se genera automáticamente">
+            </div>
+            <div class="field">
+                <label for="new-part-number">Part number</label>
+                <input id="new-part-number" name="part_number" type="text" placeholder="Opcional">
+            </div>
+            <div class="field">
+                <label for="new-u-height">Altura U</label>
+                <input id="new-u-height" name="u_height" type="number" min="0" step="0.5" value="1" required>
+            </div>
+            <label class="checkbox-field">
+                <input type="checkbox" name="is_full_depth">
+                <span><strong>Profundidad completa</strong><small>Ocupa ambas caras del rack.</small></span>
+            </label>
+            <div class="field field-full">
+                <label for="new-description">Descripción</label>
+                <textarea id="new-description" name="description" rows="3" placeholder="Función del modelo, familia o notas técnicas"></textarea>
+            </div>
+        </div>
+        <div class="builder-actions">
+            <div>
+                <strong>Después agrega las interfaces</strong>
+                <span>Los equipos nuevos heredarán automáticamente los componentes.</span>
+            </div>
+            <button
+                class="button primary"
+                type="submit"
+                {% if not write_enabled or not can_manage_device_types %}disabled{% endif %}
+            >Crear modelo</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/device_types.js') }}"></script>
+{% endblock %}

@@ -6,7 +6,7 @@ El repositorio incluye una primera suite unitaria en `tests/test_access_control.
 
 | Módulo | Cobertura actual | Pendiente |
 |---|---|---|
-| Autenticación y roles | Inicialización, usuario, contraseña y permisos | bloqueo, revocación de sesiones y pruebas HTTP |
+| Autenticación y roles | Inicialización, usuario, contraseña, permisos y persistencia de personalizaciones | bloqueo, revocación de sesiones y pruebas HTTP |
 | Auditoría | Creación y persistencia de evento | filtros, retención, exportación y carga |
 | Dispositivos/interfaces | Manual | unitarias e integración con NetBox simulado |
 | Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
@@ -33,11 +33,16 @@ Se ejecutaron en un entorno aislado, no en el servidor:
 - Creación y autenticación de usuario de prueba: correcta.
 - Rechazo de contraseña débil: correcto.
 - Creación de rol personalizado y evento de auditoría: correcta.
+- Persistencia de permisos personalizados del rol Operador tras volver a ejecutar la inicialización: correcta.
 - Carga sintáctica de todas las plantillas administrativas: correcta.
-- Cuatro pruebas unitarias: superadas.
+- Cinco pruebas unitarias: superadas.
 - Middleware aislado: solicitud no autenticada a `/` redirigida al login.
 
 Estos resultados no validan systemd, el puerto 8101, la base persistente del servidor, el navegador completo ni NetBox.
+
+## Integración continua
+
+`.github/workflows/ci.yml` instala `requirements-lock.txt`, compila `app` y `tests`, ejecuta la suite unitaria, importa `app.main`, analiza las plantillas Jinja2 y valida los scripts de despliegue. El resultado del workflow del PR debe revisarse antes de fusionar.
 
 ## Prueba manual requerida en desarrollo
 

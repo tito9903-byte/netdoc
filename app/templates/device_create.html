@@ -14,25 +14,44 @@
     <a href="/devices">← Volver a dispositivos</a>
 </div>
 
+<section class="workflow-intro">
+    <div>
+        <span class="eyebrow">Alta guiada</span>
+        <h2>Crea el equipo usando un modelo completo y una ubicación real</h2>
+        <p>
+            El modelo aporta automáticamente las interfaces y componentes.
+            Después selecciona sitio, rack, posición U y cara para mantener una
+            elevación física confiable.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/device-types">Revisar modelos</a>
+        <a class="button secondary" href="/racks">Revisar racks</a>
+    </div>
+</section>
+
 {% if errors %}
 <section class="create-alert create-alert-error">
     <strong>No se pudo crear el equipo.</strong>
-
     <ul>
         {% for error in errors %}
-            <li>{{ error }}</li>
+        <li>{{ error }}</li>
         {% endfor %}
     </ul>
 </section>
 {% endif %}
 
 {% if not write_enabled %}
-<section class="create-alert create-alert-warning">
-    <strong>La escritura está desactivada.</strong>
-    <p>
-        Activa NETBOX_WRITE_ENABLED para permitir la creación.
-    </p>
-</section>
+<div class="read-only-callout">
+    <span>◌</span>
+    <div>
+        <strong>Desarrollo está protegido en modo de solo lectura.</strong>
+        <span>
+            Puedes revisar todas las opciones y preparar el proceso, pero no se
+            enviará ningún cambio a NetBox.
+        </span>
+    </div>
+</div>
 {% endif %}
 
 <form
@@ -49,10 +68,9 @@
     <section class="create-form-panel">
         <div class="create-form-panel-header">
             <div class="step-number">1</div>
-
             <div>
                 <h2>Identificación</h2>
-                <p>Datos principales del equipo.</p>
+                <p>Nombre operativo, función, estado y serial del equipo.</p>
             </div>
         </div>
 
@@ -61,7 +79,6 @@
                 <label for="name">
                     Nombre del equipo <span>*</span>
                 </label>
-
                 <input
                     id="name"
                     name="name"
@@ -71,57 +88,44 @@
                     required
                     autofocus
                 >
+                <small>Usa la convención de nombres aprobada para facilitar búsquedas y auditorías.</small>
             </div>
 
             <div class="create-field">
                 <label for="status">
                     Estado <span>*</span>
                 </label>
-
                 <select id="status" name="status" required>
                     {% for value, label in statuses %}
-                        <option
-                            value="{{ value }}"
-                            {% if form_data.get('status', 'active') == value %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ label }}
-                        </option>
+                    <option
+                        value="{{ value }}"
+                        {% if form_data.get('status', 'active') == value %}selected{% endif %}
+                    >
+                        {{ label }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="create-field">
                 <label for="role_id">
-                    Rol <span>*</span>
+                    Rol del dispositivo <span>*</span>
                 </label>
-
-                <select
-                    id="role_id"
-                    name="role_id"
-                    required
-                >
+                <select id="role_id" name="role_id" required>
                     <option value="">Seleccionar rol</option>
-
                     {% for role in roles %}
-                        <option
-                            value="{{ role.get('id') }}"
-                            {% if form_data.get('role_id') == role.get('id') | string %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ role.get("display")
-                               or role.get("name")
-                               or "Sin nombre" }}
-                        </option>
+                    <option
+                        value="{{ role.get('id') }}"
+                        {% if form_data.get('role_id') == role.get('id') | string %}selected{% endif %}
+                    >
+                        {{ role.get("display") or role.get("name") or "Sin nombre" }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="create-field">
                 <label for="serial">Número de serie</label>
-
                 <input
                     id="serial"
                     name="serial"
@@ -136,77 +140,50 @@
     <section class="create-form-panel">
         <div class="create-form-panel-header">
             <div class="step-number">2</div>
-
             <div>
                 <h2>Fabricante y modelo</h2>
-                <p>
-                    El modelo determina las interfaces y componentes.
-                </p>
+                <p>El modelo determina interfaces, bahías, energía, altura y profundidad.</p>
             </div>
         </div>
 
         <div class="create-form-grid">
             <div class="create-field">
-                <label for="manufacturer_id">
-                    Fabricante
-                </label>
-
-                <select
-                    id="manufacturer_id"
-                    name="manufacturer_id"
-                >
+                <label for="manufacturer_id">Filtrar por fabricante</label>
+                <select id="manufacturer_id" name="manufacturer_id">
                     <option value="">Todos los fabricantes</option>
-
                     {% for manufacturer in manufacturers %}
-                        <option
-                            value="{{ manufacturer.get('id') }}"
-                            {% if form_data.get('manufacturer_id') == manufacturer.get('id') | string %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ manufacturer.get("display")
-                               or manufacturer.get("name")
-                               or "Sin nombre" }}
-                        </option>
+                    <option
+                        value="{{ manufacturer.get('id') }}"
+                        {% if form_data.get('manufacturer_id') == manufacturer.get('id') | string %}selected{% endif %}
+                    >
+                        {{ manufacturer.get("display") or manufacturer.get("name") or "Sin nombre" }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="create-field create-field-wide">
                 <label for="device_type_id">
-                    Tipo de dispositivo <span>*</span>
+                    Modelo <span>*</span>
                 </label>
-
-                <select
-                    id="device_type_id"
-                    name="device_type_id"
-                    required
-                >
+                <select id="device_type_id" name="device_type_id" required>
                     <option value="">Seleccionar modelo</option>
-
                     {% for device_type in device_types %}
-                        {% set manufacturer = device_type.get("manufacturer") or {} %}
-
-                        <option
-                            value="{{ device_type.get('id') }}"
-                            data-manufacturer-id="{{ manufacturer.get('id', '') }}"
-                            {% if form_data.get('device_type_id') == device_type.get('id') | string %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ manufacturer.get("display")
-                               or manufacturer.get("name")
-                               or "Sin fabricante" }}
-                            —
-                            {{ device_type.get("display")
-                               or device_type.get("model")
-                               or "Sin modelo" }}
-                        </option>
+                    {% set manufacturer = device_type.get("manufacturer") or {} %}
+                    <option
+                        value="{{ device_type.get('id') }}"
+                        data-manufacturer-id="{{ manufacturer.get('id', '') }}"
+                        {% if form_data.get('device_type_id') == device_type.get('id') | string %}selected{% endif %}
+                    >
+                        {{ manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" }}
+                        —
+                        {{ device_type.get("display") or device_type.get("model") or "Sin modelo" }}
+                    </option>
                     {% endfor %}
                 </select>
-
                 <small>
-                    Las interfaces del tipo se crearán automáticamente.
+                    Las plantillas de interfaz y componentes se crearán automáticamente.
+                    <a href="/device-types">Preparar o corregir un modelo →</a>
                 </small>
             </div>
         </div>
@@ -215,10 +192,9 @@
     <section class="create-form-panel">
         <div class="create-form-panel-header">
             <div class="step-number">3</div>
-
             <div>
                 <h2>Ubicación física</h2>
-                <p>Selecciona el sitio y el rack cuando corresponda.</p>
+                <p>Selecciona sitio, rack, posición U y cara para reflejar la instalación.</p>
             </div>
         </div>
 
@@ -227,56 +203,39 @@
                 <label for="site_id">
                     Sitio <span>*</span>
                 </label>
-
-                <select
-                    id="site_id"
-                    name="site_id"
-                    required
-                >
+                <select id="site_id" name="site_id" required>
                     <option value="">Seleccionar sitio</option>
-
                     {% for site in sites %}
-                        <option
-                            value="{{ site.get('id') }}"
-                            {% if form_data.get('site_id') == site.get('id') | string %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ site.get("display")
-                               or site.get("name")
-                               or "Sin nombre" }}
-                        </option>
+                    <option
+                        value="{{ site.get('id') }}"
+                        {% if form_data.get('site_id') == site.get('id') | string %}selected{% endif %}
+                    >
+                        {{ site.get("display") or site.get("name") or "Sin nombre" }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="create-field">
                 <label for="rack_id">Rack</label>
-
                 <select id="rack_id" name="rack_id">
                     <option value="">Sin rack</option>
-
                     {% for rack in racks %}
-                        {% set rack_site = rack.get("site") or {} %}
-
-                        <option
-                            value="{{ rack.get('id') }}"
-                            data-site-id="{{ rack_site.get('id', '') }}"
-                            {% if form_data.get('rack_id') == rack.get('id') | string %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ rack.get("display")
-                               or rack.get("name")
-                               or "Sin nombre" }}
-                        </option>
+                    {% set rack_site = rack.get("site") or {} %}
+                    <option
+                        value="{{ rack.get('id') }}"
+                        data-site-id="{{ rack_site.get('id', '') }}"
+                        {% if form_data.get('rack_id') == rack.get('id') | string %}selected{% endif %}
+                    >
+                        {{ rack.get("display") or rack.get("name") or "Sin nombre" }}
+                    </option>
                     {% endfor %}
                 </select>
+                <small>Solo se mostrarán racks del sitio seleccionado.</small>
             </div>
 
             <div class="create-field">
                 <label for="position">Posición U</label>
-
                 <input
                     id="position"
                     name="position"
@@ -290,25 +249,12 @@
 
             <div class="create-field">
                 <label for="face">Cara del rack</label>
-
                 <select id="face" name="face">
                     <option value="">Sin definir</option>
-
-                    <option
-                        value="front"
-                        {% if form_data.get('face') == 'front' %}
-                            selected
-                        {% endif %}
-                    >
+                    <option value="front" {% if form_data.get('face') == 'front' %}selected{% endif %}>
                         Frontal
                     </option>
-
-                    <option
-                        value="rear"
-                        {% if form_data.get('face') == 'rear' %}
-                            selected
-                        {% endif %}
-                    >
+                    <option value="rear" {% if form_data.get('face') == 'rear' %}selected{% endif %}>
                         Trasera
                     </option>
                 </select>
@@ -318,20 +264,12 @@
 
     <section class="create-submit-bar">
         <div>
-            <strong>Revisa la información antes de guardar.</strong>
-            <span>
-                El cambio quedará registrado en el historial de NetBox.
-            </span>
+            <strong>Revisa modelo y ubicación antes de guardar.</strong>
+            <span>El cambio quedará registrado en el historial de NetBox y en la auditoría de NetDoc.</span>
         </div>
 
         <div class="create-submit-actions">
-            <a
-                class="create-secondary-button"
-                href="/devices"
-            >
-                Cancelar
-            </a>
-
+            <a class="create-secondary-button" href="/devices">Cancelar</a>
             <button
                 class="create-primary-button"
                 type="submit"
@@ -345,7 +283,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script
-    src="{{ url_for('static', path='js/device_create.js') }}"
-></script>
+<script src="{{ url_for('static', path='js/device_create.js') }}"></script>
 {% endblock %}

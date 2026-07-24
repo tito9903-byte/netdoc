@@ -1,0 +1,198 @@
+.auth-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.current-user {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.current-user-avatar {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 1px solid rgba(32, 200, 210, 0.22);
+    border-radius: 9px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.current-user strong,
+.current-user span {
+    display: block;
+}
+
+.current-user strong {
+    font-size: 11px;
+}
+
+.current-user div > span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.logout-button {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: #c6d2dc;
+    background: var(--surface);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.logout-button:hover {
+    border-color: rgba(255, 125, 134, 0.35);
+    color: #ffafb5;
+    background: rgba(255, 125, 134, 0.08);
+}
+
+.login-body {
+    min-height: 100vh;
+    background:
+        radial-gradient(
+            circle at 50% 15%,
+            rgba(32, 200, 210, 0.08),
+            transparent 34%
+        ),
+        var(--background);
+}
+
+.login-shell {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    padding: 24px;
+}
+
+.login-panel {
+    width: min(410px, 100%);
+    padding: 30px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+}
+
+.login-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.login-brand strong,
+.login-brand span {
+    display: block;
+}
+
+.login-brand strong {
+    font-size: 18px;
+}
+
+.login-brand span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.login-heading {
+    margin-top: 30px;
+}
+
+.login-heading h1,
+.login-heading p {
+    margin: 0;
+}
+
+.login-heading h1 {
+    font-size: 22px;
+}
+
+.login-heading p {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.login-error {
+    margin-top: 19px;
+    padding: 12px;
+    border: 1px solid rgba(255, 125, 134, 0.25);
+    border-radius: 9px;
+    color: #ffb3b9;
+    background: rgba(255, 125, 134, 0.08);
+    font-size: 12px;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.login-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: #b8c7d3;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.login-field input {
+    width: 100%;
+    min-height: 43px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    outline: none;
+    color: var(--text);
+    background: var(--surface-soft);
+}
+
+.login-field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(32, 200, 210, 0.09);
+}
+
+.login-button {
+    min-height: 44px;
+    margin-top: 3px;
+    border: 1px solid var(--accent);
+    border-radius: 9px;
+    color: #041014;
+    background: var(--accent);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.login-button:hover {
+    filter: brightness(1.08);
+}
+
+.login-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 24px;
+    padding-top: 19px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--muted);
+    font-size: 10px;
+}
+
+@media (max-width: 900px) {
+    .auth-topbar-actions .current-user,
+    .auth-topbar-actions .environment-badge {
+        display: none;
+    }
+}

@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Dispositivos | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/devices.css') }}"
+>
+{% endblock %}
+
+{% block content %}
+<section class="devices-toolbar">
+    <form
+        class="device-filters"
+        method="get"
+        action="/devices"
+    >
+        <div class="filter-field search-field">
+            <label for="device-search">Buscar</label>
+
+            <input
+                id="device-search"
+                name="q"
+                type="search"
+                value="{{ query }}"
+                placeholder="Nombre, serial, modelo, IP..."
+            >
+        </div>
+
+        <div class="filter-field">
+            <label for="site-filter">Sitio</label>
+
+            <select
+                id="site-filter"
+                name="site_id"
+            >
+                <option value="">Todos los sitios</option>
+
+                {% for site in sites %}
+                    <option
+                        value="{{ site.get('id') }}"
+                        {% if selected_site_id == site.get('id') %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ site.get("display")
+                           or site.get("name")
+                           or "Sin nombre" }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="role-filter">Rol</label>
+
+            <select
+                id="role-filter"
+                name="role_id"
+            >
+                <option value="">Todos los roles</option>
+
+                {% for role in roles %}
+                    <option
+                        value="{{ role.get('id') }}"
+                        {% if selected_role_id == role.get('id') %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ role.get("display")
+                           or role.get("name")
+                           or "Sin nombre" }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="status-filter">Estado</label>
+
+            <select
+                id="status-filter"
+                name="status"
+            >
+                <option value="">Todos los estados</option>
+
+                {% for value, label in statuses %}
+                    <option
+                        value="{{ value }}"
+                        {% if selected_status == value %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-actions">
+            <button
+                class="primary-button"
+                type="submit"
+            >
+                Buscar
+            </button>
+
+            <a
+                class="secondary-button"
+                href="/devices"
+            >
+                Limpiar
+            </a>
+        </div>
+    </form>
+</section>
+
+<section class="device-panel">
+    <div class="device-panel-header">
+        <div>
+            <h2>Inventario de dispositivos</h2>
+
+            <p>
+                Mostrando {{ first_result }}–{{ last_result }}
+                de {{ total_count }} equipos
+            </p>
+        </div>
+
+        <span class="result-badge">
+            {{ total_count }} registrados
+        </span>
+    </div>
+
+    {% if devices %}
+        <div class="devices-table-wrapper">
+            <table class="devices-table">
+                <thead>
+                    <tr>
+                        <th>Dispositivo</th>
+                        <th>Tipo</th>
+                        <th>Rol</th>
+                        <th>Sitio</th>
+                        <th>Rack</th>
+                        <th>IP principal</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for device in devices %}
+                        {% set device_type = device.get("device_type") or {} %}
+                        {% set role = device.get("role")
+                            or device.get("device_role")
+                            or {} %}
+                        {% set site = device.get("site") or {} %}
+                        {% set rack = device.get("rack") or {} %}
+                        {% set status_data = device.get("status") or {} %}
+                        {% set status_value = status_data.get("value") or "" %}
+                        {% set primary_ip = device.get("primary_ip4")
+                            or device.get("primary_ip")
+                            or {} %}
+
+                        <tr>
+                            <td>
+                                <div class="device-name-cell">
+                                    <span class="device-list-avatar">
+                                        {{ (device.get("name") or "N")[0] | upper }}
+                                    </span>
+
+                                    <div>
+                                        <a
+                                            href="/devices/{{ device.get('id') }}"
+                                        >
+                                            {{ device.get("name")
+                                               or device.get("display")
+                                               or "Sin nombre" }}
+                                        </a>
+
+                                        <span>
+                                            ID {{ device.get("id", "—") }}
+
+                                            {% if device.get("serial") %}
+                                                · {{ device.get("serial") }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>
+                                {{ device_type.get("display")
+                                   or device_type.get("model")
+                                   or "—" }}
+                            </td>
+
+                            <td>
+                                {{ role.get("display")
+                                   or role.get("name")
+                                   or "—" }}
+                            </td>
+
+                            <td>
+                                {{ site.get("display")
+                                   or site.get("name")
+                                   or "—" }}
+                            </td>
+
+                            <td>
+                                {{ rack.get("display")
+                                   or rack.get("name")
+                                   or "—" }}
+                            </td>
+
+                            <td class="mono-value">
+                                {{ primary_ip.get("display")
+                                   or primary_ip.get("address")
+                                   or "—" }}
+                            </td>
+
+                            <td>
+                                <span
+                                    class="device-status
+                                    status-{{ status_value }}"
+                                >
+                                    {{ status_data.get("label")
+                                       or status_value
+                                       or "Sin estado" }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-bar">
+            <div class="pagination-summary">
+                Página {{ page }} de {{ total_pages }}
+            </div>
+
+            <nav class="pagination">
+                {% if previous_url %}
+                    <a href="{{ previous_url }}">
+                        Anterior
+                    </a>
+                {% else %}
+                    <span class="disabled-page">
+                        Anterior
+                    </span>
+                {% endif %}
+
+                {% for page_link in page_links %}
+                    <a
+                        href="{{ page_link.url }}"
+                        class="{% if page_link.active %}active{% endif %}"
+                    >
+                        {{ page_link.number }}
+                    </a>
+                {% endfor %}
+
+                {% if next_url %}
+                    <a href="{{ next_url }}">
+                        Siguiente
+                    </a>
+                {% else %}
+                    <span class="disabled-page">
+                        Siguiente
+                    </span>
+                {% endif %}
+            </nav>
+        </div>
+
+    {% else %}
+        <div class="devices-empty-state">
+            <div>▣</div>
+            <h3>No se encontraron dispositivos</h3>
+
+            <p>
+                Cambia los filtros o verifica la documentación en NetBox.
+            </p>
+
+            <a
+                class="secondary-button"
+                href="/devices"
+            >
+                Limpiar filtros
+            </a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

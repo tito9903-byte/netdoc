@@ -1,0 +1,818 @@
+.rack-toolbar,
+.rack-list-header,
+.rack-detail-header,
+.rack-detail-metrics article,
+.rack-elevation-panel,
+.rack-information-panel {
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.rack-toolbar {
+    padding: 18px;
+    border-radius: 14px;
+}
+
+.rack-filters {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.4fr) minmax(210px, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.rack-filter label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.rack-filter input,
+.rack-filter select {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    outline: none;
+    color: var(--text);
+    background: var(--surface-soft);
+}
+
+.rack-filter input:focus,
+.rack-filter select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(32, 200, 210, 0.08);
+}
+
+.rack-filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.rack-primary-button,
+.rack-secondary-button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 15px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.rack-primary-button {
+    border: 1px solid var(--accent);
+    color: #041014;
+    background: var(--accent);
+}
+
+.rack-secondary-button {
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: var(--surface-soft);
+}
+
+.rack-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-top: 18px;
+    padding: 16px 19px;
+    border-radius: 14px;
+}
+
+.rack-list-header h2,
+.rack-list-header p {
+    margin: 0;
+}
+
+.rack-list-header h2 {
+    font-size: 16px;
+}
+
+.rack-list-header p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.rack-result-badge {
+    padding: 6px 10px;
+    border: 1px solid rgba(32, 200, 210, 0.22);
+    border-radius: 999px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 11px;
+}
+
+.rack-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 15px;
+    margin-top: 16px;
+}
+
+.rack-card {
+    display: block;
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+.rack-card:hover {
+    border-color: rgba(32, 200, 210, 0.36);
+    background: var(--surface-hover);
+}
+
+.rack-card-top {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.rack-card-icon {
+    display: grid;
+    width: 39px;
+    height: 39px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 18px;
+}
+
+.rack-card-identity {
+    min-width: 0;
+    flex: 1;
+}
+
+.rack-card-identity h3,
+.rack-card-identity p {
+    margin: 0;
+}
+
+.rack-card-identity h3 {
+    overflow: hidden;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rack-card-identity p {
+    margin-top: 4px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rack-card-status,
+.rack-detail-status {
+    padding: 4px 8px;
+    border: 1px solid rgba(80, 216, 144, 0.2);
+    border-radius: 999px;
+    color: #91e9b7;
+    background: rgba(80, 216, 144, 0.09);
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+.rack-card-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 17px;
+}
+
+.rack-card-metrics span,
+.rack-card-metrics strong {
+    display: block;
+}
+
+.rack-card-metrics span {
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.rack-card-metrics strong {
+    margin-top: 3px;
+    font-size: 15px;
+}
+
+.rack-progress {
+    height: 8px;
+    margin-top: 14px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-soft);
+}
+
+.rack-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+}
+
+.rack-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 13px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.rack-card-footer strong {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.rack-empty {
+    margin-top: 16px;
+    padding: 70px 20px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    text-align: center;
+    background: var(--surface);
+}
+
+.rack-empty > div {
+    color: var(--accent);
+    font-size: 36px;
+}
+
+.rack-empty h2 {
+    margin: 14px 0 0;
+    font-size: 17px;
+}
+
+.rack-empty p {
+    margin: 8px 0 20px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.rack-detail-navigation {
+    margin-bottom: 14px;
+}
+
+.rack-detail-navigation a {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.rack-detail-navigation a:hover {
+    color: var(--accent);
+}
+
+.rack-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 19px;
+    border-radius: 14px;
+}
+
+.rack-detail-identity {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.rack-detail-icon {
+    display: grid;
+    width: 45px;
+    height: 45px;
+    place-items: center;
+    border-radius: 11px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 19px;
+}
+
+.rack-detail-identity h2,
+.rack-detail-identity p {
+    margin: 0;
+}
+
+.rack-detail-identity h2 {
+    font-size: 20px;
+}
+
+.rack-detail-identity p {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.rack-detail-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.rack-detail-metrics article {
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.rack-detail-metrics span,
+.rack-detail-metrics strong,
+.rack-detail-metrics small {
+    display: block;
+}
+
+.rack-detail-metrics span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.rack-detail-metrics strong {
+    margin-top: 4px;
+    font-size: 23px;
+}
+
+.rack-detail-metrics small {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.rack-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 17px;
+    margin-top: 16px;
+}
+
+.rack-elevation-panel,
+.rack-information-panel {
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 14px;
+}
+
+.rack-panel-header {
+    display: flex;
+    min-height: 68px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 14px 17px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.rack-panel-header h3,
+.rack-panel-header p {
+    margin: 0;
+}
+
+.rack-panel-header h3 {
+    font-size: 14px;
+}
+
+.rack-panel-header p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.rack-face-tabs {
+    display: flex;
+    gap: 5px;
+}
+
+.rack-face-tabs a {
+    padding: 6px 9px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    background: var(--surface-soft);
+    font-size: 10px;
+}
+
+.rack-face-tabs a.active {
+    border-color: var(--accent);
+    color: #041014;
+    background: var(--accent);
+}
+
+.rack-visual-scroll {
+    overflow-x: auto;
+    padding: 21px;
+}
+
+.rack-visual {
+    display: grid;
+    width: min(600px, 100%);
+    min-width: 410px;
+    grid-template-columns: 58px minmax(300px, 1fr);
+    margin: 0 auto;
+    border: 1px solid #3a4d5d;
+    background: #080f16;
+}
+
+.rack-unit-labels,
+.rack-grid {
+    display: grid;
+    grid-template-rows: repeat(var(--rack-units), 30px);
+}
+
+.rack-unit-labels {
+    border-right: 1px solid #3a4d5d;
+}
+
+.rack-unit-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #1d2a35;
+    color: #73889a;
+    font-family: monospace;
+    font-size: 9px;
+}
+
+.rack-grid {
+    position: relative;
+}
+
+.rack-grid-row {
+    grid-column: 1;
+    border-bottom: 1px solid #1d2a35;
+}
+
+.rack-device-block {
+    z-index: 2;
+    grid-column: 1;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    justify-content: center;
+    margin: 2px 5px;
+    padding: 5px 9px;
+    overflow: hidden;
+    border: 1px solid rgba(32, 200, 210, 0.5);
+    border-radius: 5px;
+    color: var(--text);
+    background: rgba(13, 74, 86, 0.92);
+}
+
+.rack-device-block:hover {
+    border-color: var(--accent);
+    background: rgba(17, 94, 108, 0.98);
+}
+
+.rack-device-block.full-depth {
+    border-style: dashed;
+}
+
+.rack-device-name,
+.rack-device-model {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rack-device-name {
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.rack-device-model {
+    margin-top: 2px;
+    color: #a2c8d0;
+    font-size: 8px;
+}
+
+.rack-information-list {
+    margin: 0;
+}
+
+.rack-information-list > div {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 12px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.rack-information-list dt {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.rack-information-list dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+}
+
+.rack-unpositioned {
+    margin: 16px;
+    padding: 14px;
+    border: 1px solid rgba(244, 190, 99, 0.2);
+    border-radius: 10px;
+    background: rgba(244, 190, 99, 0.06);
+}
+
+.rack-unpositioned h4,
+.rack-unpositioned p {
+    margin: 0;
+}
+
+.rack-unpositioned h4 {
+    color: #f4cf90;
+    font-size: 12px;
+}
+
+.rack-unpositioned p {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+.rack-unpositioned-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 11px;
+}
+
+.rack-unpositioned-list a {
+    padding: 8px 9px;
+    border: 1px solid var(--border-soft);
+    border-radius: 7px;
+    background: var(--surface-soft);
+}
+
+.rack-unpositioned-list strong,
+.rack-unpositioned-list span {
+    display: block;
+}
+
+.rack-unpositioned-list strong {
+    font-size: 10px;
+}
+
+.rack-unpositioned-list span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 8px;
+}
+
+@media (max-width: 1180px) {
+    .rack-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rack-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 800px) {
+    .rack-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .rack-filter-actions {
+        flex-direction: column;
+    }
+
+    .rack-detail-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .rack-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rack-list-header,
+    .rack-detail-header,
+    .rack-panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .rack-detail-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .rack-information-list > div {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
+
+/* NETDOC_RACK_COMPACT_START */
+
+/*
+ * Elevación compacta:
+ * evita que un rack de 42U ocupe toda la página.
+ */
+
+.content {
+    overflow-x: hidden;
+}
+
+.rack-detail-grid {
+    grid-template-columns: minmax(0, 1fr) 290px;
+    align-items: start;
+}
+
+.rack-elevation-panel {
+    min-width: 0;
+}
+
+.rack-visual-scroll {
+    max-height: calc(100vh - 315px);
+    overflow: auto;
+    padding: 16px;
+    scrollbar-gutter: stable;
+}
+
+.rack-visual {
+    width: min(760px, 100%);
+    min-width: 520px;
+}
+
+.rack-unit-labels,
+.rack-grid {
+    grid-template-rows: repeat(var(--rack-units), 24px);
+}
+
+.rack-unit-label {
+    font-size: 8px;
+}
+
+.rack-device-block {
+    margin: 1px 4px;
+    padding: 3px 8px;
+}
+
+.rack-device-name {
+    font-size: 9px;
+}
+
+.rack-device-model {
+    margin-top: 1px;
+    font-size: 7px;
+}
+
+/* Los equipos de 1U no tienen espacio para dos líneas. */
+.rack-device-block.one-u {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+}
+
+.rack-device-block.one-u .rack-device-name {
+    font-size: 9px;
+}
+
+.rack-device-block.one-u .rack-device-model {
+    display: none;
+}
+
+/* Mantiene la información visible mientras se revisa el rack. */
+.rack-information-panel {
+    position: sticky;
+    top: 92px;
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+}
+
+/* Mejora la barra de desplazamiento del rack. */
+.rack-visual-scroll::-webkit-scrollbar,
+.rack-information-panel::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+.rack-visual-scroll::-webkit-scrollbar-thumb,
+.rack-information-panel::-webkit-scrollbar-thumb {
+    border: 2px solid var(--surface);
+    border-radius: 999px;
+    background: #31495a;
+}
+
+.rack-visual-scroll::-webkit-scrollbar-track,
+.rack-information-panel::-webkit-scrollbar-track {
+    background: var(--surface-soft);
+}
+
+@media (max-width: 1180px) {
+    .rack-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rack-information-panel {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 700px) {
+    .rack-visual-scroll {
+        max-height: 68vh;
+        padding: 10px;
+    }
+
+    .rack-visual {
+        min-width: 460px;
+    }
+}
+
+/* NETDOC_RACK_COMPACT_END */
+
+/* NETDOC_RACK_READABILITY_START */
+
+/*
+ * Mejora la lectura de nombres y modelos dentro del rack.
+ */
+
+.rack-unit-labels,
+.rack-grid {
+    grid-template-rows: repeat(var(--rack-units), 32px);
+}
+
+.rack-unit-label {
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.rack-device-block {
+    min-height: 0;
+    margin: 2px 6px;
+    padding: 4px 10px;
+    line-height: 1.15;
+}
+
+.rack-device-name {
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1.15;
+}
+
+.rack-device-model {
+    margin-top: 3px;
+    font-size: 9px;
+    line-height: 1.1;
+}
+
+/*
+ * Un equipo de 1U muestra únicamente el nombre para evitar
+ * que el texto quede cortado.
+ */
+.rack-device-block.one-u {
+    min-height: 28px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 11px;
+}
+
+.rack-device-block.one-u .rack-device-name {
+    width: 100%;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 28px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rack-device-block.one-u .rack-device-model {
+    display: none;
+}
+
+/*
+ * Equipos de dos unidades o más muestran nombre y modelo.
+ */
+.rack-device-block:not(.one-u) {
+    justify-content: center;
+}
+
+.rack-device-block:not(.one-u) .rack-device-name,
+.rack-device-block:not(.one-u) .rack-device-model {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* NETDOC_RACK_READABILITY_END */

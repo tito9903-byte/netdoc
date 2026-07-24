@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | NetDoc{% endblock %}
+
+{% block content %}
+<section class="metric-grid">
+    <article class="metric-card">
+        <div class="metric-icon">⌖</div>
+
+        <div>
+            <span class="metric-label">Sitios</span>
+
+            <strong class="metric-value">
+                {% if summary.sites.value is not none %}
+                    {{ summary.sites.value }}
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
+
+            {% if summary.sites.error %}
+                <small class="metric-error">
+                    Sin permiso o no disponible
+                </small>
+            {% else %}
+                <small>Ubicaciones documentadas</small>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <div class="metric-icon">▣</div>
+
+        <div>
+            <span class="metric-label">Dispositivos</span>
+
+            <strong class="metric-value">
+                {% if summary.devices.value is not none %}
+                    {{ summary.devices.value }}
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
+
+            {% if summary.devices.error %}
+                <small class="metric-error">
+                    Sin permiso o no disponible
+                </small>
+            {% else %}
+                <small>Equipos registrados</small>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <div class="metric-icon">▥</div>
+
+        <div>
+            <span class="metric-label">Racks</span>
+
+            <strong class="metric-value">
+                {% if summary.racks.value is not none %}
+                    {{ summary.racks.value }}
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
+
+            {% if summary.racks.error %}
+                <small class="metric-error">
+                    Sin permiso o no disponible
+                </small>
+            {% else %}
+                <small>Bastidores registrados</small>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <div class="metric-icon">⇆</div>
+
+        <div>
+            <span class="metric-label">Interfaces</span>
+
+            <strong class="metric-value">
+                {% if summary.interfaces.value is not none %}
+                    {{ summary.interfaces.value }}
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
+
+            {% if summary.interfaces.error %}
+                <small class="metric-error">
+                    Sin permiso o no disponible
+                </small>
+            {% else %}
+                <small>Puertos documentados</small>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <div class="metric-icon">⌁</div>
+
+        <div>
+            <span class="metric-label">Cables</span>
+
+            <strong class="metric-value">
+                {% if summary.cables.value is not none %}
+                    {{ summary.cables.value }}
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
+
+            {% if summary.cables.error %}
+                <small class="metric-error">
+                    Sin permiso o no disponible
+                </small>
+            {% else %}
+                <small>Conexiones físicas</small>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel main-panel">
+        <div class="panel-header">
+            <div>
+                <h2>Dispositivos recientes</h2>
+                <p>
+                    Equipos modificados recientemente en NetBox
+                </p>
+            </div>
+
+            <span class="panel-badge">
+                {{ recent_devices | length }} mostrados
+            </span>
+        </div>
+
+        {% if recent_devices_error %}
+            <div class="alert alert-error">
+                <strong>No se pudieron consultar los dispositivos.</strong>
+                <span>{{ recent_devices_error }}</span>
+            </div>
+
+        {% elif recent_devices %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dispositivo</th>
+                            <th>Tipo</th>
+                            <th>Sitio</th>
+                            <th>Estado</th>
+                            <th>Actualizado</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for device in recent_devices %}
+                            {% set device_type = device.get("device_type") or {} %}
+                            {% set site = device.get("site") or {} %}
+                            {% set status = device.get("status") or {} %}
+
+                            <tr>
+                                <td>
+                                    <div class="device-cell">
+                                        <span class="device-avatar">
+                                            {{ (device.get("name") or "N")[0] | upper }}
+                                        </span>
+
+                                        <div>
+                                            <strong>
+                                                {{ device.get("name") or device.get("display") or "Sin nombre" }}
+                                            </strong>
+
+                                            <span>
+                                                ID {{ device.get("id", "—") }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {{ device_type.get("display")
+                                       or device_type.get("model")
+                                       or "—" }}
+                                </td>
+
+                                <td>
+                                    {{ site.get("display")
+                                       or site.get("name")
+                                       or "—" }}
+                                </td>
+
+                                <td>
+                                    <span class="status-badge">
+                                        {{ status.get("label")
+                                           or status.get("value")
+                                           or "Sin estado" }}
+                                    </span>
+                                </td>
+
+                                <td class="muted">
+                                    {% if device.get("last_updated") %}
+                                        {{ device.get("last_updated")[:16] | replace("T", " ") }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">▣</div>
+                <h3>No hay dispositivos registrados</h3>
+                <p>
+                    Cuando existan dispositivos en NetBox aparecerán aquí.
+                </p>
+            </div>
+        {% endif %}
+    </article>
+
+    <aside class="panel side-panel">
+        <div class="panel-header">
+            <div>
+                <h2>Estado de integración</h2>
+                <p>Conexión entre NetDoc y NetBox</p>
+            </div>
+        </div>
+
+        <div class="integration-item">
+            <span
+                class="status-dot
+                {% if netbox_connected %}online{% else %}offline{% endif %}"
+            ></span>
+
+            <div>
+                <strong>API de NetBox</strong>
+
+                <span>
+                    {% if netbox_connected %}
+                        Conectada y respondiendo
+                    {% else %}
+                        Presenta errores de consulta
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="integration-item">
+            <span class="status-dot online"></span>
+
+            <div>
+                <strong>Modo de acceso</strong>
+                <span>Token API de solo lectura</span>
+            </div>
+        </div>
+
+        <div class="integration-item">
+            <span class="status-dot online"></span>
+
+            <div>
+                <strong>Fuente oficial</strong>
+                <span>Los datos se obtienen desde NetBox</span>
+            </div>
+        </div>
+
+        <div class="next-module">
+            <span>Próximo módulo</span>
+            <strong>Consulta de dispositivos</strong>
+
+            <p>
+                Búsqueda, filtros, detalles, interfaces y conexiones
+                de cada equipo.
+            </p>
+        </div>
+    </aside>
+</section>
+{% endblock %}

@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/devices.css') }}"
+>
+{% endblock %}
+
+{% block content %}
+{% set device_type = device.get("device_type") or {} %}
+{% set manufacturer = device_type.get("manufacturer") or {} %}
+{% set role = device.get("role")
+    or device.get("device_role")
+    or {} %}
+{% set site = device.get("site") or {} %}
+{% set location = device.get("location") or {} %}
+{% set rack = device.get("rack") or {} %}
+{% set status_data = device.get("status") or {} %}
+{% set primary_ip = device.get("primary_ip4")
+    or device.get("primary_ip")
+    or {} %}
+
+<div class="detail-navigation">
+    <a href="/devices">
+        ← Volver a dispositivos
+    </a>
+</div>
+
+<section class="device-detail-header">
+    <div class="device-detail-identity">
+        <span class="device-detail-avatar">
+            {{ (device.get("name") or "N")[0] | upper }}
+        </span>
+
+        <div>
+            <h2>
+                {{ device.get("name")
+                   or device.get("display")
+                   or "Sin nombre" }}
+            </h2>
+
+            <p>
+                {{ manufacturer.get("display")
+                   or manufacturer.get("name")
+                   or "Fabricante no definido" }}
+
+                ·
+
+                {{ device_type.get("display")
+                   or device_type.get("model")
+                   or "Modelo no definido" }}
+            </p>
+        </div>
+    </div>
+
+    <span
+        class="device-status
+        status-{{ status_data.get('value', '') }}"
+    >
+        {{ status_data.get("label")
+           or status_data.get("value")
+           or "Sin estado" }}
+    </span>
+</section>
+
+<section class="detail-metrics">
+    <article>
+        <span>Interfaces</span>
+        <strong>{{ interface_count }}</strong>
+        <small>Total documentado</small>
+    </article>
+
+    <article>
+        <span>Habilitadas</span>
+        <strong>{{ enabled_interfaces }}</strong>
+        <small>Puertos administrativamente activos</small>
+    </article>
+
+    <article>
+        <span>Conectadas</span>
+        <strong>{{ connected_interfaces }}</strong>
+        <small>Interfaces con cable o extremo remoto</small>
+    </article>
+
+    <article>
+        <span>Libres</span>
+        <strong>
+            {{ interface_count - connected_interfaces }}
+        </strong>
+        <small>Sin conexión documentada</small>
+    </article>
+</section>
+
+<section class="device-information-grid">
+    <article class="information-panel">
+        <div class="information-panel-header">
+            <h3>Información general</h3>
+        </div>
+
+        <dl class="information-list">
+            <div>
+                <dt>Nombre</dt>
+                <dd>
+                    {{ device.get("name") or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Fabricante</dt>
+                <dd>
+                    {{ manufacturer.get("display")
+                       or manufacturer.get("name")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Modelo</dt>
+                <dd>
+                    {{ device_type.get("display")
+                       or device_type.get("model")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Rol</dt>
+                <dd>
+                    {{ role.get("display")
+                       or role.get("name")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Número de serie</dt>
+                <dd class="mono-value">
+                    {{ device.get("serial") or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Etiqueta de activo</dt>
+                <dd>
+                    {{ device.get("asset_tag") or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>IP principal</dt>
+                <dd class="mono-value">
+                    {{ primary_ip.get("display")
+                       or primary_ip.get("address")
+                       or "—" }}
+                </dd>
+            </div>
+        </dl>
+    </article>
+
+    <article class="information-panel">
+        <div class="information-panel-header">
+            <h3>Ubicación física</h3>
+        </div>
+
+        <dl class="information-list">
+            <div>
+                <dt>Sitio</dt>
+                <dd>
+                    {{ site.get("display")
+                       or site.get("name")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Ubicación</dt>
+                <dd>
+                    {{ location.get("display")
+                       or location.get("name")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Rack</dt>
+                <dd>
+                    {{ rack.get("display")
+                       or rack.get("name")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Posición</dt>
+                <dd>
+                    {% if device.get("position") is not none %}
+                        U{{ device.get("position") }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Cara</dt>
+                <dd>
+                    {% set face = device.get("face") or {} %}
+
+                    {{ face.get("label")
+                       or face.get("value")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Tenant</dt>
+                <dd>
+                    {% set tenant = device.get("tenant") or {} %}
+
+                    {{ tenant.get("display")
+                       or tenant.get("name")
+                       or "—" }}
+                </dd>
+            </div>
+
+            <div>
+                <dt>Última actualización</dt>
+                <dd>
+                    {% if device.get("last_updated") %}
+                        {{ device.get("last_updated")[:16]
+                           | replace("T", " ") }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </dd>
+            </div>
+        </dl>
+    </article>
+</section>
+
+<section class="device-panel interfaces-panel">
+    <div class="device-panel-header">
+        <div>
+            <h2>Interfaces</h2>
+
+            <p>
+                Puertos físicos y lógicos documentados para este equipo
+            </p>
+        </div>
+
+        <span class="result-badge">
+            {{ interface_count }} interfaces
+        </span>
+    </div>
+
+    {% if interfaces %}
+        <div class="devices-table-wrapper">
+            <table class="devices-table interfaces-table">
+                <thead>
+                    <tr>
+                        <th>Interfaz</th>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>MAC</th>
+                        <th>LAG</th>
+                        <th>Estado</th>
+                        <th>Conexión</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for interface in interfaces %}
+                        {% set interface_type = interface.get("type") or {} %}
+                        {% set lag = interface.get("lag") or {} %}
+                        {% set cable = interface.get("cable") or {} %}
+                        {% set endpoints = interface.get("connected_endpoints")
+                            or [] %}
+
+                        <tr>
+                            <td>
+                                <strong>
+                                    {{ interface.get("name") or "—" }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ interface_type.get("label")
+                                   or interface_type.get("value")
+                                   or "—" }}
+                            </td>
+
+                            <td>
+                                {{ interface.get("description") or "—" }}
+                            </td>
+
+                            <td class="mono-value">
+                                {{ interface.get("primary_mac_address")
+                                   or interface.get("mac_address")
+                                   or "—" }}
+                            </td>
+
+                            <td>
+                                {{ lag.get("display")
+                                   or lag.get("name")
+                                   or "—" }}
+                            </td>
+
+                            <td>
+                                {% if interface.get("enabled") %}
+                                    <span class="interface-enabled">
+                                        Habilitada
+                                    </span>
+                                {% else %}
+                                    <span class="interface-disabled">
+                                        Deshabilitada
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if endpoints %}
+                                    <span class="connection-connected">
+                                        {{ endpoints[0].get("display")
+                                           or "Conectada" }}
+                                    </span>
+
+                                {% elif cable %}
+                                    <span class="connection-connected">
+                                        Cable
+                                        {{ cable.get("label")
+                                           or cable.get("id")
+                                           or "" }}
+                                    </span>
+
+                                {% else %}
+                                    <span class="connection-free">
+                                        Libre
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+        <div class="devices-empty-state">
+            <div>⇆</div>
+            <h3>Este equipo no tiene interfaces</h3>
+
+            <p>
+                No existen puertos documentados en NetBox.
+            </p>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

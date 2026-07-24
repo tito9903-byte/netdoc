@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/devices.css') }}"
+>
+{% endblock %}
+
+{% block content %}
+<section class="system-error">
+    <div class="system-error-icon">!</div>
+
+    <h2>{{ error_title }}</h2>
+
+    <p>{{ error_message }}</p>
+
+    <div class="system-error-actions">
+        <a
+            class="primary-button"
+            href="/devices"
+        >
+            Volver a dispositivos
+        </a>
+
+        <a
+            class="secondary-button"
+            href="/"
+        >
+            Ir al dashboard
+        </a>
+    </div>
+</section>
+{% endblock %}

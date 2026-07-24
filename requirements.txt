@@ -1,0 +1,8 @@
+argon2-cffi
+fastapi
+httpx
+itsdangerous
+jinja2
+pydantic-settings
+python-multipart
+uvicorn[standard]

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}{{ page_title }} | NetDoc{% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='css/app.css') }}"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='css/auth.css') }}"
+    >
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="brand-symbol">N</div>
+
+                <div>
+                    <strong>NetDoc</strong>
+                    <span>Documentación de red</span>
+                </div>
+            </div>
+
+            <nav class="navigation">
+                <a
+                    class="nav-item
+                    {% if current_page == 'dashboard' %}
+                        active
+                    {% endif %}"
+                    href="/"
+                >
+                    <span class="nav-icon">⌂</span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a
+                    class="nav-item
+                    {% if current_page == 'devices' %}
+                        active
+                    {% endif %}"
+                    href="/devices"
+                >
+                    <span class="nav-icon">▣</span>
+                    <span>Dispositivos</span>
+                </a>
+
+
+                <a
+                    class="nav-item
+                    {% if current_page == 'connections' %}active{% endif %}"
+                    href="/connections"
+                >
+                    <span class="nav-icon">⇄</span>
+                    <span>Conexiones</span>
+                </a>
+                <a
+                    class="nav-item
+                    {% if current_page == 'racks' %}active{% endif %}"
+                    href="/racks"
+                >
+                    <span class="nav-icon">◇</span>
+                    <span>Racks</span>
+                </a>
+
+
+                <div class="nav-item disabled">
+                    <span class="nav-icon">⬡</span>
+                    <span>Topología 3D</span>
+                    <small>Futuro</small>
+                </div>
+
+                <a
+                    class="nav-item"
+                    href="/devices/actions/new"
+                >
+                    <span class="nav-icon">＋</span>
+                    <span>Crear equipo</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="connection-status">
+                    <span
+                        class="status-dot
+                        {% if netbox_connected %}
+                            online
+                        {% else %}
+                            offline
+                        {% endif %}"
+                    ></span>
+
+                    <div>
+                        <strong>
+                            {% if netbox_connected %}
+                                NetBox conectado
+                            {% else %}
+                                Conexión limitada
+                            {% endif %}
+                        </strong>
+
+                        <span>{{ netbox_url }}</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-area">
+            <header class="topbar">
+                <button
+                    class="menu-button"
+                    id="menuToggle"
+                    type="button"
+                    aria-label="Abrir menú"
+                >
+                    ☰
+                </button>
+
+                <div class="page-heading">
+                    <h1>{{ page_title }}</h1>
+                    <p>{{ page_subtitle }}</p>
+                </div>
+
+                <div class="topbar-actions auth-topbar-actions">
+                    <span class="environment-badge">
+                        {% if write_enabled | default(false) %}Escritura controlada{% else %}Solo lectura{% endif %}
+                    </span>
+
+                    <div class="current-user">
+                        <span class="current-user-avatar">
+                            {{ (current_user or "U")[0] | upper }}
+                        </span>
+
+                        <div>
+                            <strong>{{ current_user }}</strong>
+                            <span>Administrador</span>
+                        </div>
+                    </div>
+
+                    <form
+                        action="/logout"
+                        method="post"
+                    >
+                        <button
+                            class="logout-button"
+                            type="submit"
+                        >
+                            Salir
+                        </button>
+                    </form>
+                </div>
+            </header>
+
+            <main class="content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', path='js/app.js') }}"></script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

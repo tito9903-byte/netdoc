@@ -1,0 +1,52 @@
+# Variables y secretos
+.env
+.env.*
+!.env.example
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs y ejecución
+*.log
+*.pid
+*.sock
+
+# Respaldos y temporales
+backups/
+*.bak
+*.backup
+*.antes_*
+*.contaminado*
+*.limpieza*
+*.tmp
+*.swp
+*~
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Bases de datos locales
+*.sqlite
+*.sqlite3
+
+# Claves y certificados
+.ssh/
+*.pem
+*.key
+*.p12
+*.pfx

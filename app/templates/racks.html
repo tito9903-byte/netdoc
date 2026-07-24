@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Racks | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/racks.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="rack-toolbar">
+    <form method="get" action="/racks" class="rack-filters">
+        <div class="rack-filter search">
+            <label for="rack-search">Buscar rack</label>
+            <input
+                id="rack-search"
+                name="q"
+                type="search"
+                value="{{ query }}"
+                placeholder="Nombre, ubicación, etiqueta..."
+            >
+        </div>
+
+        <div class="rack-filter">
+            <label for="rack-site">Sitio</label>
+            <select id="rack-site" name="site_id">
+                <option value="">Todos los sitios</option>
+
+                {% for site in sites %}
+                <option
+                    value="{{ site.get('id') }}"
+                    {% if selected_site_id == site.get('id') %}selected{% endif %}
+                >
+                    {{ site.get("display") or site.get("name") or "Sin nombre" }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="rack-filter-actions">
+            <button type="submit" class="rack-primary-button">
+                Buscar
+            </button>
+
+            <a href="/racks" class="rack-secondary-button">
+                Limpiar
+            </a>
+        </div>
+    </form>
+</section>
+
+<section class="rack-list-header">
+    <div>
+        <h2>Inventario de racks</h2>
+        <p>{{ racks | length }} bastidores encontrados</p>
+    </div>
+
+    <span class="rack-result-badge">
+        Vista 2D disponible
+    </span>
+</section>
+
+{% if racks %}
+<section class="rack-card-grid">
+    {% for rack in racks %}
+    <a class="rack-card" href="/racks/{{ rack.get('id') }}">
+        <div class="rack-card-top">
+            <div class="rack-card-icon">▥</div>
+
+            <div class="rack-card-identity">
+                <h3>
+                    {{ rack.get("name") or rack.get("display") or "Sin nombre" }}
+                </h3>
+
+                <p>
+                    {{ rack.get("_site_label") }}
+                    {% if rack.get("_location_label") != "—" %}
+                    · {{ rack.get("_location_label") }}
+                    {% endif %}
+                </p>
+            </div>
+
+            <span class="rack-card-status">
+                {{ rack.get("_status_label") }}
+            </span>
+        </div>
+
+        <div class="rack-card-metrics">
+            <div>
+                <span>Altura</span>
+                <strong>{{ rack.get("_u_height") }}U</strong>
+            </div>
+
+            <div>
+                <span>Equipos</span>
+                <strong>{{ rack.get("_device_count") }}</strong>
+            </div>
+
+            <div>
+                <span>Ocupación</span>
+                <strong>{{ rack.get("_utilization") | round(1) }}%</strong>
+            </div>
+        </div>
+
+        <div class="rack-progress">
+            <div
+                class="rack-progress-fill"
+                style="width: {{ rack.get('_utilization') }}%;"
+            ></div>
+        </div>
+
+        <div class="rack-card-footer">
+            <span>
+                {{ rack.get("width", "—") }} pulgadas
+                {% if rack.get("facility_id") %}
+                · {{ rack.get("facility_id") }}
+                {% endif %}
+            </span>
+
+            <strong>Ver elevación →</strong>
+        </div>
+    </a>
+    {% endfor %}
+</section>
+{% else %}
+<section class="rack-empty">
+    <div>▥</div>
+    <h2>No se encontraron racks</h2>
+    <p>Cambia los filtros o verifica la documentación en NetBox.</p>
+    <a href="/racks" class="rack-secondary-button">Limpiar filtros</a>
+</section>
+{% endif %}
+{% endblock %}

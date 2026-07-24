@@ -1,0 +1,342 @@
+.rack-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 18px;
+}
+
+.rack-elevation-panel,
+.rack-information-panel {
+    min-width: 0;
+}
+
+.rack-elevation-header {
+    flex-wrap: wrap;
+}
+
+.rack-view-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rack-zoom-controls,
+.rack-face-tabs {
+    display: flex;
+    gap: 5px;
+}
+
+.rack-zoom-button,
+.rack-face-tabs a {
+    min-height: 34px;
+    padding: 0 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    background: var(--surface-soft);
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.rack-zoom-button:hover,
+.rack-face-tabs a:hover {
+    border-color: rgba(32, 200, 210, 0.45);
+    color: var(--text);
+}
+
+.rack-zoom-button.active,
+.rack-face-tabs a.active {
+    border-color: var(--accent);
+    color: #041014;
+    background: var(--accent);
+}
+
+.rack-visual-scroll {
+    max-height: calc(100vh - 330px);
+    overflow: auto;
+    padding: 18px;
+    scrollbar-gutter: stable;
+}
+
+.rack-visual {
+    --unit-height: 44px;
+
+    display: grid;
+    width: min(920px, 100%);
+    min-width: 620px;
+    grid-template-columns: 64px minmax(500px, 1fr);
+    margin: 0 auto;
+    border: 1px solid #405364;
+    background: #080f16;
+}
+
+.rack-visual[data-zoom="compact"] {
+    --unit-height: 32px;
+}
+
+.rack-visual[data-zoom="normal"] {
+    --unit-height: 44px;
+}
+
+.rack-visual[data-zoom="detailed"] {
+    --unit-height: 58px;
+}
+
+.rack-unit-labels,
+.rack-grid {
+    display: grid;
+    grid-template-rows:
+        repeat(
+            var(--rack-units),
+            var(--unit-height)
+        );
+}
+
+.rack-unit-labels {
+    border-right: 1px solid #405364;
+}
+
+.rack-unit-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #21303c;
+    color: #87a0b3;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.rack-grid {
+    position: relative;
+}
+
+.rack-grid-row {
+    grid-column: 1;
+    border-bottom: 1px solid #21303c;
+}
+
+.rack-device-block {
+    z-index: 2;
+    grid-column: 1;
+
+    display: flex;
+    min-height: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+
+    margin: 4px 7px;
+    padding: 0 14px;
+
+    overflow: hidden;
+
+    border: 1px solid rgba(32, 200, 210, 0.62);
+    border-radius: 6px;
+
+    color: var(--text);
+    background: rgba(13, 78, 91, 0.96);
+
+    transition:
+        border-color 120ms ease,
+        background 120ms ease,
+        transform 120ms ease;
+}
+
+.rack-device-block:hover,
+.rack-device-block:focus {
+    z-index: 3;
+    border-color: #5ce8ef;
+    outline: none;
+    background: rgba(18, 105, 121, 0.99);
+    transform: translateX(2px);
+}
+
+.rack-device-name {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rack-device-position {
+    flex: 0 0 auto;
+    color: #a5dbe0;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.rack-visual[data-zoom="compact"] .rack-device-name {
+    font-size: 11px;
+}
+
+.rack-visual[data-zoom="compact"] .rack-device-position {
+    font-size: 8px;
+}
+
+.rack-visual[data-zoom="detailed"] .rack-device-name {
+    font-size: 15px;
+}
+
+.rack-visual[data-zoom="detailed"] .rack-device-position {
+    font-size: 11px;
+}
+
+.rack-information-panel {
+    position: sticky;
+    top: 92px;
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+}
+
+.rack-device-inspector {
+    margin: 16px;
+    padding: 15px;
+    border: 1px solid rgba(32, 200, 210, 0.25);
+    border-radius: 11px;
+    background: var(--accent-soft);
+}
+
+.rack-inspector-label {
+    display: block;
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.rack-device-inspector h4 {
+    margin: 7px 0 12px;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+}
+
+.rack-device-inspector dl {
+    margin: 0;
+}
+
+.rack-device-inspector dl > div {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(32, 200, 210, 0.12);
+}
+
+.rack-device-inspector dl > div:last-child {
+    border-bottom: 0;
+}
+
+.rack-device-inspector dt {
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.rack-device-inspector dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 10px;
+}
+
+.rack-visual-scroll::-webkit-scrollbar,
+.rack-information-panel::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.rack-visual-scroll::-webkit-scrollbar-thumb,
+.rack-information-panel::-webkit-scrollbar-thumb {
+    border: 2px solid var(--surface);
+    border-radius: 999px;
+    background: #385267;
+}
+
+.rack-visual-scroll::-webkit-scrollbar-track,
+.rack-information-panel::-webkit-scrollbar-track {
+    background: var(--surface-soft);
+}
+
+@media (max-width: 1220px) {
+    .rack-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rack-information-panel {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 760px) {
+    .rack-view-controls {
+        width: 100%;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .rack-zoom-controls,
+    .rack-face-tabs {
+        flex-wrap: wrap;
+    }
+
+    .rack-visual-scroll {
+        max-height: 70vh;
+        padding: 10px;
+    }
+
+    .rack-visual {
+        min-width: 570px;
+    }
+}
+
+/* NETDOC_RACK_PROPORTION_START */
+
+/*
+ * Mantiene una proporción más cercana a un rack físico
+ * de 19 pulgadas: angosto y vertical.
+ */
+
+@media (min-width: 1221px) {
+    .rack-detail-grid {
+        grid-template-columns:
+            minmax(0, 760px)
+            360px;
+        justify-content: center;
+        gap: 18px;
+    }
+
+    .rack-elevation-panel {
+        width: 100%;
+    }
+
+    .rack-information-panel {
+        width: 360px;
+    }
+
+    .rack-visual-scroll {
+        padding: 18px 24px;
+    }
+
+    .rack-visual {
+        width: 640px;
+        min-width: 640px;
+        grid-template-columns:
+            58px
+            minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 1220px) {
+    .rack-visual {
+        width: min(680px, 100%);
+        min-width: 560px;
+    }
+}
+
+/* NETDOC_RACK_PROPORTION_END */

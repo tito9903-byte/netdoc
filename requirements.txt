@@ -5,4 +5,5 @@ itsdangerous
 jinja2
 pydantic-settings
 python-multipart
+SQLAlchemy
 uvicorn[standard]

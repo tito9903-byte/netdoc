@@ -9,6 +9,10 @@ from argon2.exceptions import (
 _password_hasher = PasswordHasher()
 
 
+def hash_password(plain_password: str) -> str:
+    return _password_hasher.hash(plain_password)
+
+
 def verify_password(
     password_hash: str,
     plain_password: str,
@@ -24,6 +28,13 @@ def verify_password(
         VerificationError,
         InvalidHashError,
     ):
+        return False
+
+
+def password_needs_rehash(password_hash: str) -> bool:
+    try:
+        return _password_hasher.check_needs_rehash(password_hash)
+    except InvalidHashError:
         return False
 
 

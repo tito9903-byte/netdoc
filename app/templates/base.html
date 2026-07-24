@@ -22,10 +22,24 @@
         href="{{ url_for('static', path='css/auth.css') }}"
     >
 
+    <style>
+        .nav-section-label {
+            margin: 12px 10px 3px;
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+    </style>
+
     {% block extra_head %}{% endblock %}
 </head>
 
 <body>
+    {% set permissions = current_permissions | default(request.session.get("permissions", []), true) %}
+    {% set role_label = current_role | default(request.session.get("role_name", "Usuario"), true) %}
+
     <div class="app-shell">
         <aside class="sidebar" id="sidebar">
             <div class="brand">
@@ -38,6 +52,7 @@
             </div>
 
             <nav class="navigation">
+                {% if "dashboard.view" in permissions %}
                 <a
                     class="nav-item
                     {% if current_page == 'dashboard' %}
@@ -48,7 +63,21 @@
                     <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
+                {% endif %}
 
+
+                {% if "search.view" in permissions %}
+                <a
+                    class="nav-item
+                    {% if current_page == 'search' %}active{% endif %}"
+                    href="/search"
+                >
+                    <span class="nav-icon">⌕</span>
+                    <span>Búsqueda global</span>
+                </a>
+                {% endif %}
+
+                {% if "devices.view" in permissions %}
                 <a
                     class="nav-item
                     {% if current_page == 'devices' %}
@@ -59,8 +88,9 @@
                     <span class="nav-icon">▣</span>
                     <span>Dispositivos</span>
                 </a>
+                {% endif %}
 
-
+                {% if "connections.view" in permissions %}
                 <a
                     class="nav-item
                     {% if current_page == 'connections' %}active{% endif %}"
@@ -69,6 +99,9 @@
                     <span class="nav-icon">⇄</span>
                     <span>Conexiones</span>
                 </a>
+                {% endif %}
+
+                {% if "racks.view" in permissions %}
                 <a
                     class="nav-item
                     {% if current_page == 'racks' %}active{% endif %}"
@@ -77,7 +110,7 @@
                     <span class="nav-icon">◇</span>
                     <span>Racks</span>
                 </a>
-
+                {% endif %}
 
                 <div class="nav-item disabled">
                     <span class="nav-icon">⬡</span>
@@ -85,6 +118,7 @@
                     <small>Futuro</small>
                 </div>
 
+                {% if "devices.create" in permissions %}
                 <a
                     class="nav-item"
                     href="/devices/actions/new"
@@ -92,6 +126,64 @@
                     <span class="nav-icon">＋</span>
                     <span>Crear equipo</span>
                 </a>
+                {% endif %}
+
+                <a
+                    class="nav-item
+                    {% if current_page == 'profile' %}active{% endif %}"
+                    href="/profile"
+                >
+                    <span class="nav-icon">◎</span>
+                    <span>Mi perfil</span>
+                </a>
+
+                {% if "users.manage" in permissions or "roles.manage" in permissions or "audit.view" in permissions or "system.view" in permissions %}
+                <div class="nav-section-label">Administración</div>
+                {% endif %}
+
+                {% if "users.manage" in permissions %}
+                <a
+                    class="nav-item
+                    {% if current_page == 'users' %}active{% endif %}"
+                    href="/admin/users"
+                >
+                    <span class="nav-icon">♙</span>
+                    <span>Usuarios</span>
+                </a>
+                {% endif %}
+
+                {% if "roles.manage" in permissions %}
+                <a
+                    class="nav-item
+                    {% if current_page == 'roles' %}active{% endif %}"
+                    href="/admin/roles"
+                >
+                    <span class="nav-icon">◆</span>
+                    <span>Roles y permisos</span>
+                </a>
+                {% endif %}
+
+                {% if "audit.view" in permissions %}
+                <a
+                    class="nav-item
+                    {% if current_page == 'audit' %}active{% endif %}"
+                    href="/admin/audit"
+                >
+                    <span class="nav-icon">≣</span>
+                    <span>Auditoría</span>
+                </a>
+                {% endif %}
+
+                {% if "system.view" in permissions %}
+                <a
+                    class="nav-item
+                    {% if current_page == 'system' %}active{% endif %}"
+                    href="/system"
+                >
+                    <span class="nav-icon">◉</span>
+                    <span>Sistema</span>
+                </a>
+                {% endif %}
             </nav>
 
             <div class="sidebar-footer">
@@ -141,16 +233,16 @@
                         {% if write_enabled | default(false) %}Escritura controlada{% else %}Solo lectura{% endif %}
                     </span>
 
-                    <div class="current-user">
+                    <a class="current-user" href="/profile" aria-label="Abrir mi perfil">
                         <span class="current-user-avatar">
                             {{ (current_user or "U")[0] | upper }}
                         </span>
 
                         <div>
                             <strong>{{ current_user }}</strong>
-                            <span>Administrador</span>
+                            <span>{{ role_label }}</span>
                         </div>
-                    </div>
+                    </a>
 
                     <form
                         action="/logout"

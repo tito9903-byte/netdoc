@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if errors %}
+<div class="admin-alert error">
+    {% for error in errors %}<span>{{ error }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<div class="admin-form-grid">
+    <section class="admin-panel">
+        <div class="admin-panel-header">
+            <div>
+                <h2>{% if mode == "create" %}Datos de la cuenta{% else %}Información del usuario{% endif %}</h2>
+                <p>Los nombres de usuario se almacenan en minúsculas.</p>
+            </div>
+        </div>
+
+        <form class="admin-form" method="post"
+              action="{% if mode == 'create' %}/admin/users/new{% else %}/admin/users/{{ user.id }}/edit{% endif %}">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+
+            <div class="form-grid two">
+                <label>
+                    <span>Usuario</span>
+                    <input name="username" required minlength="3"
+                           value="{{ form_data.get('username', user.username if user else '') }}"
+                           placeholder="nombre.apellido">
+                </label>
+                <label>
+                    <span>Nombre completo</span>
+                    <input name="full_name"
+                           value="{{ form_data.get('full_name', user.full_name if user else '') }}"
+                           placeholder="Nombre y apellido">
+                </label>
+                <label>
+                    <span>Correo</span>
+                    <input name="email" type="email"
+                           value="{{ form_data.get('email', user.email if user and user.email else '') }}"
+                           placeholder="usuario@empresa.com">
+                </label>
+                <label>
+                    <span>Rol</span>
+                    {% set selected_role = form_data.get('role_id', user.role_id if user else '') %}
+                    <select name="role_id" required>
+                        {% for role in roles %}
+                        <option value="{{ role.id }}" {% if selected_role | string == role.id | string %}selected{% endif %}>
+                            {{ role.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+
+            {% if mode == "create" %}
+            <label>
+                <span>Contraseña temporal</span>
+                <input name="password" type="password" required minlength="10" autocomplete="new-password">
+                <small>Mínimo 10 caracteres, mayúscula, minúscula y número.</small>
+            </label>
+            {% endif %}
+
+            <label class="checkbox-line">
+                {% set active_value = form_data.get('is_active', user.is_active if user else true) %}
+                <input type="checkbox" name="is_active" value="1" {% if active_value %}checked{% endif %}>
+                <span>Permitir inicio de sesión</span>
+            </label>
+
+            <div class="form-actions">
+                <button class="admin-primary" type="submit">Guardar</button>
+                <a class="admin-secondary" href="/admin/users">Cancelar</a>
+            </div>
+        </form>
+    </section>
+
+    {% if mode == "edit" %}
+    <section class="admin-panel">
+        <div class="admin-panel-header">
+            <div>
+                <h2>Restablecer contraseña</h2>
+                <p>La contraseña anterior dejará de ser válida.</p>
+            </div>
+        </div>
+
+        <form class="admin-form" method="post" action="/admin/users/{{ user.id }}/password">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <label>
+                <span>Nueva contraseña</span>
+                <input name="password" type="password" required minlength="10" autocomplete="new-password">
+                <small>Mínimo 10 caracteres, mayúscula, minúscula y número.</small>
+            </label>
+            <button class="admin-secondary" type="submit">Actualizar contraseña</button>
+        </form>
+
+        <div class="admin-meta">
+            <div><span>Creado</span><strong>{{ user.created_at.strftime("%Y-%m-%d %H:%M") }}</strong></div>
+            <div><span>Contraseña actualizada</span><strong>{{ user.password_changed_at.strftime("%Y-%m-%d %H:%M") }}</strong></div>
+            <div><span>Último acceso</span><strong>{% if user.last_login_at %}{{ user.last_login_at.strftime("%Y-%m-%d %H:%M") }}{% else %}Nunca{% endif %}</strong></div>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

@@ -2,19 +2,23 @@
 
 {% block title %}Direccionamiento IP | NetDoc{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/ipam.css') }}">
+{% endblock %}
+
 {% block content %}
 <section class="workflow-intro">
     <div>
         <span class="eyebrow">IPAM operativo</span>
         <h2>Disponibilidad de direccionamiento por localidad</h2>
         <p>
-            Revisa rápidamente cuáles pools tienen espacio, cuáles están cerca
-            de agotarse y dónde está documentado cada bloque.
+            Encuentra pools con espacio, identifica bloques agotados y confirma
+            dónde está documentada cada asignación.
         </p>
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/search">Buscar en todo NetBox</a>
-        <a class="button primary" href="#pool-inventory">Ver pools</a>
+        <a class="button primary" href="#pool-inventory">Revisar pools</a>
     </div>
 </section>
 
@@ -22,24 +26,36 @@
     <article class="summary-card">
         <span>Prefijos visibles</span>
         <strong>{{ summary.prefixes }}</strong>
-        <small>Según los filtros aplicados</small>
+        <small>Según los filtros de NetBox</small>
     </article>
     <article class="summary-card">
-        <span>Pools documentados</span>
-        <strong>{{ summary.pools }}</strong>
-        <small>{{ summary.pools_with_capacity }} con disponibilidad calculada</small>
+        <span>Pools visibles</span>
+        <strong>{{ summary.visible_pools }}</strong>
+        <small>De {{ summary.total_pools }} pools documentados</small>
     </article>
     <article class="summary-card {% if summary.critical_pools %}attention{% endif %}">
-        <span>Pools críticos o llenos</span>
+        <span>Críticos o llenos</span>
         <strong>{{ summary.critical_pools }}</strong>
         <small>{{ summary.full_pools }} completamente agotados</small>
     </article>
     <article class="summary-card">
-        <span>Localidades</span>
+        <span>Localidades visibles</span>
         <strong>{{ summary.scopes }}</strong>
         <small>Sitios, ubicaciones o alcances</small>
     </article>
 </section>
+
+<div class="ipam-methodology">
+    <span class="ipam-methodology-icon">i</span>
+    <div>
+        <strong>La disponibilidad refleja lo documentado en NetBox.</strong>
+        <span>
+            NetDoc combina direcciones IP, rangos reservados y prefijos hijos en
+            la misma VRF. No escanea la red, no consulta leases DHCP y no sustituye
+            la actualización del inventario.
+        </span>
+    </div>
+</div>
 
 {% if inventory_warning %}
 <div class="read-only-callout">
@@ -52,18 +68,54 @@
 {% endif %}
 
 <section class="filter-panel">
-    <form class="filter-grid ipam-filter-grid" method="get" action="/ipam">
-        <div class="field field-wide">
-            <label for="ipam-q">Buscar</label>
+    <form class="ipam-filter-grid" method="get" action="/ipam">
+        <div class="field ipam-search-field">
+            <label for="ipam-q">Buscar en NetBox</label>
             <input
                 id="ipam-q"
                 type="search"
                 name="q"
                 value="{{ query }}"
-                placeholder="Prefijo, descripción, VLAN, VRF o localidad..."
+                placeholder="Prefijo, descripción, VLAN o VRF..."
             >
         </div>
-        <div class="field">
+
+        <div class="field ipam-filter-field">
+            <label for="ipam-scope">Localidad</label>
+            <select id="ipam-scope" name="scope">
+                <option value="">Todas las localidades</option>
+                {% for item in pool_scopes %}
+                <option value="{{ item }}" {% if selected_scope == item %}selected{% endif %}>
+                    {{ item }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field ipam-filter-field">
+            <label for="ipam-health">Disponibilidad</label>
+            <select id="ipam-health" name="health">
+                <option value="" {% if not selected_health %}selected{% endif %}>Todos los pools</option>
+                <option value="available" {% if selected_health == "available" %}selected{% endif %}>Con direcciones libres</option>
+                <option value="documented" {% if selected_health == "documented" %}selected{% endif %}>Con uso documentado</option>
+                <option value="empty" {% if selected_health == "empty" %}selected{% endif %}>Sin uso documentado</option>
+                <option value="warning" {% if selected_health == "warning" %}selected{% endif %}>Advertencia: 60–79%</option>
+                <option value="critical" {% if selected_health == "critical" %}selected{% endif %}>Críticos: 80–99%</option>
+                <option value="full" {% if selected_health == "full" %}selected{% endif %}>Completamente llenos</option>
+            </select>
+        </div>
+
+        <div class="field ipam-filter-field">
+            <label for="ipam-order">Ordenar</label>
+            <select id="ipam-order" name="order">
+                <option value="utilization_desc" {% if selected_order == "utilization_desc" %}selected{% endif %}>Mayor ocupación</option>
+                <option value="availability_desc" {% if selected_order == "availability_desc" %}selected{% endif %}>Mayor disponibilidad</option>
+                <option value="scope" {% if selected_order == "scope" %}selected{% endif %}>Localidad</option>
+                <option value="prefix" {% if selected_order == "prefix" %}selected{% endif %}>Prefijo</option>
+            </select>
+        </div>
+
+        <div class="field ipam-filter-field">
             <label for="ipam-family">Familia</label>
             <select id="ipam-family" name="family">
                 <option value="">IPv4 e IPv6</option>
@@ -71,10 +123,11 @@
                 <option value="6" {% if selected_family == 6 %}selected{% endif %}>IPv6</option>
             </select>
         </div>
-        <div class="field">
-            <label for="ipam-status">Estado</label>
+
+        <div class="field ipam-filter-field">
+            <label for="ipam-status">Estado del prefijo</label>
             <select id="ipam-status" name="status">
-                <option value="">Todos</option>
+                <option value="">Todos los estados</option>
                 {% for value, label in prefix_statuses %}
                 <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
                     {{ label }}
@@ -82,8 +135,9 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="field">
-            <label for="ipam-role">Rol</label>
+
+        <div class="field ipam-filter-field">
+            <label for="ipam-role">Rol IPAM</label>
             <select id="ipam-role" name="role_id">
                 <option value="">Todos los roles</option>
                 {% for role in roles %}
@@ -96,7 +150,8 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="filter-actions">
+
+        <div class="ipam-filter-actions">
             <button class="button primary" type="submit">Aplicar filtros</button>
             <a class="button secondary" href="/ipam">Limpiar</a>
         </div>
@@ -108,11 +163,13 @@
         <div>
             <h2>Pools de direcciones</h2>
             <p>
-                Cálculo basado en direcciones registradas, rangos reservados y
-                prefijos hijos dentro de la misma VRF.
+                Las cantidades corresponden a asignaciones y reservas documentadas,
+                no a una medición de tráfico o conectividad.
             </p>
         </div>
-        <span class="panel-badge">{{ pools | length }} pools</span>
+        <span class="panel-badge">
+            {{ pool_pagination.start }}–{{ pool_pagination.end }} de {{ pool_pagination.total }}
+        </span>
     </div>
 
     {% if pools %}
@@ -124,13 +181,13 @@
                     <th>Localidad</th>
                     <th>VRF / Rol</th>
                     <th>Capacidad</th>
-                    <th>Ocupadas</th>
-                    <th>Disponibles</th>
+                    <th>Documentadas</th>
+                    <th>Libres estimadas</th>
                     <th>Ocupación</th>
                 </tr>
             </thead>
             <tbody>
-                {% for pool in pools[:100] %}
+                {% for pool in pools %}
                 <tr>
                     <td>
                         <div class="primary-cell">
@@ -150,15 +207,26 @@
                             <span>{{ pool.get("_role_label") }}</span>
                         </div>
                     </td>
-                    <td class="numeric-cell">{{ pool.get("_capacity_label") }}</td>
-                    <td class="numeric-cell">{{ pool.get("_used_label") }}</td>
-                    <td class="numeric-cell availability-value">
-                        {{ pool.get("_available_label") }}
-                        {% if pool.get("_availability_estimated") %}
-                        <small>Calculado desde IPAM</small>
-                        {% elif pool.get("_availability_error") %}
-                        <small title="{{ pool.get('_availability_error') }}">No calculado</small>
-                        {% endif %}
+                    <td class="numeric-cell">
+                        <div class="ipam-count" title="{{ pool.get('_capacity_exact') }}">
+                            <strong>{{ pool.get("_capacity_compact") }}</strong>
+                        </div>
+                    </td>
+                    <td class="numeric-cell">
+                        <div class="ipam-count" title="{{ pool.get('_used_exact') }}">
+                            <strong>{{ pool.get("_used_compact") }}</strong>
+                            <small>Registradas o reservadas</small>
+                        </div>
+                    </td>
+                    <td class="numeric-cell">
+                        <div class="ipam-count" title="{{ pool.get('_available_exact') }}">
+                            <strong>{{ pool.get("_available_compact") }}</strong>
+                            {% if pool.get("_availability_estimated") %}
+                            <small>Estimadas desde IPAM</small>
+                            {% elif pool.get("_availability_error") %}
+                            <small title="{{ pool.get('_availability_error') }}">No calculado</small>
+                            {% endif %}
+                        </div>
                     </td>
                     <td>
                         {% if pool.get("_utilization") is not none %}
@@ -171,6 +239,12 @@
                             </div>
                             <strong>{{ pool.get("_utilization") }}%</strong>
                         </div>
+                        <span class="ipam-health-label {{ pool.get('_health') }}">
+                            {% if pool.get("_health") == "full" %}Lleno
+                            {% elif pool.get("_health") == "critical" %}Crítico
+                            {% elif pool.get("_health") == "warning" %}Advertencia
+                            {% else %}Con espacio{% endif %}
+                        </span>
                         {% else %}
                         <span class="status-pill neutral" title="{{ pool.get('_availability_error') or 'Inventario IPAM incompleto' }}">Pendiente</span>
                         {% endif %}
@@ -180,70 +254,89 @@
             </tbody>
         </table>
     </div>
+
+    {% if pool_pagination.total_pages > 1 %}
+    <div class="ipam-pagination">
+        <span class="ipam-pagination-info">
+            Página {{ pool_pagination.page }} de {{ pool_pagination.total_pages }} ·
+            {{ pool_pagination.total }} pools visibles
+        </span>
+        <div class="ipam-pagination-actions">
+            {% if pool_pagination.page > 1 %}
+            <a class="button secondary" href="/ipam?{{ {'q': query, 'scope': selected_scope, 'health': selected_health, 'order': selected_order, 'family': selected_family or '', 'status': selected_status, 'role_id': selected_role_id or '', 'page': pool_pagination.page - 1} | urlencode }}">Anterior</a>
+            {% endif %}
+            {% if pool_pagination.page < pool_pagination.total_pages %}
+            <a class="button secondary" href="/ipam?{{ {'q': query, 'scope': selected_scope, 'health': selected_health, 'order': selected_order, 'family': selected_family or '', 'status': selected_status, 'role_id': selected_role_id or '', 'page': pool_pagination.page + 1} | urlencode }}">Siguiente</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
     {% else %}
     <div class="empty-state compact-empty-state">
         <div class="empty-icon">⌁</div>
         <h3>No hay pools con los filtros seleccionados</h3>
-        <p>Marca los prefijos destinados a asignación como pool en NetBox.</p>
+        <p>Modifica la localidad, disponibilidad o filtros de NetBox.</p>
     </div>
     {% endif %}
 </section>
 
-<section class="panel workflow-panel">
-    <div class="panel-header compact-panel-header">
-        <div>
-            <h2>Catálogo de prefijos</h2>
-            <p>Referencia rápida para ubicar bloques, VRF, rol y estado.</p>
-        </div>
+<details class="ipam-catalog">
+    <summary>
+        <span class="ipam-catalog-summary-copy">
+            <strong>Catálogo completo de prefijos</strong>
+            <span>Abre esta sección solo cuando necesites revisar bloques que no son pools.</span>
+        </span>
         <span class="panel-badge">{{ prefixes | length }} prefijos</span>
-    </div>
+    </summary>
 
-    {% if prefixes %}
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Prefijo</th>
-                    <th>Localidad</th>
-                    <th>VRF</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                    <th>Uso</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for prefix in prefixes[:150] %}
-                <tr>
-                    <td>
-                        <div class="primary-cell">
-                            <strong>{{ prefix.get("prefix") or prefix.get("display") or "—" }}</strong>
-                            <span>{{ prefix.get("description") or "Sin descripción" }}</span>
-                        </div>
-                    </td>
-                    <td>{{ prefix.get("_scope_label") }}</td>
-                    <td>{{ prefix.get("_vrf_label") }}</td>
-                    <td>{{ prefix.get("_role_label") }}</td>
-                    <td><span class="status-pill neutral">{{ prefix.get("_status_label") }}</span></td>
-                    <td>
-                        {% if prefix.get("is_pool") %}
-                        <span class="status-pill accent">Pool</span>
-                        {% elif prefix.get("mark_utilized") %}
-                        <span class="status-pill warning">Utilizado</span>
-                        {% else %}
-                        <span class="muted">Prefijo</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="ipam-catalog-content">
+        {% if prefixes %}
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Prefijo</th>
+                        <th>Localidad</th>
+                        <th>VRF</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Uso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prefix in prefixes[:150] %}
+                    <tr>
+                        <td>
+                            <div class="primary-cell">
+                                <strong>{{ prefix.get("prefix") or prefix.get("display") or "—" }}</strong>
+                                <span>{{ prefix.get("description") or "Sin descripción" }}</span>
+                            </div>
+                        </td>
+                        <td>{{ prefix.get("_scope_label") }}</td>
+                        <td>{{ prefix.get("_vrf_label") }}</td>
+                        <td>{{ prefix.get("_role_label") }}</td>
+                        <td><span class="status-pill neutral">{{ prefix.get("_status_label") }}</span></td>
+                        <td>
+                            {% if prefix.get("is_pool") %}
+                            <span class="status-pill accent">Pool</span>
+                            {% elif prefix.get("mark_utilized") %}
+                            <span class="status-pill warning">Utilizado</span>
+                            {% else %}
+                            <span class="muted">Prefijo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state compact-empty-state">
+            <div class="empty-icon">⌖</div>
+            <h3>No se encontraron prefijos</h3>
+            <p>Revisa los filtros o la documentación IPAM de NetBox.</p>
+        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="empty-state compact-empty-state">
-        <div class="empty-icon">⌖</div>
-        <h3>No se encontraron prefijos</h3>
-        <p>Revisa los filtros o la documentación IPAM de NetBox.</p>
-    </div>
-    {% endif %}
-</section>
+</details>
 {% endblock %}

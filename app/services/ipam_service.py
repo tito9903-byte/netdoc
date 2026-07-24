@@ -69,6 +69,32 @@ def prefix_capacity(prefix: dict[str, Any]) -> int | None:
     return int(capacity)
 
 
+def utilization_percentage(value: Any) -> float | None:
+    """Normaliza el porcentaje que devuelve NetBox en lista o detalle."""
+
+    if isinstance(value, dict):
+        value = (
+            value.get("value")
+            or value.get("percentage")
+            or value.get("utilization")
+        )
+
+    if isinstance(value, bool) or value is None:
+        return None
+
+    if isinstance(value, str):
+        value = value.strip().removesuffix("%").strip()
+        if not value:
+            return None
+
+    try:
+        percentage = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    return round(max(0.0, min(100.0, percentage)), 1)
+
+
 def format_count(value: int | None) -> str:
     if value is None:
         return "—"
@@ -112,13 +138,37 @@ class IPAMService:
             maximum_pages=25,
         )
 
-    async def available_ip_count(self, prefix_id: int) -> int | None:
-        payload = await self.client.get_list(
-            f"/api/ipam/prefixes/{prefix_id}/available-ips/",
-            params={"limit": 1},
+    async def _load_utilization(
+        self,
+        prefix: dict[str, Any],
+        semaphore: asyncio.Semaphore,
+    ) -> tuple[float | None, str | None]:
+        for key in ("utilization", "utilization_percentage"):
+            percentage = utilization_percentage(prefix.get(key))
+            if percentage is not None:
+                return percentage, None
+
+        prefix_id = prefix.get("id")
+        if not isinstance(prefix_id, int):
+            return None, "NetBox no devolvió un ID válido para el prefijo."
+
+        try:
+            async with semaphore:
+                detail = await self.client.get(
+                    f"/api/ipam/prefixes/{prefix_id}/"
+                )
+        except NetBoxError as exc:
+            return None, exc.message
+
+        for key in ("utilization", "utilization_percentage"):
+            percentage = utilization_percentage(detail.get(key))
+            if percentage is not None:
+                return percentage, None
+
+        return (
+            None,
+            "La API de NetBox no incluyó el porcentaje de utilización.",
         )
-        count = payload.get("count")
-        return count if isinstance(count, int) else None
 
     async def _prepare_pool(
         self,
@@ -126,32 +176,25 @@ class IPAMService:
         semaphore: asyncio.Semaphore,
     ) -> dict[str, Any]:
         capacity = prefix_capacity(prefix)
-        available: int | None = None
         availability_error: str | None = None
-        prefix_id = prefix.get("id")
 
-        if isinstance(prefix_id, int):
-            try:
-                async with semaphore:
-                    available = await self.available_ip_count(prefix_id)
-            except NetBoxError as exc:
-                availability_error = exc.message
+        if prefix.get("mark_utilized") is True:
+            utilization = 100.0
+        else:
+            utilization, availability_error = await self._load_utilization(
+                prefix,
+                semaphore,
+            )
 
         used: int | None = None
-        utilization: float | None = None
+        available: int | None = None
 
-        if prefix.get("mark_utilized") is True and capacity is not None:
-            used = capacity
-            available = 0
-            utilization = 100.0
-        elif capacity is not None and available is not None:
-            safe_available = max(0, min(available, capacity))
-            used = max(0, capacity - safe_available)
-            utilization = (
-                round((used / capacity) * 100, 1)
-                if capacity
-                else 0.0
+        if capacity is not None and utilization is not None:
+            used = min(
+                capacity,
+                max(0, round(capacity * utilization / 100)),
             )
+            available = max(0, capacity - used)
 
         status_data = prefix.get("status") or {}
         role_data = prefix.get("role") or {}
@@ -171,6 +214,9 @@ class IPAMService:
             "_used_label": format_count(used),
             "_utilization": utilization,
             "_availability_error": availability_error,
+            "_availability_estimated": (
+                capacity is not None and utilization is not None
+            ),
             "_health": (
                 "unknown"
                 if utilization is None

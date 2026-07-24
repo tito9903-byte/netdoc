@@ -2,7 +2,7 @@
 
 ## Propósito, alcance y límites
 
-NetDoc ofrece una experiencia web para lectura y operaciones guiadas sobre el inventario de NetBox. NetBox conserva la autoridad sobre dispositivos, interfaces, racks y cables. NetDoc mantiene únicamente datos propios de la aplicación: usuarios, roles, permisos, sesiones y auditoría.
+NetDoc ofrece una experiencia web para lectura y operaciones guiadas sobre el inventario de NetBox. NetBox conserva la autoridad sobre dispositivos, interfaces, racks, sitios y cables. NetDoc mantiene únicamente datos propios de la aplicación: usuarios, roles, permisos y auditoría.
 
 ```mermaid
 flowchart LR
@@ -22,6 +22,7 @@ flowchart TB
   S --> B[NetBox REST]
   C --> DB[SQLAlchemy]
   DB --> L[(SQLite por defecto)]
+  MIG[Alembic migrations] --> DB
   DPL[scripts] --> SYS[systemd]
 ```
 
@@ -29,22 +30,25 @@ flowchart TB
 
 - `app/main.py`: crea FastAPI, configura middleware, autenticación y rutas principales.
 - `app/core/config.py`: carga configuración desde `.env`.
-- `app/core/database.py`: motor SQLAlchemy, sesiones transaccionales e inicialización del esquema.
+- `app/core/database.py`: motor SQLAlchemy, sesiones transaccionales e inicialización de la base.
+- `app/core/migrations.py`: crea, adopta o actualiza el esquema mediante Alembic.
 - `app/core/auth.py`: identidad de sesión, CSRF común y autorización por permisos.
 - `app/core/security.py`: hash y verificación Argon2.
 - `app/models/access.py`: entidades de usuario, rol, permiso y evento de auditoría.
-- `app/services/access_service.py`: reglas de negocio del control de acceso.
+- `app/services/access_service.py`: reglas de negocio del control de acceso y protección de login.
 - `app/routers/admin.py`: pantallas y acciones administrativas.
+- `app/routers/profile.py`: perfil y cambio de contraseña propios.
 - `app/services/netbox_client.py` y servicios especializados: integración con NetBox.
-- `app/services/search_service.py`: búsqueda concurrente y normalización de resultados de varios módulos.
+- `app/services/search_service.py`: búsqueda concurrente y normalización de resultados.
 - `app/services/system_service.py`: métricas no privilegiadas del host y del proceso.
 - `app/routers/search.py` y `app/routers/system.py`: vistas y API JSON de búsqueda y salud.
+- `migrations/versions`: historial versionado del esquema local.
 - `app/templates` y `app/static`: presentación.
 - `scripts`: despliegue operativo, sin lógica de negocio.
 
 ## Autenticación y autorización
 
-En el arranque, NetDoc crea las tablas ausentes y carga permisos y roles iniciales. Si no existe una cuenta con `ADMIN_USERNAME`, se crea usando `ADMIN_PASSWORD_HASH`; estas variables son un mecanismo de arranque, no un reemplazo de la gestión de usuarios.
+En el arranque, NetDoc actualiza primero el esquema hasta la revisión Alembic vigente y después carga permisos, roles iniciales y el administrador de arranque. Si no existe una cuenta con `ADMIN_USERNAME`, se crea usando `ADMIN_PASSWORD_HASH`; estas variables no sustituyen la gestión normal de usuarios.
 
 Tras validar la contraseña Argon2, la sesión almacena el identificador del usuario y una copia de presentación de su rol y permisos. Antes de atender cada ruta protegida, `PermissionMiddleware` vuelve a consultar la identidad activa en la base y actualiza esos datos de sesión. Como resultado:
 
@@ -53,7 +57,7 @@ Tras validar la contraseña Argon2, la sesión almacena el identificador del usu
 - una cuenta eliminada debe autenticarse nuevamente;
 - un fallo al cargar identidad se trata de forma cerrada y devuelve al login.
 
-Las rutas administrativas realizan además verificaciones explícitas y CSRF. La navegación oculta opciones que el rol no puede usar, pero la seguridad real permanece en el servidor.
+Las rutas administrativas y el perfil realizan además verificaciones explícitas y CSRF. La navegación oculta opciones que el rol no puede usar, pero la seguridad real permanece en el servidor.
 
 Roles iniciales:
 
@@ -61,17 +65,40 @@ Roles iniciales:
 - **Operador:** consulta y operaciones guiadas de dispositivos y conexiones.
 - **Consulta:** acceso de solo lectura a dashboard, búsqueda global, dispositivos, conexiones y racks.
 
-## Persistencia
+## Protección de inicio de sesión
 
-`DATABASE_URL` selecciona la base de datos. El valor predeterminado es `sqlite:///./data/netdoc.db`; desarrollo y producción deben conservar bases independientes. El archivo local y el directorio `data/` no se versionan. SQLAlchemy permite migrar más adelante a PostgreSQL sin cambiar el modelo de dominio.
+Los fallos recientes se consultan en Auditoría por nombre de usuario e IP. `LOGIN_MAX_ATTEMPTS` y `LOGIN_WINDOW_SECONDS` controlan el límite. Mientras existe bloqueo, NetDoc no verifica la contraseña, devuelve HTTP 429 con `Retry-After` y registra `LOGIN_BLOCKED` sin confirmar si la cuenta existe.
 
-La primera entrega usa `Base.metadata.create_all()` para establecer el esquema inicial. Esta decisión solo cubre el primer despliegue; cualquier evolución posterior de tablas requiere migraciones versionadas con Alembic.
+Este control es apropiado para el proceso único actual. Antes de usar varios workers, balanceadores o un proxy que oculte la IP real debe reemplazarse o complementarse con un mecanismo distribuido.
 
-SQLite habilita claves foráneas. El diseño actual supone un único proceso Uvicorn por entorno; antes de múltiples workers o mayor concurrencia debe reevaluarse el motor.
+## Persistencia y migraciones
+
+`DATABASE_URL` selecciona la base de datos. El valor predeterminado es `sqlite:///./data/netdoc.db`; desarrollo y producción deben conservar bases independientes. El archivo local y el directorio `data/` no se versionan.
+
+La revisión inicial `20260724_0001` crea:
+
+- `permissions`;
+- `roles`;
+- `role_permissions`;
+- `users`;
+- `audit_events`.
+
+`ensure_database_schema()` aplica una de estas rutas:
+
+1. Si no existen tablas del módulo de acceso, ejecuta `alembic upgrade head`.
+2. Si existe `alembic_version`, actualiza hasta `head`.
+3. Si existen exactamente todas las tablas heredadas, ejecuta `alembic stamp head` sin recrearlas ni borrar datos.
+4. Si solo existe una parte del esquema, detiene el arranque con un error explícito.
+
+La adopción de una base heredada supone que sus tablas corresponden al esquema completo anterior. Antes del primer despliegue debe respaldarse la base. El rollback del código no ejecuta `alembic downgrade` ni restaura el archivo de datos.
+
+SQLite habilita claves foráneas. El diseño actual supone un único proceso Uvicorn por entorno; antes de múltiples workers o mayor concurrencia debe reevaluarse el motor, el bloqueo de login y la estrategia de migración.
 
 ## Auditoría
 
-Los eventos registran fecha, usuario, acción, recurso, identificador, resultado, descripción, IP y agente del navegador. Se registran accesos correctos y fallidos, cierre de sesión, administración de usuarios y roles, eliminación de cuentas, exportaciones y solicitudes de creación de dispositivos o conexiones. La vista permite filtrar por acción, recurso, resultado y fechas. La exportación CSV se limita a 10,000 filas y neutraliza celdas que podrían convertirse en fórmulas. Nunca deben incluirse contraseñas, hashes, tokens ni contenido de `.env`.
+Los eventos registran fecha, usuario, acción, recurso, identificador, resultado, descripción, IP y agente del navegador. Se registran accesos correctos y fallidos, bloqueos, cierre de sesión, cambios de perfil, administración de usuarios y roles, eliminación de cuentas, exportaciones y solicitudes de creación de dispositivos o conexiones.
+
+La vista permite filtrar por acción, recurso, resultado y fechas. La exportación CSV se limita a 10,000 filas y neutraliza celdas que podrían convertirse en fórmulas. Nunca deben incluirse contraseñas, hashes, tokens ni contenido de `.env`.
 
 ## Búsqueda global
 
@@ -87,12 +114,13 @@ El navegador solicita una ruta, FastAPI valida identidad y permiso, el router us
 
 ## Dependencias y operación
 
-Dependencias principales: Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, SQLAlchemy y Uvicorn. La disponibilidad depende de FastAPI, systemd, la base de identidad y NetBox.
+Dependencias principales: Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, SQLAlchemy, Alembic y Uvicorn. La disponibilidad depende de FastAPI, systemd, la base de identidad y NetBox.
 
 ## Limitaciones y trabajo futuro
 
-- Falta prueba integral del módulo en el servidor de desarrollo.
-- Falta retención configurable y respaldo automatizado de auditoría.
+- Falta prueba integral del módulo y de la migración en el servidor de desarrollo.
+- Falta respaldo y recuperación automatizados de la base.
+- Falta retención configurable y eliminación segura de auditoría.
 - El fallo de base actualmente invalida la sesión en lugar de mostrar una página operativa diferenciada.
-- Antes de cambiar el esquema debe incorporarse Alembic.
+- El rate limiting distribuido y la IP real detrás de proxies requieren diseño adicional.
 - Continúan planificados edición controlada de inventario, patch panels, topologías, 3D, métricas históricas y alertas.

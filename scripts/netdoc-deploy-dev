@@ -5,30 +5,88 @@ set -euo pipefail
 APP_DIR="/opt/netdoc-dev"
 BRANCH="develop"
 SERVICE="netdoc-dev"
+SERVICE_USER="sshtelenord"
 HEALTH_URL="http://127.0.0.1:8101/login"
 VENV_DIR="$APP_DIR/.venv"
-REQUIREMENTS_FILE="requirements-lock.txt"
+LOCK_FILE="/run/lock/netdoc-deploy-dev.lock"
+HEALTH_ATTEMPTS=11
+HEALTH_INTERVAL=3
+
 PREVIOUS_COMMIT=""
 NEW_COMMIT=""
 HTTP_STATUS="no comprobado"
 DEPLOYMENT_STARTED=false
+SERVICE_HOME=""
 
 fail() {
   echo "ERROR: $*" >&2
   exit 1
 }
 
-check_health() {
-  HTTP_STATUS=$(curl --silent --show-error --output /dev/null \
-    --write-out '%{http_code}' --max-time 10 "$HEALTH_URL")
-  if [[ ! $HTTP_STATUS =~ ^(200|30[0-9])$ ]]; then
-    echo "ERROR: /login devolvió HTTP $HTTP_STATUS." >&2
+run_as_service() {
+  runuser -u "$SERVICE_USER" -- env HOME="$SERVICE_HOME" "$@"
+}
+
+git_cmd() {
+  run_as_service git -C "$APP_DIR" "$@"
+}
+
+run_in_app() {
+  runuser -u "$SERVICE_USER" -- env HOME="$SERVICE_HOME" \
+    bash -c 'cd "$1" && shift && exec "$@"' \
+    _ "$APP_DIR" "$@"
+}
+
+requirements_file() {
+  if [[ -f "$APP_DIR/requirements-lock.txt" ]]; then
+    printf '%s\n' "requirements-lock.txt"
+  elif [[ -f "$APP_DIR/requirements.txt" ]]; then
+    printf '%s\n' "requirements.txt"
+  else
     return 1
   fi
 }
 
+install_dependencies() {
+  local requirements
+  requirements=$(requirements_file) || {
+    echo "ERROR: no existe requirements-lock.txt ni requirements.txt." >&2
+    return 1
+  }
+
+  run_in_app "$VENV_DIR/bin/python" -m pip install \
+    --disable-pip-version-check \
+    --requirement "$requirements"
+}
+
+check_health() {
+  local attempt
+
+  for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++)); do
+    HTTP_STATUS=$(curl --silent --show-error --output /dev/null \
+      --write-out '%{http_code}' --max-time 5 "$HEALTH_URL" || true)
+
+    if [[ $HTTP_STATUS =~ ^(200|3[0-9]{2})$ ]]; then
+      return 0
+    fi
+
+    if (( attempt < HEALTH_ATTEMPTS )); then
+      sleep "$HEALTH_INTERVAL"
+    fi
+  done
+
+  echo "ERROR: /login no respondió correctamente después de 30 segundos; HTTP=${HTTP_STATUS:-000}." >&2
+  return 1
+}
+
 rollback() {
   local status=$?
+  local reset_status=0
+  local dependencies_status=0
+  local restart_status=0
+  local service_status=0
+  local health_status=0
+
   trap - ERR
   set +e
 
@@ -37,55 +95,91 @@ rollback() {
   fi
 
   echo "ERROR: despliegue falló; se restaura el commit $PREVIOUS_COMMIT." >&2
-  git reset --hard "$PREVIOUS_COMMIT"
-  local reset_status=$?
-  "$VENV_DIR/bin/pip" install --requirement "$REQUIREMENTS_FILE"
-  local dependencies_status=$?
+
+  git_cmd reset --hard "$PREVIOUS_COMMIT"
+  reset_status=$?
+
+  install_dependencies
+  dependencies_status=$?
+
   systemctl restart "$SERVICE"
-  local restart_status=$?
-  sleep 2
+  restart_status=$?
+
+  check_health
+  health_status=$?
+
   systemctl is-active --quiet "$SERVICE"
-  local service_status=$?
-  HTTP_STATUS=$(curl --silent --show-error --output /dev/null \
-    --write-out '%{http_code}' --max-time 10 "$HEALTH_URL")
-  local health_status=$?
+  service_status=$?
 
   echo "Rollback: rama=$BRANCH, commit=$PREVIOUS_COMMIT, HTTP=$HTTP_STATUS" >&2
-  if (( reset_status || dependencies_status || restart_status || service_status || health_status )) \
-    || [[ ! $HTTP_STATUS =~ ^(200|30[0-9])$ ]]; then
+
+  if (( reset_status || dependencies_status || restart_status || service_status || health_status )); then
     echo "ERROR: el rollback requiere revisión manual." >&2
   fi
+
   exit "$status"
 }
 
 [[ ${EUID} -eq 0 ]] || fail "este comando debe ejecutarse como root."
+
+for command in runuser git flock curl systemctl stat getent; do
+  command -v "$command" >/dev/null 2>&1 || fail "falta el comando requerido: $command."
+done
+
+id "$SERVICE_USER" >/dev/null 2>&1 || fail "el usuario $SERVICE_USER no existe."
+SERVICE_HOME=$(getent passwd "$SERVICE_USER" | cut -d: -f6)
+[[ -n $SERVICE_HOME && -d $SERVICE_HOME ]] || fail "no se pudo determinar HOME de $SERVICE_USER."
+
+exec 9>"$LOCK_FILE"
+flock -n 9 || fail "ya existe otro despliegue de desarrollo en ejecución."
+
 [[ -d $APP_DIR && -d $APP_DIR/.git ]] || fail "$APP_DIR no es un repositorio Git."
 [[ -f $APP_DIR/.env ]] || fail "falta $APP_DIR/.env (no se mostrará ni modificará)."
 [[ -x $VENV_DIR/bin/python ]] || fail "falta el entorno virtual en $VENV_DIR."
-[[ -f $APP_DIR/$REQUIREMENTS_FILE ]] || fail "falta $APP_DIR/$REQUIREMENTS_FILE."
+requirements_file >/dev/null || fail "falta un archivo de dependencias compatible."
 systemctl cat "$SERVICE" >/dev/null 2>&1 || fail "el servicio $SERVICE no existe."
 
-cd "$APP_DIR"
-[[ $(git branch --show-current) == "$BRANCH" ]] || fail "la rama local debe ser $BRANCH."
-git remote get-url origin >/dev/null 2>&1 || fail "falta el remoto origin."
-git diff --quiet || fail "hay cambios sin confirmar; el despliegue se cancela."
-git diff --cached --quiet || fail "hay cambios preparados; el despliegue se cancela."
+for owned_path in "$APP_DIR" "$APP_DIR/.git" "$VENV_DIR"; do
+  [[ $(stat -c '%U' "$owned_path") == "$SERVICE_USER" ]] \
+    || fail "$owned_path debe pertenecer a $SERVICE_USER."
+done
 
-PREVIOUS_COMMIT=$(git rev-parse HEAD)
+[[ $(git_cmd branch --show-current) == "$BRANCH" ]] \
+  || fail "la rama local debe ser $BRANCH."
+git_cmd remote get-url origin >/dev/null 2>&1 || fail "falta el remoto origin."
+
+[[ -z $(git_cmd status --porcelain --untracked-files=normal) ]] \
+  || fail "hay cambios locales o archivos no rastreados; el despliegue se cancela."
+
+if git_cmd ls-files --error-unmatch .env >/dev/null 2>&1; then
+  fail ".env está versionado; el despliegue se cancela."
+fi
+
+git_cmd check-ignore -q .env \
+  || fail ".env no está protegido por .gitignore."
+
+PREVIOUS_COMMIT=$(git_cmd rev-parse HEAD)
 trap rollback ERR
+
 echo "NetDoc desarrollo: rama=$BRANCH, commit anterior=$PREVIOUS_COMMIT"
-git fetch --prune origin
-git show-ref --verify --quiet "refs/remotes/origin/$BRANCH" \
+
+git_cmd fetch --prune origin
+git_cmd show-ref --verify --quiet "refs/remotes/origin/$BRANCH" \
   || fail "origin/$BRANCH no existe."
+
 DEPLOYMENT_STARTED=true
-git reset --hard "origin/$BRANCH"
-NEW_COMMIT=$(git rev-parse HEAD)
-"$VENV_DIR/bin/pip" install --requirement "$REQUIREMENTS_FILE"
-"$VENV_DIR/bin/python" -m compileall app
-"$VENV_DIR/bin/python" -c 'from app.main import app; print(app.title)'
+git_cmd reset --hard "origin/$BRANCH"
+NEW_COMMIT=$(git_cmd rev-parse HEAD)
+
+install_dependencies
+run_in_app "$VENV_DIR/bin/python" -m compileall -q app
+run_in_app "$VENV_DIR/bin/python" -c \
+  'from app.main import app; print(app.title)'
+
 systemctl restart "$SERVICE"
-sleep 2
-systemctl is-active --quiet "$SERVICE"
 check_health
+systemctl is-active --quiet "$SERVICE"
+
 trap - ERR
+
 echo "Despliegue completado: rama=$BRANCH, anterior=$PREVIOUS_COMMIT, nuevo=$NEW_COMMIT, HTTP=$HTTP_STATUS"

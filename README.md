@@ -19,7 +19,11 @@ La rama `feature/documentation-workflows-ui`, presentada en el PR #4 hacia `deve
 - un dashboard como punto de inicio operativo;
 - direccionamiento IP con prefijos, pools, localidad, VRF, capacidad y disponibilidad;
 - modelos de dispositivo con generación masiva de interfaces mediante patrones;
+- carga opcional de imágenes frontal y trasera durante la creación del modelo;
+- administración posterior de las imágenes del modelo;
 - creación guiada de racks y mejoras en la instalación física de equipos;
+- ocupación basada en la altura `u_height` real, incluida media unidad y equipos 0U;
+- elevación 2D y vista física 3D que reutilizan las imágenes del modelo;
 - correcciones visuales en racks, conexiones, búsqueda y administración;
 - foco visible, controles mayores y comportamiento accesible del menú móvil.
 
@@ -29,7 +33,7 @@ Esta rama es la versión `0.10.0`, permanece como borrador y no está desplegada
 
 1. **NetBox sigue siendo la fuente oficial.** NetDoc no mantiene una copia paralela del inventario.
 2. **Los flujos frecuentes deben requerir menos pasos.** Modelos, interfaces, racks, pools y conexiones se presentan como procesos guiados.
-3. **Documentar una vez y reutilizar.** Los tipos de dispositivo y sus componentes se definen antes de crear equipos.
+3. **Documentar una vez y reutilizar.** Los tipos de dispositivo, sus imágenes y sus componentes se definen antes de crear equipos.
 4. **La ubicación debe ser explícita.** Sitio, localidad, rack, cara y posición U deben formar parte del alta física.
 5. **La capacidad debe ser visible.** Los pools IP y racks deben mostrar disponibilidad real o declarar claramente cuando todavía no está calculada.
 6. **Las escrituras son controladas.** Autenticación, permiso, CSRF, auditoría y `NETBOX_WRITE_ENABLED=true` son obligatorios.
@@ -85,16 +89,17 @@ cp .env.example .env  # sustituya solo en su entorno los marcadores seguros
 Validaciones principales:
 
 ```bash
+scripts/netdoc-test-isolated
 python -m compileall -q app tests migrations
-alembic heads
-python -m unittest discover -s tests -v
 python -c 'from app.main import app; print(app.title, len(app.routes))'
 ```
 
-GitHub Actions valida dependencias, compilación, grafo Alembic, pruebas, importación, plantillas y scripts. Las pruebas contra NetBox real y systemd se realizan únicamente en el servidor autorizado.
+No ejecute directamente la suite desde un checkout que contenga el `.env` de desarrollo o producción. El ejecutor aislado crea una base temporal, mantiene escritura deshabilitada y elimina los datos de prueba al terminar.
+
+GitHub Actions valida dependencias, compilación, grafo Alembic, pruebas, importación, plantillas y scripts. Las pruebas contra NetBox real, cargas multipart y systemd se realizan únicamente en el servidor autorizado.
 
 No versionar `.env`, bases de datos, tokens, contraseñas, hashes, secretos de sesión o claves. Para despliegues controlados consulte [DEPLOYMENT](docs/DEPLOYMENT.md); `git push` no despliega al servidor.
 
 ## Documentación
 
-[Índice](docs/README.md) · [Estado](docs/PROJECT_STATUS.md) · [Operaciones](docs/OPERATIONS.md) · [Seguridad](docs/SECURITY.md) · [Roadmap](docs/ROADMAP.md) · [Pruebas](docs/TESTING.md) · [NetBox](docs/NETBOX_INTEGRATION.md) · [ADR](docs/adr/README.md) · [Contribución](CONTRIBUTING.md) · [Handoff IA](docs/AI_HANDOFF_PROMPT.md).
+[Índice](docs/README.md) · [Estado](docs/PROJECT_STATUS.md) · [Operaciones](docs/OPERATIONS.md) · [Seguridad](docs/SECURITY.md) · [Roadmap](docs/ROADMAP.md) · [Pruebas](docs/TESTING.md) · [NetBox](docs/NETBOX_INTEGRATION.md) · [Racks e imágenes](docs/RACKS_AND_DEVICE_IMAGES.md) · [ADR](docs/adr/README.md) · [Contribución](CONTRIBUTING.md) · [Handoff IA](docs/AI_HANDOFF_PROMPT.md).

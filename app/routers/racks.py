@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from app.core.auth import (
     access_redirect,
@@ -18,6 +19,10 @@ from app.services.rack_presentation import (
     nested_label,
     prepare_elevation,
     prepare_topology,
+)
+from app.services.rack_report_service import (
+    RackReportError,
+    build_rack_report,
 )
 from app.services.rack_service import RackService, RackServiceError
 
@@ -138,7 +143,7 @@ async def legacy_topology_redirect(
     request: Request,
     site_id: str = "",
 ):
-    """Compatibilidad: la vista 3D ahora se selecciona dentro de cada rack."""
+    """Compatibilidad: la vista 3D solo se selecciona dentro de un rack."""
 
     redirect = access_redirect(request, "racks.view")
     if redirect:
@@ -189,6 +194,54 @@ async def device_type_image(
         headers={
             "Cache-Control": "private, max-age=300",
             "ETag": etag,
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/racks/{rack_id}/report.pdf")
+async def rack_inventory_report(
+    request: Request,
+    rack_id: int,
+    face: str = "front",
+):
+    redirect = access_redirect(request, "racks.view")
+    if redirect:
+        return redirect
+
+    selected_face = "rear" if face == "rear" else "front"
+    service = RackService()
+    try:
+        rack, devices = await asyncio.gather(
+            service.get_rack(rack_id),
+            service.list_rack_devices(rack_id),
+        )
+        elevation = prepare_elevation(rack, devices, selected_face)
+        pdf, filename = await run_in_threadpool(
+            build_rack_report,
+            rack=rack,
+            elevation=elevation,
+            face=selected_face,
+        )
+    except RackServiceError as exc:
+        return Response(
+            status_code=404 if exc.status_code == 404 else 503,
+            media_type="text/plain; charset=utf-8",
+            content=exc.message,
+        )
+    except RackReportError as exc:
+        return Response(
+            status_code=500,
+            media_type="text/plain; charset=utf-8",
+            content=str(exc),
+        )
+
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },
     )

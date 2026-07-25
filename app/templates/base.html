@@ -36,7 +36,7 @@
     {% set role_label = current_role | default(request.session.get("role_name", "Usuario"), true) %}
     {% set user_label = current_user_name | default(request.session.get("full_name", ""), true) %}
     {% set general_pages = ["dashboard", "search", "profile"] %}
-    {% set documentation_pages = ["devices", "device_types", "interface_templates", "ipam", "connections", "racks", "topology"] %}
+    {% set documentation_pages = ["devices", "device_types", "interface_templates", "ipam", "connections", "racks"] %}
     {% set action_pages = ["device_type_new", "rack_create"] %}
     {% set administration_pages = ["users", "roles", "audit", "system"] %}
 
@@ -169,14 +169,6 @@
                         >
                             <span class="nav-icon">◇</span>
                             <span>Racks</span>
-                        </a>
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'topology' %}active{% endif %}"
-                            href="/topology"
-                            {% if current_page == 'topology' %}aria-current="page"{% endif %}
-                        >
-                            <span class="nav-icon">⬡</span>
-                            <span>Topología 3D</span>
                         </a>
                         {% endif %}
                     </div>

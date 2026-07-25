@@ -22,6 +22,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 from app.core.database import Base
 from app.core.migrations import ACCESS_TABLES, ensure_database_schema
 from app.models import access as _access_models
+from app.models import device_media as _device_media_models
 
 
 class MigrationTests(unittest.TestCase):
@@ -37,18 +38,25 @@ class MigrationTests(unittest.TestCase):
             self.assertEqual("created", first)
             self.assertEqual("upgraded", second)
             self.assertTrue(ACCESS_TABLES.issubset(tables))
+            self.assertIn("device_type_images", tables)
             self.assertIn("alembic_version", tables)
             engine.dispose()
 
-    def test_existing_complete_schema_is_stamped(self):
-        _ = _access_models
+    def test_existing_complete_schema_is_stamped_then_upgraded(self):
+        _ = (_access_models, _device_media_models)
         engine = create_engine("sqlite:///:memory:")
-        Base.metadata.create_all(bind=engine)
+
+        # Simula la base heredada: contiene las tablas originales de acceso,
+        # pero todavía no registra una revisión Alembic ni la tabla de imágenes.
+        for table in list(Base.metadata.sorted_tables):
+            if table.name in ACCESS_TABLES:
+                table.create(bind=engine)
 
         result = ensure_database_schema(engine)
         tables = set(inspect(engine).get_table_names())
 
         self.assertEqual("stamped", result)
+        self.assertIn("device_type_images", tables)
         self.assertIn("alembic_version", tables)
         engine.dispose()
 

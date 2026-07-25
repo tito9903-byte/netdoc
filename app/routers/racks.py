@@ -157,12 +157,12 @@ async def device_type_image(
     device_type_id: int,
     face: str,
 ):
-    denied = api_access_response(request, "racks.view")
+    denied = api_access_response(request, "devices.view")
     if denied:
         return denied
 
     try:
-        content, content_type = await RackService().get_device_type_image(
+        content, content_type, digest = await RackService().get_device_type_image(
             device_type_id,
             face,
         )
@@ -173,11 +173,22 @@ async def device_type_image(
             headers={"Cache-Control": "no-store"},
         )
 
+    etag = f'"{digest}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(
+            status_code=304,
+            headers={
+                "Cache-Control": "private, max-age=300",
+                "ETag": etag,
+            },
+        )
+
     return Response(
         content=content,
         media_type=content_type,
         headers={
             "Cache-Control": "private, max-age=300",
+            "ETag": etag,
             "X-Content-Type-Options": "nosniff",
         },
     )

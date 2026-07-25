@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "NetDoc"
-    app_version: str = "0.10.0"
+    app_version: str = "0.10.1"
 
     netbox_url: str
     netbox_token: str

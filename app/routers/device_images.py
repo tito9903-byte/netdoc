@@ -79,7 +79,7 @@ def audit_event(
         record_audit(
             session,
             action=action,
-            resource="device_type",
+            resource="device_type_image",
             resource_id=(
                 str(device_type_id)
                 if isinstance(device_type_id, int)
@@ -128,7 +128,7 @@ async def create_device_type_with_images(
     front_image: UploadFile | None = File(None),
     rear_image: UploadFile | None = File(None),
 ):
-    """Crea el modelo y adjunta sus vistas físicas en un solo flujo."""
+    """Crea el modelo en NetBox y guarda sus imágenes en NetDoc."""
 
     redirect = access_redirect(request, "devices.create")
     if redirect:
@@ -247,6 +247,9 @@ async def create_device_type_with_images(
             await image_service.upload_images(
                 device_type_id=raw_id,
                 images=images,
+                username=str(
+                    request.session.get("username") or "desconocido"
+                ),
             )
         except DeviceTypeServiceError as exc:
             audit_event(
@@ -260,7 +263,7 @@ async def create_device_type_with_images(
                 raw_id,
                 error=(
                     "El modelo fue creado correctamente, pero las imágenes no "
-                    f"pudieron guardarse: {exc.message}"
+                    f"pudieron guardarse en NetDoc: {exc.message}"
                 ),
             )
 
@@ -273,14 +276,16 @@ async def create_device_type_with_images(
             request,
             action="DEVICE_TYPE_IMAGE_UPDATE",
             device_type_id=raw_id,
-            detail=f"Imagen {' y '.join(faces)} guardada al crear el modelo.",
+            detail=(
+                f"Imagen {' y '.join(faces)} guardada en la base local de NetDoc."
+            ),
             success=True,
         )
 
     notice = "Modelo creado correctamente."
     if images:
         notice = (
-            "Modelo e imágenes creados correctamente. "
+            "Modelo creado en NetBox e imágenes guardadas en NetDoc. "
             "Ahora puedes preparar sus plantillas de puertos."
         )
 
@@ -306,6 +311,7 @@ async def device_type_images_page(
 
     try:
         device_type = await DeviceTypeService().get_device_type(device_type_id)
+        device_type = DeviceImageService().decorate_device_type(device_type)
     except DeviceTypeServiceError as exc:
         return templates.TemplateResponse(
             request=request,
@@ -333,9 +339,10 @@ async def device_type_images_page(
             "netbox_connected": True,
             "netbox_url": settings.netbox_url,
             "write_enabled": settings.netbox_write_enabled,
+            "media_write_enabled": True,
             "page_title": "Imágenes del modelo",
             "page_subtitle": (
-                "Frente y parte trasera reutilizados en racks y topología"
+                "Frente y parte trasera guardados por NetDoc y reutilizados en racks"
             ),
             "device_type": device_type,
             "csrf_token": csrf_token(request),
@@ -372,20 +379,6 @@ async def update_device_type_images(
             error="La sesión del formulario expiró. Recarga la página.",
         )
 
-    if not settings.netbox_write_enabled:
-        await close_uploads(front_image, rear_image)
-        audit_event(
-            request,
-            action="DEVICE_TYPE_IMAGE_UPDATE",
-            device_type_id=device_type_id,
-            detail="Actualización rechazada porque la escritura está deshabilitada.",
-            success=False,
-        )
-        return redirect_message(
-            device_type_id,
-            error="La escritura en NetBox está deshabilitada.",
-        )
-
     front = await read_optional_image(front_image)
     rear = await read_optional_image(rear_image)
     images: dict[str, tuple[str, bytes, str]] = {}
@@ -395,9 +388,12 @@ async def update_device_type_images(
         images["rear_image"] = rear
 
     try:
+        # Evita conservar imágenes huérfanas para un ID inexistente o eliminado.
+        await DeviceTypeService().get_device_type(device_type_id)
         await DeviceImageService().upload_images(
             device_type_id=device_type_id,
             images=images,
+            username=str(request.session.get("username") or "desconocido"),
         )
     except DeviceTypeServiceError as exc:
         audit_event(
@@ -420,10 +416,12 @@ async def update_device_type_images(
         request,
         action="DEVICE_TYPE_IMAGE_UPDATE",
         device_type_id=device_type_id,
-        detail=f"Imagen {' y '.join(faces)} actualizada en NetBox.",
+        detail=(
+            f"Imagen {' y '.join(faces)} actualizada en la base local de NetDoc."
+        ),
         success=True,
     )
     return redirect_message(
         device_type_id,
-        notice="Las imágenes del modelo se actualizaron correctamente.",
+        notice="Las imágenes se guardaron correctamente en NetDoc.",
     )

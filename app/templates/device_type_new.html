@@ -28,8 +28,9 @@
         <span class="eyebrow">Ficha física reutilizable</span>
         <h2>Crear modelo de equipo</h2>
         <p>
-            Registra primero fabricante, nombre y dimensiones. Las interfaces y
-            demás puertos se agregan después desde sus plantillas.
+            Registra fabricante, dimensiones y las vistas frontal y trasera. Las
+            imágenes se reutilizarán automáticamente en la elevación 2D y la vista
+            3D del rack.
         </p>
     </div>
     <div class="workflow-intro-actions">
@@ -42,7 +43,7 @@
     <span>◌</span>
     <div>
         <strong>Desarrollo está en modo de solo lectura.</strong>
-        <span>Puedes revisar el formulario, pero no se enviará ningún cambio a NetBox.</span>
+        <span>Puedes revisar el formulario y seleccionar imágenes, pero no se enviará ningún cambio a NetBox.</span>
     </div>
 </div>
 {% endif %}
@@ -50,13 +51,18 @@
 <section class="panel model-form-panel">
     <div class="panel-header compact-panel-header">
         <div>
-            <h2>Datos del modelo</h2>
-            <p>Completa únicamente la información común a todos los equipos de este tipo.</p>
+            <h2>Datos e imágenes del modelo</h2>
+            <p>Esta información se heredará en todos los equipos creados con el modelo.</p>
         </div>
-        <span class="panel-badge">Paso 1 de 2</span>
+        <span class="panel-badge">Modelo físico</span>
     </div>
 
-    <form class="model-create-form" method="post" action="/device-types/actions/create">
+    <form
+        class="model-create-form"
+        method="post"
+        action="/device-types/actions/create-with-images"
+        enctype="multipart/form-data"
+    >
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
 
         <div class="model-create-grid">
@@ -90,6 +96,7 @@
             <div class="field">
                 <label for="new-height">Altura U</label>
                 <input id="new-height" name="u_height" type="number" min="0" step="0.5" value="1" required>
+                <small>Define cuánto espacio ocupará el equipo en el rack.</small>
             </div>
 
             <label class="checkbox-field model-depth-field">
@@ -104,12 +111,58 @@
                 <label for="new-description">Descripción</label>
                 <textarea id="new-description" name="description" rows="4" placeholder="Función, familia o notas técnicas del modelo"></textarea>
             </div>
+
+            <section class="model-image-section">
+                <div class="model-image-section-heading">
+                    <div>
+                        <span class="eyebrow">Representación del equipo</span>
+                        <h3>Imágenes para el rack</h3>
+                        <p>
+                            Usa fotografías o diagramas recortados del frente y la
+                            parte trasera. Son opcionales y pueden sustituirse después.
+                        </p>
+                    </div>
+                    <span class="panel-badge">Máximo 5 MB por imagen</span>
+                </div>
+
+                <div class="model-image-upload-grid">
+                    <label class="model-image-upload-card" for="front-image">
+                        <span class="model-image-upload-icon">▥</span>
+                        <strong>Imagen frontal</strong>
+                        <span>Se mostrará al seleccionar la cara frontal del rack.</span>
+                        <input
+                            id="front-image"
+                            name="front_image"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                        >
+                    </label>
+
+                    <label class="model-image-upload-card" for="rear-image">
+                        <span class="model-image-upload-icon">▤</span>
+                        <strong>Imagen trasera</strong>
+                        <span>Se mostrará al seleccionar la cara posterior del rack.</span>
+                        <input
+                            id="rear-image"
+                            name="rear_image"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                        >
+                    </label>
+                </div>
+
+                <p class="model-image-guidance">
+                    Formatos admitidos: JPG, PNG, WEBP y GIF. Para una elevación
+                    más limpia, utiliza fondo transparente o una imagen frontal
+                    centrada y sin márgenes excesivos.
+                </p>
+            </section>
         </div>
 
         <div class="model-form-actions">
             <div>
-                <strong>Después agrega las plantillas.</strong>
-                <span>Los puertos e interfaces se administran en una pantalla independiente.</span>
+                <strong>Después agrega las plantillas de puertos.</strong>
+                <span>El modelo y sus imágenes se guardan primero; las interfaces se administran en una pantalla independiente.</span>
             </div>
             <div>
                 <a class="button secondary" href="/device-types">Cancelar</a>

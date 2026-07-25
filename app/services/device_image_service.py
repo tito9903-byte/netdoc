@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import session_scope
 from app.models.device_media import DeviceTypeImage
@@ -138,51 +140,61 @@ class DeviceImageService:
 
         result: dict[str, dict[str, Any]] = {}
         now = utc_now()
-        with session_scope() as session:
-            existing = {
-                item.face: item
-                for item in session.scalars(
-                    select(DeviceTypeImage).where(
-                        DeviceTypeImage.device_type_id == device_type_id,
-                        DeviceTypeImage.face.in_(validated),
+        try:
+            with session_scope() as session:
+                existing = {
+                    item.face: item
+                    for item in session.scalars(
+                        select(DeviceTypeImage).where(
+                            DeviceTypeImage.device_type_id == device_type_id,
+                            DeviceTypeImage.face.in_(validated),
+                        )
                     )
-                )
-            }
-
-            for face, (filename, content, content_type, digest) in validated.items():
-                image = existing.get(face)
-                if image is None:
-                    image = DeviceTypeImage(
-                        device_type_id=device_type_id,
-                        face=face,
-                        filename=filename,
-                        content_type=content_type,
-                        content=content,
-                        sha256=digest,
-                        size_bytes=len(content),
-                        created_at=now,
-                        updated_at=now,
-                        updated_by=username,
-                    )
-                    session.add(image)
-                else:
-                    image.filename = filename
-                    image.content_type = content_type
-                    image.content = content
-                    image.sha256 = digest
-                    image.size_bytes = len(content)
-                    image.updated_at = now
-                    image.updated_by = username
-
-                result[face] = {
-                    "device_type_id": device_type_id,
-                    "face": face,
-                    "filename": filename,
-                    "content_type": content_type,
-                    "sha256": digest,
-                    "size_bytes": len(content),
-                    "source": "netdoc",
                 }
+
+                for face, (
+                    filename,
+                    content,
+                    content_type,
+                    digest,
+                ) in validated.items():
+                    image = existing.get(face)
+                    if image is None:
+                        image = DeviceTypeImage(
+                            device_type_id=device_type_id,
+                            face=face,
+                            filename=filename,
+                            content_type=content_type,
+                            content=content,
+                            sha256=digest,
+                            size_bytes=len(content),
+                            created_at=now,
+                            updated_at=now,
+                            updated_by=username,
+                        )
+                        session.add(image)
+                    else:
+                        image.filename = filename
+                        image.content_type = content_type
+                        image.content = content
+                        image.sha256 = digest
+                        image.size_bytes = len(content)
+                        image.updated_at = now
+                        image.updated_by = username
+
+                    result[face] = {
+                        "device_type_id": device_type_id,
+                        "face": face,
+                        "filename": filename,
+                        "content_type": content_type,
+                        "sha256": digest,
+                        "size_bytes": len(content),
+                        "source": "netdoc",
+                    }
+        except SQLAlchemyError as exc:
+            raise DeviceTypeServiceError(
+                "NetDoc no pudo guardar la imagen en su base local."
+            ) from exc
 
         # El detalle de NetBox puede estar en memoria durante cinco minutos. Se
         # invalida para que la próxima elevación incorpore la nueva imagen local.
@@ -198,8 +210,9 @@ class DeviceImageService:
         images: dict[str, tuple[str, bytes, str]],
         username: str | None = None,
     ) -> dict[str, dict[str, Any]]:
-        """Compatibilidad con los flujos multipart existentes."""
-        return self.save_images(
+        """Guarda los binarios fuera del hilo principal del servidor ASGI."""
+        return await asyncio.to_thread(
+            self.save_images,
             device_type_id=device_type_id,
             images=images,
             username=username,
@@ -218,22 +231,34 @@ class DeviceImageService:
             return {}
 
         result: dict[int, dict[str, dict[str, Any]]] = {}
-        with session_scope() as session:
-            rows = session.scalars(
-                select(DeviceTypeImage).where(
-                    DeviceTypeImage.device_type_id.in_(ids)
-                )
-            ).all()
-            for image in rows:
-                result.setdefault(image.device_type_id, {})[image.face] = {
-                    "filename": image.filename,
-                    "content_type": image.content_type,
-                    "sha256": image.sha256,
-                    "size_bytes": image.size_bytes,
-                    "updated_at": image.updated_at,
-                    "updated_by": image.updated_by,
-                    "source": "netdoc",
-                }
+        try:
+            with session_scope() as session:
+                rows = session.execute(
+                    select(
+                        DeviceTypeImage.device_type_id,
+                        DeviceTypeImage.face,
+                        DeviceTypeImage.filename,
+                        DeviceTypeImage.content_type,
+                        DeviceTypeImage.sha256,
+                        DeviceTypeImage.size_bytes,
+                        DeviceTypeImage.updated_at,
+                        DeviceTypeImage.updated_by,
+                    ).where(DeviceTypeImage.device_type_id.in_(ids))
+                ).all()
+                for row in rows:
+                    result.setdefault(row.device_type_id, {})[row.face] = {
+                        "filename": row.filename,
+                        "content_type": row.content_type,
+                        "sha256": row.sha256,
+                        "size_bytes": row.size_bytes,
+                        "updated_at": row.updated_at,
+                        "updated_by": row.updated_by,
+                        "source": "netdoc",
+                    }
+        except SQLAlchemyError as exc:
+            raise DeviceTypeServiceError(
+                "NetDoc no pudo consultar las imágenes de su base local."
+            ) from exc
         return result
 
     def summary(self, device_type_id: int) -> dict[str, dict[str, Any]]:
@@ -290,13 +315,18 @@ class DeviceImageService:
         face: str,
     ) -> tuple[bytes, str, str] | None:
         normalized = self.normalize_face(face)
-        with session_scope() as session:
-            image = session.scalar(
-                select(DeviceTypeImage).where(
-                    DeviceTypeImage.device_type_id == device_type_id,
-                    DeviceTypeImage.face == normalized,
+        try:
+            with session_scope() as session:
+                image = session.scalar(
+                    select(DeviceTypeImage).where(
+                        DeviceTypeImage.device_type_id == device_type_id,
+                        DeviceTypeImage.face == normalized,
+                    )
                 )
-            )
-            if image is None:
-                return None
-            return bytes(image.content), image.content_type, image.sha256
+                if image is None:
+                    return None
+                return bytes(image.content), image.content_type, image.sha256
+        except SQLAlchemyError as exc:
+            raise DeviceTypeServiceError(
+                "NetDoc no pudo leer la imagen desde su base local."
+            ) from exc

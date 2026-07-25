@@ -1,4 +1,4 @@
-# Racks, vistas 2D/3D e imágenes de modelos
+# Racks, vistas 2D/3D, imágenes y reportes
 
 ## Objetivo
 
@@ -10,11 +10,14 @@ La asociación se realiza mediante el identificador numérico `device_type_id` d
 
 1. Crear el modelo desde **Modelos de equipos → Crear modelo**.
 2. Definir fabricante, modelo, part number, altura en U y profundidad.
-3. Adjuntar opcionalmente una imagen frontal y una imagen trasera en el mismo formulario.
+3. Adjuntar opcionalmente una imagen frontal y una imagen trasera.
 4. Crear las plantillas de interfaces y puertos en **Plantillas de puertos**.
 5. Crear el dispositivo usando el modelo.
 6. Seleccionar sitio, rack, posición U y cara.
-7. Revisar el rack alternando entre vista 2D y vista 3D.
+7. Abrir el rack y alternar entre vista 2D y vista 3D.
+8. Descargar el reporte PDF para conservar la elevación y el inventario.
+
+La opción 3D solo se muestra dentro del detalle de un rack. El catálogo `/racks` sirve para localizar y abrir el bastidor; no contiene una topología 3D global independiente.
 
 ## Separación de responsabilidades
 
@@ -25,6 +28,7 @@ La asociación se realiza mediante el identificador numérico `device_type_id` d
 | Dispositivos, rack, cara y posición | NetBox |
 | Imagen frontal y trasera cargadas desde NetDoc | Base local de NetDoc |
 | Imágenes antiguas ya presentes en NetBox | NetBox, como fallback de lectura |
+| Reporte PDF descargado | Generado bajo demanda por NetDoc |
 
 NetBox admite imágenes frontal y trasera para tipos de dispositivo, pero sus archivos dependen de `MEDIA_ROOT` y de los permisos del proceso que ejecuta NetBox. El almacenamiento local evita que una falla de permisos en ese directorio impida documentar la representación visual del equipo.
 
@@ -48,13 +52,7 @@ Formatos admitidos:
 - WEBP;
 - GIF.
 
-Cada archivo puede pesar hasta 5 MB. NetDoc valida:
-
-- nombre de archivo;
-- tamaño;
-- tipo MIME declarado;
-- firma binaria real del archivo;
-- correspondencia entre el tipo declarado y el contenido.
+Cada archivo puede pesar hasta 5 MB. NetDoc valida nombre, tamaño, tipo MIME declarado, firma binaria real y correspondencia entre el tipo declarado y el contenido.
 
 La operación se ejecuta en dos fases:
 
@@ -78,11 +76,9 @@ Cada registro conserva:
 - hash SHA-256;
 - fecha y usuario de la última actualización.
 
-Existe una restricción única por `(device_type_id, face)`, por lo que subir otra imagen para la misma cara sustituye el registro anterior.
+Existe una restricción única por `(device_type_id, face)`, por lo que subir otra imagen para la misma cara sustituye el registro anterior. Las consultas de catálogo solo recuperan metadatos; no cargan todos los binarios en memoria.
 
-Las consultas de catálogo solo recuperan metadatos; no cargan los binarios de todas las imágenes en memoria. El binario se lee únicamente al solicitar la ruta de medios.
-
-## Sustitución posterior de imágenes
+## Agregar o reemplazar imágenes
 
 Las imágenes se administran desde:
 
@@ -90,7 +86,7 @@ Las imágenes se administran desde:
 /device-types/{device_type_id}/images
 ```
 
-La escritura local requiere:
+El usuario puede seleccionar únicamente la cara que desea cambiar. Una cara no seleccionada conserva su archivo actual. La escritura local requiere:
 
 - sesión autenticada;
 - permiso `devices.create`;
@@ -99,7 +95,7 @@ La escritura local requiere:
 
 No requiere que NetBox pueda escribir en `MEDIA_ROOT` y no ejecuta una modificación sobre NetBox.
 
-## Entrega de imágenes
+## Entrega y actualización de imágenes
 
 La ruta autenticada es:
 
@@ -110,27 +106,49 @@ La ruta autenticada es:
 Orden de lectura:
 
 1. imagen local de NetDoc;
-2. imagen ya documentada en NetBox, cuando no existe una copia local;
-3. representación alternativa con nombre y modelo, cuando ninguna existe.
+2. imagen ya documentada en NetBox cuando no existe una copia local;
+3. representación alternativa con nombre y modelo cuando ninguna existe.
 
-La respuesta utiliza:
-
-- `Content-Type` validado;
-- `X-Content-Type-Options: nosniff`;
-- caché privada;
-- `ETag` derivado del SHA-256.
+La respuesta utiliza `Content-Type` validado, `X-Content-Type-Options: nosniff`, caché privada con revalidación y `ETag` derivado del SHA-256. La revalidación evita que el navegador conserve durante varios minutos una fotografía que acaba de ser reemplazada.
 
 El token de NetBox nunca se entrega al navegador.
 
-## Uso dentro del rack
+## Ajuste visual de fotografías
 
-La elevación selecciona la imagen según la cara activa:
+Las imágenes no se estiran para llenar el bloque. Las vistas 2D y 3D usan `object-fit: contain`, fondo oscuro y márgenes internos mínimos para conservar la proporción del chasis.
 
-- cara `front`: usa la imagen frontal;
-- cara `rear`: usa la imagen trasera;
-- si la cara no tiene imagen, presenta una representación alternativa con nombre y modelo.
+Para obtener el mejor resultado:
 
-La imagen se ajusta al espacio físico del dispositivo; no modifica la cantidad de unidades ocupadas. La ocupación proviene de `u_height` del modelo y de la posición del dispositivo.
+- recortar la fotografía al borde del equipo;
+- usar orientación horizontal;
+- evitar márgenes blancos grandes;
+- preferir fondo transparente u oscuro;
+- usar una fotografía diferente para frente y parte trasera;
+- documentar correctamente `u_height`, porque la fotografía no determina el espacio ocupado.
+
+En equipos de 0.5U o 1U, el modo **Detalle** de la vista 3D aumenta la altura del gabinete para que la fotografía resulte más legible. Los nombres de equipos bajos se consultan mediante el inspector lateral y el tooltip, evitando cubrir la imagen.
+
+## Vista 3D estilo datacenter
+
+La vista 3D se selecciona exclusivamente dentro de:
+
+```text
+/racks/{rack_id}?view=3d
+```
+
+Incluye:
+
+- gabinete metálico con profundidad y rieles;
+- fondo y piso técnico estilo datacenter;
+- perspectiva isométrica o frontal;
+- cara frontal o trasera;
+- escala **Ajustar** o **Detalle**;
+- fotografías sin deformación;
+- indicadores visuales de equipos con imagen;
+- conflictos de posición en rojo;
+- inspector lateral compartido con la vista 2D.
+
+La visualización es una representación documental. No sustituye una medición física ni corrige automáticamente posiciones erróneas en NetBox.
 
 ## Alturas y ocupación
 
@@ -144,6 +162,27 @@ NetDoc utiliza la altura documentada en el modelo:
 - los equipos sin posición válida se muestran fuera de la elevación.
 
 No se debe inferir una altura por el nombre o por la fotografía. Antes de colocar el dispositivo, el modelo debe tener un `u_height` correcto.
+
+## Reporte PDF del rack
+
+Cada rack ofrece:
+
+```text
+GET /racks/{rack_id}/report.pdf?face={front|rear}
+```
+
+El reporte se genera bajo demanda y requiere permiso `racks.view`. No se guarda una copia permanente en la base.
+
+Contenido:
+
+- nombre, sitio, ubicación y estado del rack;
+- altura, unidades ocupadas, libres y porcentaje de utilización;
+- elevación de la cara seleccionada;
+- equipos posicionados y conflictos;
+- inventario paginado con equipo, modelo, posición, altura, cara, estado, serial, etiqueta de activo y disponibilidad de fotografía;
+- equipos de 0U y equipos sin posición válida.
+
+El PDF se construye con primitivas internas y fuentes estándar, por lo que no agrega dependencias nativas al servidor. La elevación del reporte utiliza bloques y etiquetas para mantener legibilidad de impresión; la interfaz web conserva las fotografías completas.
 
 ## Respaldo y capacidad
 
@@ -183,8 +222,9 @@ Prueba manual en desarrollo:
 1. Confirmar que Alembic presenta `20260725_0002` como cabeza.
 2. Abrir un modelo existente y cargar una imagen frontal.
 3. Confirmar que la galería indica **Guardada en NetDoc**.
-4. Abrir la URL de medios autenticada y confirmar HTTP 200.
-5. Revisar el mismo modelo en el catálogo, ficha, rack 2D y rack 3D.
-6. Sustituir la imagen y confirmar que cambia el `ETag`.
-7. Confirmar el evento en Auditoría.
-8. Confirmar que el modelo y sus dimensiones en NetBox no fueron alterados.
+4. Sustituir la imagen y confirmar que cambia inmediatamente al recargar.
+5. Revisar el modelo en catálogo, ficha, rack 2D y rack 3D.
+6. Alternar **Ajustar** y **Detalle** en un rack de 42U.
+7. Verificar fotografías de equipos de 1U y alturas mayores.
+8. Descargar el PDF y revisar elevación, inventario y paginación.
+9. Confirmar auditoría y que el modelo y sus dimensiones en NetBox no fueron alterados.

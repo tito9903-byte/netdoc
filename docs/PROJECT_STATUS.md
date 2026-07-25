@@ -2,165 +2,122 @@
 
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
-- **Última actualización:** 2026-07-24.
-- **Versión documental:** 2.1.
-- **Versión de aplicación de la rama:** 0.10.0.
+- **Última actualización:** 2026-07-25.
+- **Versión documental:** 2.2.
+- **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/documentation-workflows-ui`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/local-device-type-images`.
 
 ## Resumen ejecutivo
 
-`develop` contiene la versión 0.9.0 con autenticación multiusuario, roles, auditoría, perfil, búsqueda global, Sistema y Alembic. El PR #4 permanece como borrador y convierte NetDoc en una capa de documentación más rápida que la interfaz general de NetBox, con flujos dirigidos para IPAM, hardware, imágenes, interfaces en lote, racks y altas físicas.
+La versión `0.10.0` fue promovida a `main` y reúne autenticación, roles, auditoría, búsqueda, Sistema, IPAM, fabricantes, modelos, plantillas, conexiones, racks 2D/3D y la base segura para el futuro asistente.
 
-La rama 0.10.0 ha sido revisada iterativamente en el puerto 8101 con datos reales de NetBox 4.4.2. Los últimos commits añaden fabricantes, fichas completas de modelos y el fundamento de planes seguros y del futuro asistente; todavía deben desplegarse manualmente en desarrollo. No se ha fusionado a `develop` ni promovido a producción.
+La rama `feature/local-device-type-images` prepara `0.10.1` para resolver una limitación detectada al subir imágenes mediante NetBox 4.4.2: el proceso de NetBox no podía escribir en su directorio multimedia. La solución no cambia permisos del servidor NetBox. NetDoc guarda las nuevas imágenes frontal y trasera en su propia base, vinculadas al `device_type_id` real de NetBox.
 
 ## Entornos y servicios
 
-| Entorno | Estado conocido | Ruta | Rama esperada | Servicio | Puerto | Sesión |
-|---|---|---|---|---|---:|---|
-| Producción | Verificado manualmente por el propietario | `/opt/netdoc-prod` | `main` | `netdoc-prod` | 8100 | independiente |
-| Desarrollo | Usado para revisión manual del PR #4 | `/opt/netdoc-dev` | rama del PR durante revisión; `develop` después de fusionar | `netdoc-dev` | 8101 | `netdoc_dev_session` |
+| Entorno | Ruta | Rama esperada | Servicio | Puerto | Base local |
+|---|---|---|---|---:|---|
+| Producción | `/opt/netdoc-prod` | `main` | `netdoc-prod` | 8100 | independiente |
+| Desarrollo | `/opt/netdoc-dev` | rama en revisión o `develop` | `netdoc-dev` | 8101 | independiente |
 
-Servidor dedicado: `192.168.10.93`; NetBox: `https://192.168.10.95`, versión documentada 4.4.2. Desarrollo debe conservar `NETBOX_WRITE_ENABLED=false` durante las revisiones iniciales. El respaldo `/opt/netbox-documental` no es producción activa.
+Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión documentada 4.4.2.
 
 ## Arquitectura vigente
 
 - FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware y Uvicorn.
-- NetBox conserva dispositivos, tipos, componentes, imágenes, racks, sitios, cables, IPAM y demás inventario.
-- SQLAlchemy conserva únicamente usuarios, roles, permisos y auditoría de NetDoc.
-- Alembic mantiene el historial versionado del esquema local; la cabeza actual es `20260724_0001`.
-- SQLite es el valor inicial de `DATABASE_URL`; cada entorno debe tener su propia base.
-- `PermissionMiddleware` recarga identidad y permisos antes de cada solicitud protegida.
-- Las escrituras exigen autenticación, permiso, CSRF y `NETBOX_WRITE_ENABLED=true`.
-- Los servicios consumen la API REST de NetBox y no duplican inventario en la base local.
-- Las imágenes privadas se sirven mediante proxy autenticado; el token no se expone.
+- NetBox conserva dispositivos, tipos, componentes, racks, sitios, cables, IPAM y demás inventario.
+- SQLAlchemy conserva usuarios, roles, permisos, auditoría e imágenes de modelos propias de NetDoc.
+- Alembic mantiene el esquema local; la cabeza de esta rama es `20260725_0002`.
+- SQLite es el valor inicial de `DATABASE_URL`; cada entorno usa su propia base.
+- Las escrituras hacia NetBox exigen autenticación, permiso, CSRF y `NETBOX_WRITE_ENABLED=true`.
+- La escritura local de imágenes exige autenticación, permiso `devices.create` y CSRF, pero no modifica NetBox.
+- Las imágenes se entregan mediante una ruta autenticada; el token de NetBox no se expone.
 - Los cambios futuros de formularios e IA convergen en un `ChangePlan` determinista.
-- La lista cerrada de capacidades impide que un cliente o modelo invente rutas REST.
-- El esquema de la instalación se descubre mediante `OPTIONS` antes de habilitar una nueva escritura.
 
-## Completado en `develop`
+## Funcionalidades disponibles en 0.10.0
 
-- Dashboard, dispositivos e interfaces, filtros y paginación.
+- Dashboard, dispositivos, interfaces, filtros y paginación.
 - Creación guiada de equipos.
 - Consulta y creación de conexiones y cables.
-- Racks con listado, detalle, inspector y elevación 2D.
-- Autenticación multiusuario, roles iniciales y roles personalizados.
-- Administración de usuarios, perfil y cambio de contraseña.
-- Auditoría con filtros y exportación CSV.
-- Protección temporal contra intentos repetidos de login.
-- Búsqueda global y módulo Sistema de solo lectura.
-- Migración inicial Alembic y adopción controlada de bases heredadas completas.
-- Despliegue separado y validado para desarrollo y producción.
+- Racks con listado, detalle, elevación 2D y vista 3D.
+- Ocupación física mediante posición, cara y `u_height`.
+- Autenticación multiusuario, roles, permisos, perfil y auditoría.
+- Protección temporal de inicio de sesión.
+- Búsqueda global y módulo Sistema.
+- Direccionamiento IP con pools, localidad, VRF y ocupación.
+- Fabricantes, modelos, ficha completa y plantillas de puertos.
+- Creación de modelos con imágenes opcionales.
+- Planes seguros, lista cerrada de capacidades y vista previa de cables.
 
-## En progreso en `feature/documentation-workflows-ui`
+## En progreso en `feature/local-device-type-images`
 
-### Experiencia visual y navegación
+### Persistencia local de imágenes
 
-- Navegación agrupada por General, Documentación, Acciones rápidas y Administración.
-- Fabricantes, modelos y plantillas de puertos aparecen como apartados separados.
-- Crear modelo se inicia dentro del catálogo, no desde Acciones rápidas.
-- Topología 3D seleccionable dentro del detalle del rack.
-- Dashboard como punto de inicio de los principales procesos.
-- Jerarquía visual común para formularios, filtros, avisos, estados y tablas.
+- Tabla `device_type_images` mediante migración `20260725_0002`.
+- Una imagen frontal y una trasera por `device_type_id`.
+- Sustitución idempotente por la restricción única `(device_type_id, face)`.
+- Validación de JPG, PNG, WEBP y GIF mediante firma binaria real.
+- Límite de 5 MB por archivo.
+- Hash SHA-256, nombre seguro, tamaño, fecha y usuario de actualización.
+- Consultas de catálogo que recuperan solo metadatos, no binarios.
+- Lectura local prioritaria y fallback a imágenes antiguas de NetBox.
+- Entrega autenticada con `ETag`, caché privada y `nosniff`.
+- Reutilización en catálogo, ficha, rack 2D y rack 3D.
 
-### Direccionamiento IP
+### Migraciones y compatibilidad
 
-- Pantalla `/ipam` para prefijos y pools.
-- Filtros por texto, familia, estado, rol, localidad y disponibilidad.
-- Localidad, VRF, rol y estado visibles por prefijo.
-- Cálculo desde direcciones, rangos y prefijos hijos documentados en la misma VRF.
-- Clasificación visual, paginación, orden y cantidades IPv6 compactas.
-- API interna de solo lectura `/api/ipam/pools`.
+- Las bases vacías reciben `0001` y `0002`.
+- Las bases versionadas se actualizan hasta `head`.
+- Una base heredada completa del esquema inicial se marca en `20260724_0001` y después recibe `0002`.
+- Los esquemas parciales siguen siendo rechazados.
 
-### Fabricantes, modelos, componentes e imágenes
+### Seguridad
 
-- Catálogo `/manufacturers` con búsqueda, conteo de modelos y creación controlada.
-- Ficha `/manufacturers/{id}` con edición y modelos asociados.
-- Catálogo `/device-types` con acceso a la ficha completa de cada modelo.
-- Ficha `/device-types/{id}` con información general, edición, imágenes, resumen de componentes, interfaces y equipos asociados.
-- Alta `/device-types/new` e imágenes frontal/trasera en el mismo formulario.
-- Plantillas `/interface-templates` separadas del catálogo de modelos.
-- Generación de hasta 256 plantillas mediante patrones con vista previa.
-- Galería `/device-types/{id}/images` para sustituir imágenes.
-- Auditoría para creación y actualización de fabricantes, modelos e imágenes.
-- Eliminación deliberadamente deshabilitada hasta implementar protección de dependencias.
-- Pendiente: generadores y editores propios para bahías de módulos, energía, consola y patch panels.
+- No se escribe en `MEDIA_ROOT` de NetBox.
+- No se almacena el token de NetBox en la base de imágenes.
+- La ruta de carga valida sesión, permiso y CSRF.
+- Antes de guardar se comprueba que el modelo todavía existe en NetBox.
+- Los errores SQL se convierten en mensajes controlados.
+- Las imágenes pasan a formar parte del respaldo de `DATABASE_URL`.
 
-### Racks y altas físicas
+## Validaciones automatizadas de la rama
 
-- Ocupación con posición y `u_height` real.
-- Equipos de 0U, 0.5U y alturas superiores.
-- Cara frontal, trasera, profundidad completa y superposiciones.
-- Selector Vista 2D / Vista 3D en `/racks/{id}`.
-- Fotografías reutilizadas en ambas vistas.
-- Alta guiada de rack y colocación física del equipo.
-- `/topology` reservado como redirección de compatibilidad.
+- compilación Python;
+- grafo Alembic con una sola cabeza;
+- creación y actualización de la tabla local;
+- adopción de una base heredada completa;
+- guardado, sustitución y lectura de imágenes;
+- rechazo de archivos cuya firma no corresponde a una imagen;
+- prioridad de la imagen local sobre NetBox;
+- carga multipart autenticada y entrega de la imagen;
+- importación de la aplicación y análisis de plantillas;
+- suite aislada sobre una base temporal.
 
-### Conexiones
+## Requiere verificación en desarrollo
 
-- Presentación descriptiva de equipo e interfaz.
-- Tipos, estados y unidades traducidos defensivamente.
-- Creación actual protegida por sesión, permisos, CSRF y modo de escritura.
-- Planificador determinista que rechaza extremos ocupados, iguales o inválidos.
-- API `POST /api/change-plans/cable` que consulta extremos y devuelve una vista previa; no escribe.
-
-### Escrituras seguras y futuro asistente
-
-- `ChangePlan` con pasos, dependencias, advertencias, huella y frase de confirmación.
-- Redacción recursiva de secretos para UI, logs y auditoría.
-- Rechazo de `DELETE` en planes automáticos.
-- Lista cerrada de capacidades para hardware, racks, dispositivos, cables, IPAM y circuitos.
-- Solo la creación de cable está marcada inicialmente como candidata a ejecución asistida.
-- Descubrimiento de campos, obligatoriedad y opciones mediante `OPTIONS`.
-- Validación dinámica de payload contra la versión y plugins instalados.
-- Documentación de arquitectura conversacional y cobertura de módulos.
-- Todavía no existe interfaz de chat ni ejecutor automático.
-
-## Validaciones de la rama
-
-Automatizadas:
-
-- compilación de Python;
-- grafo Alembic;
-- suite aislada sobre SQLite temporal;
-- importación de la aplicación;
-- análisis de plantillas Jinja2;
-- sintaxis de scripts;
-- alturas fraccionarias, 0U, profundidad completa, conflictos e imágenes;
-- rutas de fabricantes y ficha completa del modelo;
-- planes, huellas, redacción, lista cerrada y confirmación;
-- planificador y vista previa de cable;
-- análisis de esquemas `OPTIONS` y validación de campos/opciones;
-- GitHub Actions correcto para el último commit verificado.
-
-Pendiente o requiere verificación:
-
-- desplegar el último commit únicamente en desarrollo;
-- revisar `/manufacturers`, `/device-types` y una ficha `/device-types/{id}` con datos reales;
-- verificar creación y actualización real de fabricantes y modelos en un entorno autorizado;
-- verificar un modelo con imagen frontal y trasera;
-- comprobar el `PATCH multipart` de NetBox 4.4.2;
-- probar la API de vista previa de cable con interfaces reales;
-- comparar opciones de cable con `OPTIONS` de la instalación;
-- diseñar el ejecutor confirmado sin habilitarlo todavía;
-- no fusionar ni tocar producción hasta aprobación explícita.
+- desplegar la rama únicamente en el puerto 8101;
+- confirmar `alembic current` y `alembic heads` en `20260725_0002`;
+- cargar una imagen en un modelo existente;
+- confirmar la etiqueta **Guardada en NetDoc**;
+- revisar la misma imagen en catálogo, ficha, rack 2D y rack 3D;
+- sustituirla y comprobar el cambio de `ETag`;
+- revisar el evento de auditoría;
+- confirmar que NetBox no recibió un `PATCH` de imagen.
 
 ## Riesgos y deuda
 
-- La rama reutiliza permisos amplios existentes; se requieren permisos separados por dominio antes del asistente.
-- El token técnico debe rotarse y restringirse por objetos y acciones.
-- La creación del modelo y las imágenes no es una única transacción; un fallo puede requerir reintento.
-- Los flujos compuestos necesitan estados parciales y compensaciones explícitas.
-- El esquema `OPTIONS` de plugins puede diferir y debe tratarse defensivamente.
-- Una fotografía no sustituye la altura correcta del modelo.
-- SQLite debe reevaluarse antes de varios workers.
-- El rollback de código no revierte migraciones ni restaura automáticamente la base local.
-- Falta definir retención y eliminación segura de auditoría.
-- El asistente futuro debe resistir prompt injection, ambigüedad y solicitudes fuera de capacidad.
+- Las imágenes aumentan el tamaño de la base local; el respaldo y el espacio libre deben supervisarse.
+- SQLite es adecuado para el tamaño inicial, pero debe reevaluarse antes de varios workers o miles de modelos.
+- El `device_type_id` es una referencia externa: una futura eliminación de modelos necesitará limpieza controlada de imágenes huérfanas.
+- La creación del modelo en NetBox y el guardado local de imágenes no forman una única transacción.
+- El rollback de código no revierte migraciones ni restaura la base.
+- Aún faltan editores propios para bahías de módulos, energía, consola y patch panels.
+- El asistente conversacional todavía no tiene interfaz ni ejecutor habilitado.
 
 ## Próximo objetivo
 
-**En progreso:** desplegar y revisar las nuevas áreas de fabricantes/modelos en desarrollo, integrar la vista previa segura en Conexiones y preparar resolutores exactos de objetos. Después se construirán editores de los demás componentes del modelo y un asistente de solo lectura que guíe al usuario y produzca planes sin ejecutar. La primera escritura conversacional prevista será la creación confirmada de un cable.
+Validar `0.10.1` en desarrollo. Después de confirmar migración, carga y visualización en racks, abrir la promoción `develop → main`. La siguiente etapa funcional continuará con componentes de modelos y conexiones físicas guiadas.
 
 ## Reglas de mantenimiento
 

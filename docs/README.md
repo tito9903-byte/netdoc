@@ -12,14 +12,16 @@ sustituye al código versionado. Actualice primero la fuente oficial indicada.
 | [SECURITY](SECURITY.md) | Reglas de seguridad | Todo el equipo | Seguridad |
 | [ROADMAP](ROADMAP.md) | Trabajo futuro | Producto | Planificación |
 | [NETBOX_INTEGRATION](NETBOX_INTEGRATION.md) | Integración | Desarrollo | Integración |
+| [RACKS_AND_DEVICE_IMAGES](RACKS_AND_DEVICE_IMAGES.md) | Racks 2D/3D, alturas e imágenes | Producto, operación y desarrollo | Flujo físico |
 | [TESTING](TESTING.md) | Estrategia de pruebas | Desarrollo | Pruebas |
 | [GLOSSARY](GLOSSARY.md) | Vocabulario | Todo el equipo | Terminología |
 | [ADR](adr/README.md) | Decisiones | Todo el equipo | Decisiones |
 | [AI handoff](AI_HANDOFF_PROMPT.md) | Transferencia de contexto | Agentes IA | Handoff |
 
 **Lectura recomendada:** nuevos desarrolladores: `AGENTS.md`, estado,
-arquitectura, seguridad, contribución y ADR; operación: despliegue, operaciones
-y seguridad; agentes IA: el prompt maestro completo y los documentos que ordena.
+arquitectura, seguridad, contribución y ADR; operación: despliegue, operaciones,
+racks e imágenes y seguridad; agentes IA: el prompt maestro completo y los
+documentos que ordena.
 
 Mantenga enlaces relativos, español claro, sin secretos ni resultados no
 verificados. Actualice la fuente oficial junto al cambio y enlace los resúmenes;

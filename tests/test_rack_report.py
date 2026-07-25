@@ -9,7 +9,7 @@ from PIL import Image
 
 from app.main import app
 from app.services.rack_presentation import prepare_elevation
-from app.services.rack_report_service import build_rack_report
+from app.services.rack_report_detailed_service import build_rack_report
 
 
 RACK = {
@@ -81,10 +81,11 @@ class RackReportTests(unittest.TestCase):
 
         self.assertTrue(pdf.startswith(b"%PDF-1.4"))
         self.assertTrue(pdf.rstrip().endswith(b"%%EOF"))
-        self.assertGreater(len(pdf), 3500)
+        self.assertGreater(len(pdf), 5000)
         self.assertEqual(filename, "rack-smn05-inventario.pdf")
         self.assertIn(b"/Type /Pages", pdf)
         self.assertIn(b"/Title", pdf)
+        self.assertGreaterEqual(pdf.count(b"/Type /Page"), 5)
 
     def test_report_embeds_device_photo(self):
         elevation = prepare_elevation(RACK, DEVICES, "front")
@@ -103,7 +104,7 @@ class RackReportTests(unittest.TestCase):
         )
 
         self.assertIn(b"/Subtype /Image", pdf)
-        self.assertGreater(len(pdf), 5000)
+        self.assertGreater(len(pdf), 7000)
 
     @patch(
         "app.routers.racks.RackService.list_rack_devices",

@@ -133,59 +133,22 @@ async def racks_page(
     )
 
 
-@router.get("/topology", response_class=HTMLResponse)
-async def topology_page(
+@router.get("/topology")
+async def legacy_topology_redirect(
     request: Request,
     site_id: str = "",
 ):
+    """Compatibilidad: la vista 3D ahora se selecciona dentro de cada rack."""
+
     redirect = access_redirect(request, "racks.view")
     if redirect:
         return redirect
 
-    selected_site_id = parse_optional_int(site_id)
-    service = RackService()
-    try:
-        sites, racks, devices = await asyncio.gather(
-            service.list_sites(),
-            service.list_racks(site_id=selected_site_id),
-            service.list_devices(site_id=selected_site_id),
-        )
-        topology = prepare_topology(
-            sites=sites,
-            racks=racks,
-            devices=devices,
-        )
-    except RackServiceError as exc:
-        return templates.TemplateResponse(
-            request=request,
-            name="error.html",
-            status_code=503,
-            context=context(
-                request,
-                current_page="topology",
-                page_title="Topología 3D",
-                page_subtitle="No fue posible construir la vista física",
-                error_title="No se pudo cargar la topología",
-                error_message=exc.message,
-                netbox_connected=False,
-            ),
-        )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="topology.html",
-        context=context(
-            request,
-            current_page="topology",
-            page_title="Topología 3D",
-            page_subtitle=(
-                "Vista física por sitio, rack, posición U y cara documentada"
-            ),
-            sites=sites,
-            selected_site_id=selected_site_id,
-            **topology,
-        ),
-    )
+    query = urlencode({"site_id": site_id}) if site_id.strip() else ""
+    target = "/racks"
+    if query:
+        target = f"{target}?{query}"
+    return RedirectResponse(target, status_code=303)
 
 
 @router.get("/media/device-types/{device_type_id}/{face}")
@@ -225,12 +188,14 @@ async def rack_detail_page(
     request: Request,
     rack_id: int,
     face: str = "front",
+    view: str = "2d",
 ):
     redirect = access_redirect(request, "racks.view")
     if redirect:
         return redirect
 
     selected_face = face if face in {"front", "rear"} else "front"
+    selected_view = view if view in {"2d", "3d"} else "2d"
     service = RackService()
 
     try:
@@ -266,11 +231,12 @@ async def rack_detail_page(
                 or "Rack"
             ),
             page_subtitle=(
-                "Elevación basada en posición, cara, imagen y altura del modelo"
+                "Vista 2D o 3D basada en posición, cara, imagen y altura del modelo"
             ),
             rack=rack,
             devices=devices,
             selected_face=selected_face,
+            selected_view=selected_view,
             rack_site_label=nested_label(rack.get("site"), "Sin sitio"),
             **elevation,
         ),

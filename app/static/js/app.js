@@ -2,9 +2,19 @@ const menuButton = document.getElementById("menuToggle");
 const sidebar = document.getElementById("sidebar");
 
 if (menuButton && sidebar) {
+    const mobileNavQuery = window.matchMedia("(max-width: 900px)");
+
     const setOpen = (open) => {
         sidebar.classList.toggle("open", open);
+        document.body.classList.toggle(
+            "mobile-nav-open",
+            open && mobileNavQuery.matches,
+        );
         menuButton.setAttribute("aria-expanded", String(open));
+        menuButton.setAttribute(
+            "aria-label",
+            open ? "Cerrar menú" : "Abrir menú",
+        );
     };
 
     menuButton.addEventListener("click", () => {
@@ -34,10 +44,16 @@ if (menuButton && sidebar) {
     sidebar.addEventListener("click", (event) => {
         const target = event.target;
         if (
-            window.matchMedia("(max-width: 900px)").matches &&
+            mobileNavQuery.matches &&
             target instanceof Element &&
             target.closest("a.nav-item")
         ) {
+            setOpen(false);
+        }
+    });
+
+    mobileNavQuery.addEventListener("change", (event) => {
+        if (!event.matches) {
             setOpen(false);
         }
     });

@@ -108,6 +108,21 @@ class DocumentationRouteTests(unittest.TestCase):
         )
         self.assertIn("Altura U", response.text)
 
+    def test_combined_model_image_route_requires_valid_csrf(self):
+        response = self.client.post(
+            "/device-types/actions/create-with-images",
+            data={
+                "manufacturer_id": "1",
+                "model": "C600",
+                "u_height": "2",
+            },
+            follow_redirects=False,
+        )
+
+        self.assertEqual(303, response.status_code)
+        self.assertIn("/device-types/new?", response.headers["location"])
+        self.assertIn("error=", response.headers["location"])
+
     @patch(
         "app.routers.documentation.DeviceTypeService.list_interface_templates",
         new_callable=AsyncMock,

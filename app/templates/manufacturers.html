@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Fabricantes | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/hardware.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if notice %}<div class="notice success-notice"><strong>Operación completada.</strong><span>{{ notice }}</span></div>{% endif %}
+{% if error %}<div class="notice error-notice"><strong>No fue posible completar la operación.</strong><span>{{ error }}</span></div>{% endif %}
+
+<section class="workflow-intro compact-workflow-intro">
+    <div>
+        <span class="eyebrow">Biblioteca de hardware</span>
+        <h2>Fabricantes</h2>
+        <p>Crea y administra las marcas que agrupan los modelos reutilizables de NetBox.</p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/device-types">Modelos de equipos</a>
+        <a class="button primary" href="#new-manufacturer">Nuevo fabricante</a>
+    </div>
+</section>
+
+<section class="summary-grid summary-grid-four hardware-summary">
+    <article class="summary-card"><span>Fabricantes visibles</span><strong>{{ total_manufacturers }}</strong><small>Según la búsqueda actual</small></article>
+    <article class="summary-card"><span>Modelos asociados</span><strong>{{ total_models }}</strong><small>Dentro de los fabricantes visibles</small></article>
+    <article class="summary-card"><span>Escritura</span><strong>{% if write_enabled %}Activa{% else %}Bloqueada{% endif %}</strong><small>Controlada por el entorno</small></article>
+    <article class="summary-card"><span>Eliminación</span><strong>No disponible</strong><small>Se habilitará con protección de dependencias</small></article>
+</section>
+
+<section class="hardware-layout">
+    <div class="panel hardware-table-panel">
+        <div class="panel-header compact-panel-header">
+            <div><h2>Catálogo de fabricantes</h2><p>Abre una ficha para editar y consultar sus modelos.</p></div>
+            <form class="hardware-search" method="get" action="/manufacturers">
+                <input type="search" name="q" value="{{ query }}" placeholder="Buscar fabricante...">
+                <button class="button secondary" type="submit">Buscar</button>
+            </form>
+        </div>
+
+        {% if manufacturers %}
+        <div class="table-wrapper">
+            <table class="data-table roomy-table">
+                <thead><tr><th>Fabricante</th><th>Slug</th><th>Modelos</th><th>Descripción</th><th></th></tr></thead>
+                <tbody>
+                    {% for manufacturer in manufacturers %}
+                    <tr>
+                        <td><div class="primary-cell"><strong>{{ manufacturer.get("_name") }}</strong><span>ID {{ manufacturer.get("id") }}</span></div></td>
+                        <td class="mono-value">{{ manufacturer.get("slug") or "—" }}</td>
+                        <td><span class="panel-badge">{{ manufacturer.get("_model_count") }}</span></td>
+                        <td>{{ manufacturer.get("description") or "Sin descripción" }}</td>
+                        <td><a class="button secondary small" href="/manufacturers/{{ manufacturer.get('id') }}">Abrir</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state compact-empty-state"><div class="empty-icon">▦</div><h3>No hay fabricantes visibles</h3><p>Cambia la búsqueda o registra el primero.</p></div>
+        {% endif %}
+    </div>
+
+    <aside class="panel hardware-form-panel" id="new-manufacturer">
+        <div class="panel-header compact-panel-header"><div><h2>Crear fabricante</h2><p>Luego podrás crear modelos dentro de su ficha.</p></div></div>
+        {% if not write_enabled %}
+        <div class="read-only-callout compact-callout"><span>◌</span><div><strong>Solo lectura</strong><span>El formulario puede revisarse, pero no enviarse.</span></div></div>
+        {% endif %}
+        <form method="post" action="/manufacturers/actions/create" class="hardware-form">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <div class="field"><label for="manufacturer-name">Nombre</label><input id="manufacturer-name" name="name" required placeholder="Ejemplo: ZTE"></div>
+            <div class="field"><label for="manufacturer-slug">Slug opcional</label><input id="manufacturer-slug" name="slug" placeholder="Se genera automáticamente"></div>
+            <div class="field"><label for="manufacturer-description">Descripción</label><textarea id="manufacturer-description" name="description" rows="4" placeholder="Uso, alcance o referencia interna"></textarea></div>
+            <button class="button primary hardware-submit" type="submit" {% if not write_enabled %}disabled{% endif %}>Crear fabricante</button>
+        </form>
+    </aside>
+</section>
+{% endblock %}

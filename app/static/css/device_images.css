@@ -88,6 +88,24 @@
     margin-top: 5px;
 }
 
+.model-image-metadata {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--muted);
+    background: rgba(7, 16, 22, 0.48);
+    font-size: 9px;
+}
+
+.model-image-metadata span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .model-image-upload-panel {
     margin-top: 18px;
 }
@@ -207,7 +225,8 @@
         grid-template-columns: 1fr;
     }
 
-    .model-image-navigation {
+    .model-image-navigation,
+    .model-image-metadata {
         align-items: flex-start;
         flex-direction: column;
     }

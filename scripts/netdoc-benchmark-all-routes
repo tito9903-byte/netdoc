@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mide todas las rutas GET navegables registradas en la aplicación real.
+# Mide todas las rutas GET navegables publicadas por NetDoc.
 set -euo pipefail
 
 APP_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -180,14 +180,20 @@ def resolve_path(path: str, values: dict[str, Any]) -> str | None:
 
 
 def discover_routes(values: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Descubre rutas desde OpenAPI para soportar FastAPI con routers perezosos."""
     discovered: set[str] = {"/health"}
     skipped: list[str] = []
 
-    for route in app.routes:
-        path = getattr(route, "path", "")
-        methods = getattr(route, "methods", None) or set()
+    schema = app.openapi()
+    paths = schema.get("paths", {}) if isinstance(schema, dict) else {}
 
-        if not path or "GET" not in methods:
+    if not isinstance(paths, dict):
+        raise SystemExit("ERROR: FastAPI no devolvió un catálogo OpenAPI válido.")
+
+    for path, operations in paths.items():
+        if not isinstance(path, str) or not isinstance(operations, dict):
+            continue
+        if "get" not in {str(method).lower() for method in operations}:
             continue
         if path in EXCLUDED_PATHS:
             continue
@@ -224,6 +230,12 @@ def login(client: httpx.Client) -> None:
     )
     if response.status_code not in {302, 303, 307, 308}:
         raise SystemExit(f"ERROR: login falló con HTTP {response.status_code}.")
+
+    check = client.get("/", follow_redirects=False)
+    if check.status_code in {302, 303, 307, 308} and "/login" in check.headers.get(
+        "location", ""
+    ):
+        raise SystemExit("ERROR: la sesión no quedó autenticada.")
 
 
 def measure(client: httpx.Client, path: str) -> Result:

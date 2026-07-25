@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
@@ -15,11 +14,11 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
-from app.services.rack_presentation import (
-    nested_label,
-    prepare_elevation,
-    prepare_topology,
+from app.services.navigation_read_service import (
+    NavigationReadError,
+    NavigationReadService,
 )
+from app.services.rack_presentation import nested_label, prepare_elevation
 from app.services.rack_report_service import (
     RackReportError,
     build_rack_report,
@@ -90,23 +89,12 @@ async def racks_page(
         return redirect
 
     selected_site_id = parse_optional_int(site_id)
-    service = RackService()
-
     try:
-        sites, racks, devices = await asyncio.gather(
-            service.list_sites(),
-            service.list_racks(
-                site_id=selected_site_id,
-                query=q,
-            ),
-            service.list_devices(site_id=selected_site_id),
+        sites, racks = await NavigationReadService().rack_catalog(
+            site_id=selected_site_id,
+            query=q,
         )
-        topology = prepare_topology(
-            sites=sites,
-            racks=racks,
-            devices=devices,
-        )
-    except RackServiceError as exc:
+    except NavigationReadError as exc:
         return templates.TemplateResponse(
             request=request,
             name="error.html",
@@ -128,10 +116,10 @@ async def racks_page(
             request,
             page_title="Racks",
             page_subtitle=(
-                "Capacidad física calculada desde posiciones y altura de modelos"
+                "Catálogo rápido; la ocupación física se calcula al abrir cada rack"
             ),
             sites=sites,
-            racks=topology["topology_racks"],
+            racks=racks,
             selected_site_id=selected_site_id,
             query=q,
         ),

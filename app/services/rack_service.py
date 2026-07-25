@@ -11,6 +11,7 @@ import httpx
 from app.core.config import get_settings
 from app.services.device_image_service import DeviceImageService
 from app.services.device_type_service import DeviceTypeServiceError
+from app.services.netbox_client import get_shared_netbox_client
 
 
 class RackServiceError(Exception):
@@ -33,25 +34,9 @@ class RackService:
         self.settings = get_settings()
         self.base_url = self.settings.netbox_url.rstrip("/")
 
-    def _headers(self, *, accept: str = "application/json") -> dict[str, str]:
-        token_type = self.settings.netbox_token_type.strip().lower()
-        authorization = (
-            f"Bearer {self.settings.netbox_token}"
-            if token_type == "bearer"
-            else f"Token {self.settings.netbox_token}"
-        )
-        return {
-            "Authorization": authorization,
-            "Accept": accept,
-            "User-Agent": "NetDoc/0.10.1",
-        }
-
     @staticmethod
     def _local_error(exc: DeviceTypeServiceError) -> RackServiceError:
-        return RackServiceError(
-            exc.message,
-            exc.status_code or 503,
-        )
+        return RackServiceError(exc.message, exc.status_code or 503)
 
     @staticmethod
     def _error_message(response: httpx.Response) -> str:
@@ -75,18 +60,13 @@ class RackService:
                 else str(value)
             )
             messages.append(f"{field}: {rendered}")
-
-        return (
-            " | ".join(messages)
-            or f"NetBox respondió con HTTP {response.status_code}."
-        )
+        return " | ".join(messages) or f"NetBox respondió con HTTP {response.status_code}."
 
     async def request(
         self,
         endpoint: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
         clean_params = {
             key: value
             for key, value in (params or {}).items()
@@ -94,13 +74,12 @@ class RackService:
         }
 
         try:
-            async with httpx.AsyncClient(
-                headers=self._headers(),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(url, params=clean_params)
+            client = await get_shared_netbox_client()
+            response = await client.get(
+                endpoint.lstrip("/"),
+                params=clean_params,
+                headers={"Accept": "application/json"},
+            )
         except httpx.ConnectError as exc:
             raise RackServiceError(
                 f"No fue posible conectar con NetBox en {self.base_url}."
@@ -127,7 +106,6 @@ class RackService:
             raise RackServiceError(
                 "NetBox devolvió un formato de respuesta inesperado."
             )
-
         return payload
 
     async def get_all(
@@ -152,9 +130,7 @@ class RackService:
             )
             page_results = payload.get("results")
             if not isinstance(page_results, list):
-                raise RackServiceError(
-                    "NetBox no devolvió un listado válido."
-                )
+                raise RackServiceError("NetBox no devolvió un listado válido.")
             results.extend(
                 item for item in page_results if isinstance(item, dict)
             )
@@ -181,10 +157,7 @@ class RackService:
             params["site_id"] = site_id
         if query.strip():
             params["q"] = query.strip()
-        return await self.get_all(
-            "/api/dcim/racks/",
-            params=params,
-        )
+        return await self.get_all("/api/dcim/racks/", params=params)
 
     async def get_rack(self, rack_id: int) -> dict[str, Any]:
         return await self.request(f"/api/dcim/racks/{rack_id}/")
@@ -230,7 +203,7 @@ class RackService:
             for device in devices
             if (device_type_id := self._device_type_id(device)) is not None
         })
-        semaphore = asyncio.Semaphore(10)
+        semaphore = asyncio.Semaphore(12)
 
         async def load(
             device_type_id: int,
@@ -355,13 +328,11 @@ class RackService:
         )
 
         try:
-            async with httpx.AsyncClient(
-                headers=self._headers(accept="image/*"),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(image_url)
+            client = await get_shared_netbox_client()
+            response = await client.get(
+                image_url,
+                headers={"Accept": "image/*"},
+            )
         except httpx.ConnectError as exc:
             raise RackServiceError(
                 "No fue posible descargar la imagen desde NetBox."

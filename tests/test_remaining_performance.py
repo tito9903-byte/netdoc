@@ -49,23 +49,26 @@ class IPAMPerformanceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_overview_starts_prefix_roles_and_inventory_together(self):
         service = IPAMService()
+        expected = {"prefixes", "roles", "inventory"}
         started: set[str] = set()
+        all_started = asyncio.Event()
         release = asyncio.Event()
 
-        async def prefixes(*args, **kwargs):
-            started.add("prefixes")
+        async def wait_at_barrier(name: str, result):
+            started.add(name)
+            if started == expected:
+                all_started.set()
             await release.wait()
-            return []
+            return result
+
+        async def prefixes(*args, **kwargs):
+            return await wait_at_barrier("prefixes", [])
 
         async def roles():
-            started.add("roles")
-            await release.wait()
-            return []
+            return await wait_at_barrier("roles", [])
 
         async def inventory():
-            started.add("inventory")
-            await release.wait()
-            return [], [], None
+            return await wait_at_barrier("inventory", ([], [], None))
 
         with (
             patch.object(service, "list_prefixes", side_effect=prefixes),
@@ -73,12 +76,11 @@ class IPAMPerformanceTests(unittest.IsolatedAsyncioTestCase):
             patch.object(service, "load_ip_inventory", side_effect=inventory),
         ):
             task = asyncio.create_task(service.overview())
-            await asyncio.sleep(0)
-            self.assertEqual(
-                {"prefixes", "roles", "inventory"},
-                started,
-            )
-            release.set()
+            try:
+                await asyncio.wait_for(all_started.wait(), timeout=1.0)
+                self.assertEqual(expected, started)
+            finally:
+                release.set()
             result = await task
 
         self.assertEqual(0, result["summary"]["prefixes"])

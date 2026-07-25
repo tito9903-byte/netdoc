@@ -10,6 +10,7 @@ import httpx
 
 from app.core.config import get_settings
 from app.services.device_image_service import DeviceImageService
+from app.services.device_type_service import DeviceTypeServiceError
 
 
 class RackServiceError(Exception):
@@ -44,6 +45,13 @@ class RackService:
             "Accept": accept,
             "User-Agent": "NetDoc/0.10.1",
         }
+
+    @staticmethod
+    def _local_error(exc: DeviceTypeServiceError) -> RackServiceError:
+        return RackServiceError(
+            exc.message,
+            exc.status_code or 503,
+        )
 
     @staticmethod
     def _error_message(response: httpx.Response) -> str:
@@ -193,7 +201,10 @@ class RackService:
         payload = await self.request(
             f"/api/dcim/device-types/{device_type_id}/"
         )
-        payload = DeviceImageService().decorate_device_type(payload)
+        try:
+            payload = DeviceImageService().decorate_device_type(payload)
+        except DeviceTypeServiceError as exc:
+            raise self._local_error(exc) from exc
         type(self)._device_type_cache[device_type_id] = (
             now + self._device_type_cache_seconds,
             payload,
@@ -238,7 +249,10 @@ class RackService:
             for device_type_id, payload in loaded
             if isinstance(payload, dict)
         }
-        local_summaries = DeviceImageService().summaries(type_ids)
+        try:
+            local_summaries = DeviceImageService().summaries(type_ids)
+        except DeviceTypeServiceError as exc:
+            raise self._local_error(exc) from exc
 
         hydrated: list[dict[str, Any]] = []
         for device in devices:
@@ -257,6 +271,9 @@ class RackService:
                         combined[f"_local_{face}_image"] = True
                         combined[f"_{face}_image_available"] = True
                         combined[f"_{face}_image_source"] = "netdoc"
+                        combined[f"{face}_image"] = (
+                            f"/media/device-types/{device_type_id}/{face}"
+                        )
             hydrated.append({
                 **device,
                 "device_type": combined,
@@ -325,7 +342,10 @@ class RackService:
         if face not in {"front", "rear"}:
             raise RackServiceError("La cara solicitada no es válida.", 400)
 
-        local = DeviceImageService().get_local_image(device_type_id, face)
+        try:
+            local = DeviceImageService().get_local_image(device_type_id, face)
+        except DeviceTypeServiceError as exc:
+            raise self._local_error(exc) from exc
         if local is not None:
             return local
 

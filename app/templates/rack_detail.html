@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/topology.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/rack_view_modes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_datacenter.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -19,17 +20,27 @@
 
 <div class="rack-detail-navigation">
     <a href="/racks">← Volver a racks</a>
-    <div class="rack-display-mode" aria-label="Vista del rack">
+    <div class="rack-detail-actions">
         <a
-            href="/racks/{{ rack.get('id') }}?view=2d&face={{ selected_face }}"
-            class="{% if selected_view == '2d' %}active{% endif %}"
-            {% if selected_view == '2d' %}aria-current="page"{% endif %}
-        >Vista 2D</a>
-        <a
-            href="/racks/{{ rack.get('id') }}?view=3d&face={{ selected_face }}"
-            class="{% if selected_view == '3d' %}active{% endif %}"
-            {% if selected_view == '3d' %}aria-current="page"{% endif %}
-        >Vista 3D</a>
+            class="rack-report-button"
+            href="/racks/{{ rack.get('id') }}/report.pdf?face={{ selected_face }}"
+            title="Descargar elevación e inventario en PDF"
+        >
+            <span>⇩</span>
+            Descargar reporte PDF
+        </a>
+        <div class="rack-display-mode" aria-label="Vista del rack">
+            <a
+                href="/racks/{{ rack.get('id') }}?view=2d&face={{ selected_face }}"
+                class="{% if selected_view == '2d' %}active{% endif %}"
+                {% if selected_view == '2d' %}aria-current="page"{% endif %}
+            >Vista 2D</a>
+            <a
+                href="/racks/{{ rack.get('id') }}?view=3d&face={{ selected_face }}"
+                class="{% if selected_view == '3d' %}active{% endif %}"
+                {% if selected_view == '3d' %}aria-current="page"{% endif %}
+            >Vista 3D</a>
+        </div>
     </div>
 </div>
 
@@ -93,20 +104,24 @@
     <article class="rack-elevation-panel rack-three-dimensional-panel">
         <div class="rack-panel-header rack-elevation-header">
             <div>
-                <h3>Vista 3D del rack</h3>
+                <h3>Vista 3D estilo datacenter</h3>
                 <p>
-                    Los equipos conservan su posición y altura real. La imagen frontal
-                    o trasera proviene del modelo documentado en NetBox.
+                    La altura y posición provienen de NetBox. Las fotografías del modelo
+                    pueden estar guardadas en NetDoc o provenir de NetBox como respaldo.
                 </p>
             </div>
-            <div class="rack-view-controls">
+            <div class="rack-view-controls rack-view-controls-3d">
                 <div class="topology-toggle-group" aria-label="Perspectiva">
-                    <button class="topology-toggle active" type="button" data-topology-view="isometric">3D</button>
+                    <button class="topology-toggle active" type="button" data-topology-view="isometric">Isométrica</button>
                     <button class="topology-toggle" type="button" data-topology-view="front">Frontal</button>
                 </div>
                 <div class="topology-toggle-group" aria-label="Cara del rack">
                     <button class="topology-toggle" type="button" data-topology-face="front">Frente</button>
                     <button class="topology-toggle" type="button" data-topology-face="rear">Trasera</button>
+                </div>
+                <div class="topology-toggle-group" aria-label="Escala del rack">
+                    <button class="topology-toggle active" type="button" data-topology-scale="fit">Ajustar</button>
+                    <button class="topology-toggle" type="button" data-topology-scale="detail">Detalle</button>
                 </div>
             </div>
         </div>
@@ -116,6 +131,7 @@
             data-topology-root
             data-view="isometric"
             data-face="{{ selected_face }}"
+            data-scale="fit"
         >
             <div class="rack-single-topology-scene">
                 <article
@@ -125,9 +141,7 @@
                 >
                     <div class="topology-rack-heading">
                         <div>
-                            <a href="/racks/{{ rack.get('id') }}?view=3d">
-                                {{ rack.get("name") or rack.get("display") or "Rack" }}
-                            </a>
+                            <strong>{{ rack.get("name") or rack.get("display") or "Rack" }}</strong>
                             <span>{{ rack_site_label }} · {{ location.get("display") or location.get("name") or "Sin ubicación" }}</span>
                         </div>
                         <span>{{ used_units_label }} / {{ rack_height }}U</span>
@@ -147,7 +161,14 @@
                                 href="/devices/{{ device.get('id') }}"
                                 style="top: {{ device.get('_top_percent') }}%; height: {{ device.get('_height_percent') }}%;"
                                 data-topology-device
+                                data-rack-inspector-device
+                                data-device-name="{{ device.get('name') or device.get('display') or 'Sin nombre' }}"
+                                data-device-model="{{ device.get('_model') }}"
+                                data-device-status="{{ device.get('_status') }}"
                                 data-device-face="{{ device.get('_face') }}"
+                                data-device-position="{{ device.get('_position_label') }}"
+                                data-device-height="{{ device.get('_u_height_label') }}"
+                                data-device-units="{{ device.get('_u_height') }}"
                                 data-full-depth="{{ 'true' if device.get('_full_depth') else 'false' }}"
                                 data-front-image="{{ device.get('_front_image') }}"
                                 data-rear-image="{{ device.get('_rear_image') }}"
@@ -157,7 +178,7 @@
                                 <img
                                     src="{{ device.get('_front_image') or device.get('_rear_image') }}"
                                     alt="Imagen del modelo {{ device.get('_model') }}"
-                                    loading="lazy"
+                                    loading="eager"
                                     data-topology-device-image
                                 >
                                 {% endif %}
@@ -184,7 +205,7 @@
             <div>
                 <h3>Elevación 2D del rack</h3>
                 <p>
-                    Las imágenes provienen del modelo del equipo en NetBox.
+                    Las fotografías se ajustan al espacio definido por la altura U del modelo.
                     Haz clic sobre un equipo para abrir su ficha.
                 </p>
             </div>
@@ -221,6 +242,7 @@
                         class="rack-device-block {% if device.get('_has_conflict') %}conflict{% endif %} {% if device.get('_selected_image') %}has-image{% endif %}"
                         href="/devices/{{ device.get('id') }}"
                         style="grid-row: {{ device.get('_grid_start') }} / span {{ device.get('_span') }};"
+                        data-rack-inspector-device
                         data-device-name="{{ device.get('name') or device.get('display') or 'Sin nombre' }}"
                         data-device-model="{{ device.get('_model') }}"
                         data-device-status="{{ device.get('_status') }}"

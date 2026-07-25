@@ -2,7 +2,9 @@
 
 ## Objetivo
 
-NetDoc presenta la instalación física documentada en NetBox sin mantener un inventario paralelo. El modelo de equipo define las dimensiones y las imágenes reutilizables; cada dispositivo define el rack, la cara y la posición donde está instalado.
+NetDoc presenta la instalación física documentada en NetBox sin mantener un inventario paralelo. NetBox conserva fabricante, modelo, dimensiones, componentes, dispositivos, rack, cara y posición. NetDoc conserva únicamente las imágenes frontal y trasera cuando se cargan desde su interfaz.
+
+La asociación se realiza mediante el identificador numérico `device_type_id` del modelo en NetBox. Las imágenes no alteran el modelo ni se copian a cada dispositivo.
 
 ## Flujo recomendado
 
@@ -14,11 +16,25 @@ NetDoc presenta la instalación física documentada en NetBox sin mantener un in
 6. Seleccionar sitio, rack, posición U y cara.
 7. Revisar el rack alternando entre vista 2D y vista 3D.
 
-NetBox continúa siendo la fuente oficial de todos estos datos.
+## Separación de responsabilidades
+
+| Dato | Sistema responsable |
+|---|---|
+| Fabricante, modelo, slug y part number | NetBox |
+| `u_height`, profundidad y componentes | NetBox |
+| Dispositivos, rack, cara y posición | NetBox |
+| Imagen frontal y trasera cargadas desde NetDoc | Base local de NetDoc |
+| Imágenes antiguas ya presentes en NetBox | NetBox, como fallback de lectura |
+
+NetBox admite imágenes frontal y trasera para tipos de dispositivo, pero sus archivos dependen de `MEDIA_ROOT` y de los permisos del proceso que ejecuta NetBox. El almacenamiento local evita que una falla de permisos en ese directorio impida documentar la representación visual del equipo.
 
 ## Imágenes durante la creación del modelo
 
-El formulario `GET /device-types/new` envía un formulario `multipart/form-data` a `POST /device-types/actions/create-with-images`.
+El formulario `GET /device-types/new` envía un formulario `multipart/form-data` a:
+
+```text
+POST /device-types/actions/create-with-images
+```
 
 Campos opcionales:
 
@@ -32,31 +48,86 @@ Formatos admitidos:
 - WEBP;
 - GIF.
 
-Cada archivo puede pesar hasta 5 MB. La validación se realiza antes de crear el modelo para evitar dejar un modelo nuevo por una imagen con formato o tamaño inválido.
+Cada archivo puede pesar hasta 5 MB. NetDoc valida:
+
+- nombre de archivo;
+- tamaño;
+- tipo MIME declarado;
+- firma binaria real del archivo;
+- correspondencia entre el tipo declarado y el contenido.
 
 La operación se ejecuta en dos fases:
 
 1. NetDoc crea el tipo de dispositivo mediante la API REST de NetBox.
-2. Si se seleccionaron imágenes, NetDoc actualiza el modelo creado mediante una solicitud multipart a `/api/dcim/device-types/{id}/`.
+2. Si se seleccionaron imágenes, NetDoc las guarda en la tabla local `device_type_images` usando el ID devuelto por NetBox.
 
-Si el modelo se crea pero falla la carga de imágenes, NetDoc conserva el modelo, registra el resultado en auditoría y dirige al usuario a la galería del modelo para repetir únicamente la carga de imágenes.
+Si el modelo se crea pero falla la persistencia local, el modelo se conserva, el resultado queda en auditoría y el usuario puede repetir únicamente la carga de imágenes desde la galería.
+
+## Esquema local
+
+La migración Alembic `20260725_0002` agrega la tabla `device_type_images`.
+
+Cada registro conserva:
+
+- `device_type_id` externo de NetBox;
+- cara `front` o `rear`;
+- nombre seguro;
+- tipo de contenido;
+- binario de la imagen;
+- tamaño;
+- hash SHA-256;
+- fecha y usuario de la última actualización.
+
+Existe una restricción única por `(device_type_id, face)`, por lo que subir otra imagen para la misma cara sustituye el registro anterior.
+
+Las consultas de catálogo solo recuperan metadatos; no cargan los binarios de todas las imágenes en memoria. El binario se lee únicamente al solicitar la ruta de medios.
 
 ## Sustitución posterior de imágenes
 
-Las imágenes también pueden administrarse después desde:
+Las imágenes se administran desde:
 
 ```text
 /device-types/{device_type_id}/images
 ```
 
-Esta pantalla permite sustituir la vista frontal, la trasera o ambas sin recrear el modelo ni sus plantillas.
+La escritura local requiere:
+
+- sesión autenticada;
+- permiso `devices.create`;
+- token CSRF válido;
+- que el `device_type_id` todavía exista en NetBox.
+
+No requiere que NetBox pueda escribir en `MEDIA_ROOT` y no ejecuta una modificación sobre NetBox.
+
+## Entrega de imágenes
+
+La ruta autenticada es:
+
+```text
+/media/device-types/{device_type_id}/{front|rear}
+```
+
+Orden de lectura:
+
+1. imagen local de NetDoc;
+2. imagen ya documentada en NetBox, cuando no existe una copia local;
+3. representación alternativa con nombre y modelo, cuando ninguna existe.
+
+La respuesta utiliza:
+
+- `Content-Type` validado;
+- `X-Content-Type-Options: nosniff`;
+- caché privada;
+- `ETag` derivado del SHA-256.
+
+El token de NetBox nunca se entrega al navegador.
 
 ## Uso dentro del rack
 
 La elevación selecciona la imagen según la cara activa:
 
-- cara `front`: usa `front_image`;
-- cara `rear`: usa `rear_image`;
+- cara `front`: usa la imagen frontal;
+- cara `rear`: usa la imagen trasera;
 - si la cara no tiene imagen, presenta una representación alternativa con nombre y modelo.
 
 La imagen se ajusta al espacio físico del dispositivo; no modifica la cantidad de unidades ocupadas. La ocupación proviene de `u_height` del modelo y de la posición del dispositivo.
@@ -74,28 +145,28 @@ NetDoc utiliza la altura documentada en el modelo:
 
 No se debe inferir una altura por el nombre o por la fotografía. Antes de colocar el dispositivo, el modelo debe tener un `u_height` correcto.
 
-## Seguridad y permisos
+## Respaldo y capacidad
 
-Crear modelos o cargar imágenes requiere simultáneamente:
+Las imágenes forman parte de `DATABASE_URL`. Por tanto:
 
-- sesión autenticada;
-- permiso `devices.create`;
-- token CSRF válido;
-- `NETBOX_WRITE_ENABLED=true`;
-- token de NetBox con permisos suficientes para tipos de dispositivo.
+- el respaldo de la base local incluye usuarios, roles, auditoría e imágenes;
+- la base crecerá según la cantidad y el tamaño de los archivos;
+- no se debe copiar la base de desarrollo sobre producción;
+- antes de una migración o despliegue debe crearse un respaldo consistente;
+- para muchos miles de imágenes se deberá evaluar PostgreSQL u almacenamiento de objetos, manteniendo la misma interfaz de servicio.
 
-Desarrollo debe permanecer con `NETBOX_WRITE_ENABLED=false` durante la revisión inicial. En ese estado se pueden abrir los formularios y revisar imágenes existentes, pero no crear ni modificar objetos.
-
-El token de NetBox nunca se entrega al navegador. Las imágenes privadas se sirven mediante el proxy autenticado de NetDoc.
+Con el límite actual de dos imágenes de hasta 5 MB por modelo, SQLite es adecuado para el tamaño inicial del proyecto, siempre que existan respaldos y espacio suficiente.
 
 ## Auditoría
 
 Se registran, como mínimo:
 
-- `DEVICE_TYPE_CREATE` para la creación del modelo;
-- `DEVICE_TYPE_IMAGE_UPDATE` para la carga o sustitución de imágenes;
+- `DEVICE_TYPE_CREATE` para la creación del modelo en NetBox;
+- `DEVICE_TYPE_IMAGE_UPDATE` para la carga o sustitución local;
 - resultado correcto o fallido;
 - usuario, IP, agente de usuario y modelo afectado.
+
+No se registra el contenido binario ni el token de NetBox.
 
 ## Validación
 
@@ -109,10 +180,11 @@ python -c 'from app.main import app; print(app.title, len(app.routes))'
 
 Prueba manual en desarrollo:
 
-1. Confirmar que `/device-types/new` contiene ambos selectores de archivo.
-2. Confirmar que el botón permanece bloqueado con escritura deshabilitada.
-3. Activar escritura únicamente en un entorno autorizado.
-4. Crear un modelo de prueba con altura conocida e imágenes frontal y trasera.
-5. Crear sus plantillas y un dispositivo de prueba.
-6. Colocarlo en un rack y verificar 2D, 3D, cara frontal y cara trasera.
-7. Confirmar auditoría y que producción no fue modificada.
+1. Confirmar que Alembic presenta `20260725_0002` como cabeza.
+2. Abrir un modelo existente y cargar una imagen frontal.
+3. Confirmar que la galería indica **Guardada en NetDoc**.
+4. Abrir la URL de medios autenticada y confirmar HTTP 200.
+5. Revisar el mismo modelo en el catálogo, ficha, rack 2D y rack 3D.
+6. Sustituir la imagen y confirmar que cambia el `ETag`.
+7. Confirmar el evento en Auditoría.
+8. Confirmar que el modelo y sus dimensiones en NetBox no fueron alterados.

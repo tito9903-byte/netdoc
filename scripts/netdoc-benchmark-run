@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Ejecuta el benchmark completo solicitando credenciales desde la terminal.
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+BENCHMARK="$SCRIPT_DIR/netdoc-benchmark-all"
+
+[[ -x "$BENCHMARK" ]] || {
+  echo "ERROR: no existe el benchmark ejecutable en $BENCHMARK." >&2
+  exit 1
+}
+
+read -r -p "Usuario de NetDoc: " NETDOC_BENCHMARK_USERNAME
+read -r -s -p "Contraseña de NetDoc: " NETDOC_BENCHMARK_PASSWORD
+printf '\n'
+
+if [[ -z "$NETDOC_BENCHMARK_USERNAME" || -z "$NETDOC_BENCHMARK_PASSWORD" ]]; then
+  unset NETDOC_BENCHMARK_USERNAME NETDOC_BENCHMARK_PASSWORD
+  echo "ERROR: usuario y contraseña son obligatorios." >&2
+  exit 1
+fi
+
+export NETDOC_BENCHMARK_USERNAME
+export NETDOC_BENCHMARK_PASSWORD
+
+cleanup() {
+  unset NETDOC_BENCHMARK_USERNAME NETDOC_BENCHMARK_PASSWORD
+}
+trap cleanup EXIT INT TERM
+
+exec bash "$BENCHMARK"

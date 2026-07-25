@@ -5,8 +5,8 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 BENCHMARK="$SCRIPT_DIR/netdoc-benchmark-all"
 
-[[ -x "$BENCHMARK" ]] || {
-  echo "ERROR: no existe el benchmark ejecutable en $BENCHMARK." >&2
+[[ -f "$BENCHMARK" ]] || {
+  echo "ERROR: no existe el benchmark en $BENCHMARK." >&2
   exit 1
 }
 
@@ -28,4 +28,4 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-exec bash "$BENCHMARK"
+bash "$BENCHMARK"

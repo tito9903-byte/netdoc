@@ -19,7 +19,7 @@ from app.services.navigation_read_service import (
     NavigationReadService,
 )
 from app.services.rack_presentation import nested_label, prepare_elevation
-from app.services.rack_report_service import (
+from app.services.rack_report_detailed_service import (
     RackReportError,
     build_rack_report,
 )

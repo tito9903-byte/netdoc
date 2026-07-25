@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from io import BytesIO
 import unittest
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.main import app
 from app.services.rack_presentation import prepare_elevation
@@ -61,6 +63,13 @@ DEVICES = [
 
 
 class RackReportTests(unittest.TestCase):
+    @staticmethod
+    def sample_image() -> bytes:
+        image = Image.new("RGB", (640, 96), (220, 225, 228))
+        output = BytesIO()
+        image.save(output, format="PNG")
+        return output.getvalue()
+
     def test_report_builder_returns_valid_pdf_container(self):
         elevation = prepare_elevation(RACK, DEVICES, "front")
 
@@ -76,6 +85,25 @@ class RackReportTests(unittest.TestCase):
         self.assertEqual(filename, "rack-smn05-inventario.pdf")
         self.assertIn(b"/Type /Pages", pdf)
         self.assertIn(b"/Title", pdf)
+
+    def test_report_embeds_device_photo(self):
+        elevation = prepare_elevation(RACK, DEVICES, "front")
+
+        pdf, _ = build_rack_report(
+            rack=RACK,
+            elevation=elevation,
+            face="front",
+            image_assets={
+                200: (
+                    self.sample_image(),
+                    "image/png",
+                    "test-image",
+                )
+            },
+        )
+
+        self.assertIn(b"/Subtype /Image", pdf)
+        self.assertGreater(len(pdf), 5000)
 
     @patch(
         "app.routers.racks.RackService.list_rack_devices",

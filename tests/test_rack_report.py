@@ -70,7 +70,7 @@ class RackReportTests(unittest.TestCase):
         image.save(output, format="PNG")
         return output.getvalue()
 
-    def test_report_builder_returns_valid_pdf_container(self):
+    def test_report_builder_returns_compact_single_page_pdf(self):
         elevation = prepare_elevation(RACK, DEVICES, "front")
 
         pdf, filename = build_rack_report(
@@ -85,7 +85,7 @@ class RackReportTests(unittest.TestCase):
         self.assertEqual(filename, "rack-smn05-inventario.pdf")
         self.assertIn(b"/Type /Pages", pdf)
         self.assertIn(b"/Title", pdf)
-        self.assertGreaterEqual(pdf.count(b"/Type /Page"), 5)
+        self.assertIn(b"/Count 1", pdf)
 
     def test_report_embeds_device_photo(self):
         elevation = prepare_elevation(RACK, DEVICES, "front")
@@ -105,6 +105,7 @@ class RackReportTests(unittest.TestCase):
 
         self.assertIn(b"/Subtype /Image", pdf)
         self.assertGreater(len(pdf), 7000)
+        self.assertIn(b"/Count 1", pdf)
 
     @patch(
         "app.routers.racks.RackService.list_rack_devices",

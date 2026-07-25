@@ -21,8 +21,8 @@ Estados:
 | Localidades | Fundamento | Administrar dentro del sitio | Exigir sitio y jerarquía correcta |
 | Racks | En revisión | Listado, ficha, alta, 2D y 3D | Altura, numeración, cara y conflictos |
 | Reservas de rack | Planificado | Calendario de unidades reservadas | No permitir solapamientos |
-| Fabricantes | Planificado | Apartado propio con CRUD controlado | Evitar variantes duplicadas |
-| Modelos de equipos | En revisión | Catálogo, ficha, edición e imágenes | Dimensiones y componentes reutilizables |
+| Fabricantes | En revisión | Catálogo, ficha, creación y edición | Evitar variantes duplicadas; sin eliminación inicial |
+| Modelos de equipos | En revisión | Catálogo, ficha, edición, imágenes y equipos asociados | Dimensiones y componentes reutilizables |
 | Tipos de módulos | Planificado | Biblioteca de tarjetas y módulos | Compatibilidad con bahías |
 | Dispositivos | Operativo / en revisión | Búsqueda, ficha y alta física guiada | Modelo, rol, sitio, rack y estado |
 | Módulos instalados | Planificado | Insertar tarjeta en bahía disponible | Validar tipo y bahía compatible |
@@ -114,7 +114,7 @@ No se permitirá al asistente:
 
 ## Orden de implementación
 
-1. Finalizar modelos, fabricantes, componentes y racks.
+1. Finalizar editores de componentes, fabricantes, modelos y racks.
 2. Consolidar conexiones físicas y trazado.
 3. Agregar sitios y localidades como flujo administrable.
 4. Implementar VLAN, prefijos, rangos y direcciones con prevalidación.

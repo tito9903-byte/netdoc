@@ -81,14 +81,19 @@ class RackReportTests(unittest.TestCase):
 
         self.assertTrue(pdf.startswith(b"%PDF-1.4"))
         self.assertTrue(pdf.rstrip().endswith(b"%%EOF"))
-        self.assertGreater(len(pdf), 5000)
         self.assertEqual(filename, "rack-smn05-inventario.pdf")
+        self.assertIn(b"/Type /Catalog", pdf)
         self.assertIn(b"/Type /Pages", pdf)
         self.assertIn(b"/Title", pdf)
         self.assertIn(b"/Count 1", pdf)
 
     def test_report_embeds_device_photo(self):
         elevation = prepare_elevation(RACK, DEVICES, "front")
+        without_photo, _ = build_rack_report(
+            rack=RACK,
+            elevation=elevation,
+            face="front",
+        )
 
         pdf, _ = build_rack_report(
             rack=RACK,
@@ -104,8 +109,8 @@ class RackReportTests(unittest.TestCase):
         )
 
         self.assertIn(b"/Subtype /Image", pdf)
-        self.assertGreater(len(pdf), 7000)
         self.assertIn(b"/Count 1", pdf)
+        self.assertGreater(len(pdf), len(without_photo))
 
     @patch(
         "app.routers.racks.RackService.list_rack_devices",

@@ -115,11 +115,27 @@ function finishNavigationFeedback() {
 
 window.addEventListener("pageshow", finishNavigationFeedback);
 
-// Prefetch solo cuando el usuario demuestra intención de abrir un enlace.
+// Prefetch solo para páginas livianas. Las rutas que consultan inventario amplio
+// deben comenzar únicamente después de un clic explícito del usuario.
 const prefetched = new Set();
 const prefetchTimers = new WeakMap();
 const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 const allowPrefetch = !(connection && connection.saveData);
+const noPrefetchPrefixes = [
+    "/racks",
+    "/connections",
+    "/device-types",
+    "/manufacturers",
+    "/search",
+    "/system",
+    "/admin/audit",
+];
+
+function isHeavyNavigationPath(pathname) {
+    return noPrefetchPrefixes.some((prefix) => (
+        pathname === prefix || pathname.startsWith(`${prefix}/`)
+    ));
+}
 
 function eligibleInternalLink(anchor) {
     if (!(anchor instanceof HTMLAnchorElement)) {
@@ -146,7 +162,8 @@ function eligibleInternalLink(anchor) {
         url.pathname === window.location.pathname && url.search === window.location.search ||
         url.pathname.endsWith(".pdf") ||
         url.pathname.startsWith("/media/") ||
-        url.pathname === "/logout"
+        url.pathname === "/logout" ||
+        isHeavyNavigationPath(url.pathname)
     ) {
         return null;
     }
@@ -220,7 +237,23 @@ document.addEventListener("click", (event) => {
     const anchor = event.target instanceof Element
         ? event.target.closest("a[href]")
         : null;
-    if (eligibleInternalLink(anchor)) {
+    if (!(anchor instanceof HTMLAnchorElement)) {
+        return;
+    }
+
+    let url;
+    try {
+        url = new URL(anchor.href, window.location.href);
+    } catch (_error) {
+        return;
+    }
+
+    if (
+        url.origin === window.location.origin &&
+        !anchor.target &&
+        !anchor.hasAttribute("download") &&
+        !anchor.getAttribute("href")?.startsWith("#")
+    ) {
         startNavigationFeedback();
     }
 });

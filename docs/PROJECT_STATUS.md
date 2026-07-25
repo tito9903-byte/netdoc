@@ -3,16 +3,16 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-24.
-- **Versión documental:** 2.0.
+- **Versión documental:** 2.1.
 - **Versión de aplicación de la rama:** 0.10.0.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; desarrollo `develop`; trabajo actual `feature/documentation-workflows-ui`.
 
 ## Resumen ejecutivo
 
-`develop` contiene la versión 0.9.0 con autenticación multiusuario, roles, auditoría, perfil, búsqueda global, Sistema y Alembic. El PR #4 permanece como borrador y convierte NetDoc en una capa de documentación más rápida que la interfaz general de NetBox, con flujos dirigidos para IPAM, modelos, imágenes, interfaces en lote, racks y altas físicas.
+`develop` contiene la versión 0.9.0 con autenticación multiusuario, roles, auditoría, perfil, búsqueda global, Sistema y Alembic. El PR #4 permanece como borrador y convierte NetDoc en una capa de documentación más rápida que la interfaz general de NetBox, con flujos dirigidos para IPAM, hardware, imágenes, interfaces en lote, racks y altas físicas.
 
-La rama 0.10.0 ha sido revisada iterativamente en el puerto 8101 con datos reales de NetBox 4.4.2. Los últimos commits añaden el fundamento de planes seguros y del futuro asistente, pero todavía no han sido desplegados manualmente en el servidor. No se ha fusionado a `develop` ni promovido a producción.
+La rama 0.10.0 ha sido revisada iterativamente en el puerto 8101 con datos reales de NetBox 4.4.2. Los últimos commits añaden fabricantes, fichas completas de modelos y el fundamento de planes seguros y del futuro asistente; todavía deben desplegarse manualmente en desarrollo. No se ha fusionado a `develop` ni promovido a producción.
 
 ## Entornos y servicios
 
@@ -57,11 +57,11 @@ Servidor dedicado: `192.168.10.93`; NetBox: `https://192.168.10.95`, versión do
 ### Experiencia visual y navegación
 
 - Navegación agrupada por General, Documentación, Acciones rápidas y Administración.
-- Modelos y plantillas de puertos separados en procesos independientes.
+- Fabricantes, modelos y plantillas de puertos aparecen como apartados separados.
+- Crear modelo se inicia dentro del catálogo, no desde Acciones rápidas.
 - Topología 3D seleccionable dentro del detalle del rack.
 - Dashboard como punto de inicio de los principales procesos.
 - Jerarquía visual común para formularios, filtros, avisos, estados y tablas.
-- Pendiente reorganizar hardware en apartados de fabricantes, modelos y componentes con creación y edición desde cada ficha.
 
 ### Direccionamiento IP
 
@@ -72,15 +72,19 @@ Servidor dedicado: `192.168.10.93`; NetBox: `https://192.168.10.95`, versión do
 - Clasificación visual, paginación, orden y cantidades IPv6 compactas.
 - API interna de solo lectura `/api/ipam/pools`.
 
-### Modelos, plantillas e imágenes
+### Fabricantes, modelos, componentes e imágenes
 
-- Catálogo `/device-types`, alta `/device-types/new` y plantillas `/interface-templates`.
+- Catálogo `/manufacturers` con búsqueda, conteo de modelos y creación controlada.
+- Ficha `/manufacturers/{id}` con edición y modelos asociados.
+- Catálogo `/device-types` con acceso a la ficha completa de cada modelo.
+- Ficha `/device-types/{id}` con información general, edición, imágenes, resumen de componentes, interfaces y equipos asociados.
+- Alta `/device-types/new` e imágenes frontal/trasera en el mismo formulario.
+- Plantillas `/interface-templates` separadas del catálogo de modelos.
 - Generación de hasta 256 plantillas mediante patrones con vista previa.
-- Imagen frontal y trasera opcionales al crear el modelo.
-- Validación de JPG, PNG, WEBP o GIF, máximo 5 MB.
 - Galería `/device-types/{id}/images` para sustituir imágenes.
-- Auditoría separada para creación del modelo y actualización de imágenes.
-- Pendiente: ficha individual con pestañas, edición, fabricantes y otros componentes.
+- Auditoría para creación y actualización de fabricantes, modelos e imágenes.
+- Eliminación deliberadamente deshabilitada hasta implementar protección de dependencias.
+- Pendiente: generadores y editores propios para bahías de módulos, energía, consola y patch panels.
 
 ### Racks y altas físicas
 
@@ -97,19 +101,19 @@ Servidor dedicado: `192.168.10.93`; NetBox: `https://192.168.10.95`, versión do
 - Presentación descriptiva de equipo e interfaz.
 - Tipos, estados y unidades traducidos defensivamente.
 - Creación actual protegida por sesión, permisos, CSRF y modo de escritura.
-- Nuevo planificador determinista que rechaza extremos ocupados, iguales o inválidos.
-- Nueva API `POST /api/change-plans/cable` que consulta los extremos y devuelve una vista previa; no escribe.
+- Planificador determinista que rechaza extremos ocupados, iguales o inválidos.
+- API `POST /api/change-plans/cable` que consulta extremos y devuelve una vista previa; no escribe.
 
 ### Escrituras seguras y futuro asistente
 
 - `ChangePlan` con pasos, dependencias, advertencias, huella y frase de confirmación.
 - Redacción recursiva de secretos para UI, logs y auditoría.
 - Rechazo de `DELETE` en planes automáticos.
-- Lista cerrada de capacidades para fabricantes, modelos, plantillas, racks, dispositivos, cables, IPAM y circuitos.
-- Solo la creación de cable está marcada inicialmente como candidata a ejecución asistida; las demás operaciones pueden prepararse, pero no ejecutarse por IA.
+- Lista cerrada de capacidades para hardware, racks, dispositivos, cables, IPAM y circuitos.
+- Solo la creación de cable está marcada inicialmente como candidata a ejecución asistida.
 - Descubrimiento de campos, obligatoriedad y opciones mediante `OPTIONS`.
 - Validación dinámica de payload contra la versión y plugins instalados.
-- Documentación de la arquitectura conversacional y mapa completo de módulos.
+- Documentación de arquitectura conversacional y cobertura de módulos.
 - Todavía no existe interfaz de chat ni ejecutor automático.
 
 ## Validaciones de la rama
@@ -123,7 +127,7 @@ Automatizadas:
 - análisis de plantillas Jinja2;
 - sintaxis de scripts;
 - alturas fraccionarias, 0U, profundidad completa, conflictos e imágenes;
-- separación de formularios y ruta combinada de modelo e imágenes;
+- rutas de fabricantes y ficha completa del modelo;
 - planes, huellas, redacción, lista cerrada y confirmación;
 - planificador y vista previa de cable;
 - análisis de esquemas `OPTIONS` y validación de campos/opciones;
@@ -132,11 +136,11 @@ Automatizadas:
 Pendiente o requiere verificación:
 
 - desplegar el último commit únicamente en desarrollo;
-- revisar fabricantes/modelos/componentes con la reorganización pendiente;
-- verificar creación real de un modelo con imágenes en un entorno autorizado;
+- revisar `/manufacturers`, `/device-types` y una ficha `/device-types/{id}` con datos reales;
+- verificar creación y actualización real de fabricantes y modelos en un entorno autorizado;
+- verificar un modelo con imagen frontal y trasera;
 - comprobar el `PATCH multipart` de NetBox 4.4.2;
-- revisar fotografías reales con diferentes proporciones;
-- probar la API de vista previa de cable contra interfaces reales;
+- probar la API de vista previa de cable con interfaces reales;
 - comparar opciones de cable con `OPTIONS` de la instalación;
 - diseñar el ejecutor confirmado sin habilitarlo todavía;
 - no fusionar ni tocar producción hasta aprobación explícita.
@@ -156,7 +160,7 @@ Pendiente o requiere verificación:
 
 ## Próximo objetivo
 
-**En progreso:** reorganizar fabricantes, modelos, imágenes y plantillas como fichas administrables; desplegar y revisar el último PR #4 en desarrollo; integrar la vista previa segura en el flujo de conexiones; y preparar resolutores exactos de objetos. Después se construirá un asistente de solo lectura que guíe al usuario y produzca planes sin ejecutar. La primera escritura conversacional prevista será la creación confirmada de un cable.
+**En progreso:** desplegar y revisar las nuevas áreas de fabricantes/modelos en desarrollo, integrar la vista previa segura en Conexiones y preparar resolutores exactos de objetos. Después se construirán editores de los demás componentes del modelo y un asistente de solo lectura que guíe al usuario y produzca planes sin ejecutar. La primera escritura conversacional prevista será la creación confirmada de un cable.
 
 ## Reglas de mantenimiento
 

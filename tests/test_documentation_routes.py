@@ -88,6 +88,27 @@ class DocumentationRouteTests(unittest.TestCase):
         self.assertIn("Plantillas de puertos", response.text)
 
     @patch(
+        "app.routers.documentation.DeviceTypeService.list_manufacturers",
+        new_callable=AsyncMock,
+        return_value=MANUFACTURERS,
+    )
+    def test_new_model_form_includes_front_and_rear_images(
+        self,
+        _manufacturers,
+    ):
+        response = self.client.get("/device-types/new")
+
+        self.assertEqual(200, response.status_code)
+        self.assertIn('enctype="multipart/form-data"', response.text)
+        self.assertIn('name="front_image"', response.text)
+        self.assertIn('name="rear_image"', response.text)
+        self.assertIn(
+            '/device-types/actions/create-with-images',
+            response.text,
+        )
+        self.assertIn("Altura U", response.text)
+
+    @patch(
         "app.routers.documentation.DeviceTypeService.list_interface_templates",
         new_callable=AsyncMock,
         return_value=INTERFACES,

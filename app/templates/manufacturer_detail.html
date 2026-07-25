@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ manufacturer.get('_name') }} | Fabricantes | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/hardware.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if notice %}<div class="notice success-notice"><strong>Operación completada.</strong><span>{{ notice }}</span></div>{% endif %}
+{% if error %}<div class="notice error-notice"><strong>No fue posible completar la operación.</strong><span>{{ error }}</span></div>{% endif %}
+
+<div class="hardware-breadcrumbs"><a href="/manufacturers">Fabricantes</a><span>›</span><strong>{{ manufacturer.get("_name") }}</strong></div>
+
+<section class="workflow-intro compact-workflow-intro">
+    <div>
+        <span class="eyebrow">Fabricante seleccionado</span>
+        <h2>{{ manufacturer.get("_name") }}</h2>
+        <p>{{ manufacturer.get("description") or "Sin descripción registrada." }}</p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/device-types?manufacturer_id={{ manufacturer.get('id') }}">Ver en catálogo</a>
+        <a class="button primary" href="/device-types/new">Crear modelo</a>
+    </div>
+</section>
+
+<section class="hardware-detail-grid">
+    <article class="panel hardware-form-panel">
+        <div class="panel-header compact-panel-header"><div><h2>Editar fabricante</h2><p>Los cambios se guardan directamente en la ficha de NetBox.</p></div><span class="panel-badge">{{ manufacturer.get("_model_count") }} modelos</span></div>
+        {% if not write_enabled %}<div class="read-only-callout compact-callout"><span>◌</span><div><strong>Solo lectura</strong><span>La actualización está bloqueada en este entorno.</span></div></div>{% endif %}
+        <form method="post" action="/manufacturers/{{ manufacturer.get('id') }}/actions/update" class="hardware-form">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <div class="field"><label for="manufacturer-name">Nombre</label><input id="manufacturer-name" name="name" required value="{{ manufacturer.get('name') or manufacturer.get('_name') }}"></div>
+            <div class="field"><label for="manufacturer-slug">Slug</label><input id="manufacturer-slug" name="slug" value="{{ manufacturer.get('slug') or '' }}"></div>
+            <div class="field"><label for="manufacturer-description">Descripción</label><textarea id="manufacturer-description" name="description" rows="5">{{ manufacturer.get("description") or "" }}</textarea></div>
+            <button class="button primary hardware-submit" type="submit" {% if not write_enabled %}disabled{% endif %}>Guardar cambios</button>
+        </form>
+    </article>
+
+    <article class="panel hardware-table-panel">
+        <div class="panel-header compact-panel-header"><div><h2>Modelos asociados</h2><p>Abre un modelo para editar ficha, imágenes y componentes.</p></div><a class="button secondary" href="/device-types/new">Nuevo modelo</a></div>
+        {% if models %}
+        <div class="hardware-card-list">
+            {% for model in models %}
+            <a class="hardware-model-card" href="/device-types/{{ model.get('id') }}">
+                <span class="hardware-model-avatar">{{ manufacturer.get("_name")[:1] | upper }}</span>
+                <span class="hardware-model-copy"><strong>{{ model.get("_model_label") }}</strong><small>{{ model.get("part_number") or "Sin part number" }} · {{ model.get("u_height") or 0 }}U</small></span>
+                <span class="hardware-model-stats"><span>{{ model.get("_interface_count") }} puertos</span><span>{{ model.get("_module_bay_count") }} bahías</span></span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state compact-empty-state"><div class="empty-icon">▣</div><h3>Este fabricante no tiene modelos</h3><p>Crea el primer modelo y sus componentes reutilizables.</p></div>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

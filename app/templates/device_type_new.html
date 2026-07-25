@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Crear modelo | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_type_create_images.css') }}">
+{% endblock %}
+
+{% block content %}
+<a class="back-link" href="/device-types">← Volver a modelos</a>
+
+{% if notice %}
+<div class="notice success-notice">
+    <strong>Operación completada.</strong>
+    <span>{{ notice }}</span>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible completar la operación.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="workflow-intro compact-workflow-intro">
+    <div>
+        <span class="eyebrow">Ficha física reutilizable</span>
+        <h2>Crear modelo de equipo</h2>
+        <p>
+            Registra fabricante, dimensiones y las vistas frontal y trasera. Las
+            imágenes se reutilizarán automáticamente en la elevación 2D y la vista
+            3D del rack.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/interface-templates">Ver plantillas</a>
+    </div>
+</section>
+
+{% if not write_enabled %}
+<div class="read-only-callout">
+    <span>◌</span>
+    <div>
+        <strong>Desarrollo está en modo de solo lectura.</strong>
+        <span>Puedes revisar el formulario y seleccionar imágenes, pero no se enviará ningún cambio a NetBox.</span>
+    </div>
+</div>
+{% endif %}
+
+<section class="panel model-form-panel">
+    <div class="panel-header compact-panel-header">
+        <div>
+            <h2>Datos e imágenes del modelo</h2>
+            <p>Esta información se heredará en todos los equipos creados con el modelo.</p>
+        </div>
+        <span class="panel-badge">Modelo físico</span>
+    </div>
+
+    <form
+        class="model-create-form"
+        method="post"
+        action="/device-types/actions/create-with-images"
+        enctype="multipart/form-data"
+    >
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+
+        <div class="model-create-grid">
+            <div class="field">
+                <label for="new-manufacturer">Fabricante</label>
+                <select id="new-manufacturer" name="manufacturer_id" required>
+                    <option value="">Seleccionar fabricante</option>
+                    {% for manufacturer in manufacturers %}
+                    <option value="{{ manufacturer.get('id') }}">
+                        {{ manufacturer.get("display") or manufacturer.get("name") or "Sin nombre" }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field model-name-field">
+                <label for="new-model">Modelo</label>
+                <input id="new-model" name="model" type="text" placeholder="Ejemplo: C600" required>
+            </div>
+
+            <div class="field">
+                <label for="new-part-number">Part number</label>
+                <input id="new-part-number" name="part_number" type="text" placeholder="Opcional">
+            </div>
+
+            <div class="field">
+                <label for="new-slug">Slug</label>
+                <input id="new-slug" name="slug" type="text" placeholder="Se genera automáticamente">
+            </div>
+
+            <div class="field">
+                <label for="new-height">Altura U</label>
+                <input id="new-height" name="u_height" type="number" min="0" step="0.5" value="1" required>
+                <small>Define cuánto espacio ocupará el equipo en el rack.</small>
+            </div>
+
+            <label class="checkbox-field model-depth-field">
+                <input type="checkbox" name="full_depth" value="true">
+                <span>
+                    <strong>Profundidad completa</strong>
+                    <small>El equipo ocupa ambas caras del rack.</small>
+                </span>
+            </label>
+
+            <div class="field model-description-field">
+                <label for="new-description">Descripción</label>
+                <textarea id="new-description" name="description" rows="4" placeholder="Función, familia o notas técnicas del modelo"></textarea>
+            </div>
+
+            <section class="model-image-section">
+                <div class="model-image-section-heading">
+                    <div>
+                        <span class="eyebrow">Representación del equipo</span>
+                        <h3>Imágenes para el rack</h3>
+                        <p>
+                            Usa fotografías o diagramas recortados del frente y la
+                            parte trasera. Son opcionales y pueden sustituirse después.
+                        </p>
+                    </div>
+                    <span class="panel-badge">Máximo 5 MB por imagen</span>
+                </div>
+
+                <div class="model-image-upload-grid">
+                    <label class="model-image-upload-card" for="front-image">
+                        <span class="model-image-upload-icon">▥</span>
+                        <strong>Imagen frontal</strong>
+                        <span>Se mostrará al seleccionar la cara frontal del rack.</span>
+                        <input
+                            id="front-image"
+                            name="front_image"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                        >
+                    </label>
+
+                    <label class="model-image-upload-card" for="rear-image">
+                        <span class="model-image-upload-icon">▤</span>
+                        <strong>Imagen trasera</strong>
+                        <span>Se mostrará al seleccionar la cara posterior del rack.</span>
+                        <input
+                            id="rear-image"
+                            name="rear_image"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                        >
+                    </label>
+                </div>
+
+                <p class="model-image-guidance">
+                    Formatos admitidos: JPG, PNG, WEBP y GIF. Para una elevación
+                    más limpia, utiliza fondo transparente o una imagen frontal
+                    centrada y sin márgenes excesivos.
+                </p>
+            </section>
+        </div>
+
+        <div class="model-form-actions">
+            <div>
+                <strong>Después agrega las plantillas de puertos.</strong>
+                <span>El modelo y sus imágenes se guardan primero; las interfaces se administran en una pantalla independiente.</span>
+            </div>
+            <div>
+                <a class="button secondary" href="/device-types">Cancelar</a>
+                <button
+                    class="button primary"
+                    type="submit"
+                    {% if not write_enabled or not can_manage_device_types %}disabled{% endif %}
+                >
+                    Crear modelo
+                </button>
+            </div>
+        </div>
+    </form>
+</section>
+{% endblock %}

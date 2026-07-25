@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Crear rack | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_create.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="create-device-navigation">
+    <a href="/racks">← Volver a racks</a>
+</div>
+
+<section class="workflow-intro">
+    <div>
+        <span class="eyebrow">Infraestructura física</span>
+        <h2>Documenta el rack antes de instalar equipos</h2>
+        <p>
+            Define el sitio, la ubicación, la capacidad y los identificadores
+            físicos. Así las posiciones U y las elevaciones serán confiables
+            desde el primer equipo.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/racks">Ver inventario</a>
+        <a class="button secondary" href="/device-types">Preparar modelos</a>
+    </div>
+</section>
+
+{% if errors %}
+<section class="create-alert create-alert-error">
+    <strong>No se pudo crear el rack.</strong>
+    <ul>
+        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+{% if not write_enabled %}
+<div class="read-only-callout">
+    <span>◌</span>
+    <div>
+        <strong>Desarrollo está en modo de solo lectura.</strong>
+        <span>Puedes completar y revisar el formulario, pero no se enviará el rack a NetBox.</span>
+    </div>
+</div>
+{% endif %}
+
+<form class="create-device-form" method="post" action="/racks/actions/new">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+
+    <section class="create-form-panel">
+        <div class="create-form-panel-header">
+            <div class="step-number">1</div>
+            <div>
+                <h2>Ubicación y nombre</h2>
+                <p>El rack siempre pertenece a un sitio y puede asociarse a una ubicación.</p>
+            </div>
+        </div>
+
+        <div class="create-form-grid">
+            <div class="create-field create-field-wide">
+                <label for="rack-name">Nombre del rack <span>*</span></label>
+                <input
+                    id="rack-name"
+                    name="name"
+                    type="text"
+                    value="{{ form_data.get('name', '') }}"
+                    placeholder="Ejemplo: SMN-CORE-01"
+                    required
+                    autofocus
+                >
+                <small>Usa una convención clara que identifique localidad, función y número.</small>
+            </div>
+
+            <div class="create-field">
+                <label for="rack-site">Sitio <span>*</span></label>
+                <select id="rack-site" name="site_id" data-rack-site required>
+                    <option value="">Seleccionar sitio</option>
+                    {% for site in sites %}
+                    <option
+                        value="{{ site.get('id') }}"
+                        {% if form_data.get('site_id') == site.get('id') | string %}selected{% endif %}
+                    >
+                        {{ site.get("display") or site.get("name") or "Sin nombre" }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="create-field">
+                <label for="rack-location">Ubicación</label>
+                <select id="rack-location" name="location_id" data-rack-location disabled>
+                    <option value="">Sin ubicación específica</option>
+                    {% for location in locations %}
+                    {% set location_site = location.get("site") or {} %}
+                    <option
+                        value="{{ location.get('id') }}"
+                        data-site-id="{{ location_site.get('id', '') }}"
+                        {% if form_data.get('location_id') == location.get('id') | string %}selected{% endif %}
+                    >
+                        {{ location.get("display") or location.get("name") or "Sin nombre" }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small>Sala, piso, gabinete, nodo o área dentro del sitio.</small>
+            </div>
+
+            <div class="create-field">
+                <label for="rack-facility">ID de facilidad</label>
+                <input
+                    id="rack-facility"
+                    name="facility_id"
+                    type="text"
+                    value="{{ form_data.get('facility_id', '') }}"
+                    placeholder="Ejemplo: M204.313"
+                >
+            </div>
+        </div>
+    </section>
+
+    <section class="create-form-panel">
+        <div class="create-form-panel-header">
+            <div class="step-number">2</div>
+            <div>
+                <h2>Capacidad y formato</h2>
+                <p>Define las unidades disponibles y la numeración de la elevación.</p>
+            </div>
+        </div>
+
+        <div class="create-form-grid">
+            <div class="create-field create-field-wide">
+                <label for="rack-type">Tipo de rack</label>
+                <select id="rack-type" name="rack_type_id">
+                    <option value="">Sin tipo predefinido</option>
+                    {% for rack_type in rack_types %}
+                    {% set manufacturer = rack_type.get("manufacturer") or {} %}
+                    <option
+                        value="{{ rack_type.get('id') }}"
+                        {% if form_data.get('rack_type_id') == rack_type.get('id') | string %}selected{% endif %}
+                    >
+                        {{ manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" }}
+                        — {{ rack_type.get("model") or rack_type.get("display") or "Sin modelo" }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small>Cuando existe, el tipo documenta las características físicas del modelo de rack.</small>
+            </div>
+
+            <div class="create-field">
+                <label for="rack-height">Altura U <span>*</span></label>
+                <input
+                    id="rack-height"
+                    name="u_height"
+                    type="number"
+                    min="1"
+                    max="200"
+                    value="{{ form_data.get('u_height', '42') }}"
+                    required
+                >
+            </div>
+
+            <div class="create-field">
+                <label for="rack-width">Ancho <span>*</span></label>
+                <select id="rack-width" name="width" required>
+                    {% for item in rack_widths %}
+                    <option
+                        value="{{ item.value }}"
+                        {% if form_data.get('width', '19') == item.value | string %}selected{% endif %}
+                    >{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="create-field">
+                <label for="rack-start">Unidad inicial</label>
+                <input
+                    id="rack-start"
+                    name="starting_unit"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    value="{{ form_data.get('starting_unit', '1') }}"
+                >
+            </div>
+
+            <label class="checkbox-field">
+                <input
+                    type="checkbox"
+                    name="desc_units"
+                    {% if form_data.get('desc_units') == 'on' %}checked{% endif %}
+                >
+                <span>
+                    <strong>Numeración descendente</strong>
+                    <small>La unidad menor aparecerá arriba.</small>
+                </span>
+            </label>
+        </div>
+    </section>
+
+    <section class="create-form-panel">
+        <div class="create-form-panel-header">
+            <div class="step-number">3</div>
+            <div>
+                <h2>Operación e identificación</h2>
+                <p>Completa el estado, la función y los identificadores de inventario.</p>
+            </div>
+        </div>
+
+        <div class="create-form-grid">
+            <div class="create-field">
+                <label for="rack-status">Estado <span>*</span></label>
+                <select id="rack-status" name="status" required>
+                    {% for item in rack_statuses %}
+                    <option
+                        value="{{ item.value }}"
+                        {% if form_data.get('status', 'active') == item.value %}selected{% endif %}
+                    >{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="create-field">
+                <label for="rack-role">Rol</label>
+                <select id="rack-role" name="role_id">
+                    <option value="">Sin rol</option>
+                    {% for role in roles %}
+                    <option
+                        value="{{ role.get('id') }}"
+                        {% if form_data.get('role_id') == role.get('id') | string %}selected{% endif %}
+                    >{{ role.get("display") or role.get("name") or "Sin nombre" }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="create-field">
+                <label for="rack-serial">Serial</label>
+                <input id="rack-serial" name="serial" type="text" value="{{ form_data.get('serial', '') }}">
+            </div>
+
+            <div class="create-field">
+                <label for="rack-asset">Asset tag</label>
+                <input id="rack-asset" name="asset_tag" type="text" value="{{ form_data.get('asset_tag', '') }}">
+            </div>
+
+            <div class="create-field create-field-wide">
+                <label for="rack-description">Descripción</label>
+                <textarea
+                    id="rack-description"
+                    name="description"
+                    rows="3"
+                    placeholder="Función, fila, sala, energía o notas de instalación"
+                >{{ form_data.get("description", "") }}</textarea>
+            </div>
+        </div>
+    </section>
+
+    <section class="create-submit-bar">
+        <div>
+            <strong>Revisa sitio, ubicación y capacidad antes de guardar.</strong>
+            <span>Luego podrás instalar equipos y visualizar la elevación 2D.</span>
+        </div>
+        <div class="create-submit-actions">
+            <a class="create-secondary-button" href="/racks">Cancelar</a>
+            <button
+                class="create-primary-button"
+                type="submit"
+                {% if not write_enabled %}disabled{% endif %}
+            >Crear rack</button>
+        </div>
+    </section>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/rack_create.js') }}"></script>
+{% endblock %}

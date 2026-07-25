@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Mi perfil | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/profile.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="profile-alert {% if message_is_error %}error{% else %}success{% endif %}">
+    {{ message }}
+</div>
+{% endif %}
+
+<section class="profile-summary">
+    <div class="profile-avatar">{{ (user.full_name or user.username)[0] | upper }}</div>
+    <div>
+        <h2>{{ user.full_name or user.username }}</h2>
+        <p>@{{ user.username }} · {{ user.role.name }}</p>
+    </div>
+    <span class="profile-state">Cuenta activa</span>
+</section>
+
+<div class="profile-grid">
+    <section class="profile-panel">
+        <header>
+            <h2>Datos personales</h2>
+            <p>Actualiza el nombre que se muestra y el correo de la cuenta.</p>
+        </header>
+
+        <form method="post" action="/profile" class="profile-form">
+            <input type="hidden" name="csrf" value="{{ profile_csrf }}">
+
+            <label>
+                <span>Usuario</span>
+                <input type="text" value="{{ user.username }}" disabled>
+                <small>El nombre de usuario solo puede cambiarlo un administrador.</small>
+            </label>
+
+            <label>
+                <span>Nombre completo</span>
+                <input
+                    type="text"
+                    name="full_name"
+                    value="{{ user.full_name or '' }}"
+                    maxlength="140"
+                    autocomplete="name"
+                >
+            </label>
+
+            <label>
+                <span>Correo</span>
+                <input
+                    type="email"
+                    name="email"
+                    value="{{ user.email or '' }}"
+                    maxlength="180"
+                    autocomplete="email"
+                >
+            </label>
+
+            <button class="profile-primary" type="submit">Guardar cambios</button>
+        </form>
+    </section>
+
+    <section class="profile-panel">
+        <header>
+            <h2>Seguridad</h2>
+            <p>Cambia tu contraseña verificando primero la contraseña actual.</p>
+        </header>
+
+        <form method="post" action="/profile/password" class="profile-form">
+            <input type="hidden" name="csrf" value="{{ password_csrf }}">
+
+            <label>
+                <span>Contraseña actual</span>
+                <input type="password" name="current_password" required autocomplete="current-password">
+            </label>
+
+            <label>
+                <span>Contraseña nueva</span>
+                <input type="password" name="new_password" required minlength="10" autocomplete="new-password">
+                <small>Mínimo 10 caracteres, mayúsculas, minúsculas y un número.</small>
+            </label>
+
+            <label>
+                <span>Confirmar contraseña</span>
+                <input type="password" name="confirm_password" required minlength="10" autocomplete="new-password">
+            </label>
+
+            <button class="profile-primary" type="submit">Cambiar contraseña</button>
+        </form>
+    </section>
+</div>
+
+<section class="profile-meta">
+    <div><span>Rol</span><strong>{{ user.role.name }}</strong></div>
+    <div><span>Último acceso</span><strong>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M UTC') if user.last_login_at else 'Sin registro' }}</strong></div>
+    <div><span>Contraseña actualizada</span><strong>{{ user.password_changed_at.strftime('%Y-%m-%d') }}</strong></div>
+    <div><span>Cuenta creada</span><strong>{{ user.created_at.strftime('%Y-%m-%d') }}</strong></div>
+</section>
+{% endblock %}

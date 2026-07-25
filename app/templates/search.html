@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Búsqueda global | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/search.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="global-search-hero">
+    <form action="/search" method="get" class="global-search-form">
+        <label for="global-search-input">Buscar en toda la documentación</label>
+        <div>
+            <input
+                id="global-search-input"
+                type="search"
+                name="q"
+                value="{{ query }}"
+                minlength="2"
+                autofocus
+                placeholder="Equipo, interfaz, rack, sitio, cable o serial..."
+            >
+            <button type="submit">Buscar</button>
+        </div>
+        <p>
+            Consulta varios módulos de NetBox al mismo tiempo sin modificar
+            el inventario.
+        </p>
+    </form>
+</section>
+
+{% if not searched %}
+<section class="search-welcome">
+    <div class="search-welcome-icon">⌕</div>
+    <h2>Encuentra la infraestructura sin navegar pantalla por pantalla</h2>
+    <p>Escribe al menos dos caracteres o entra directamente a un flujo frecuente.</p>
+
+    <div class="search-start-grid">
+        <a class="search-start-card" href="/devices">
+            <strong>Dispositivos</strong>
+            <span>Nombre, serial, modelo, sitio o dirección principal.</span>
+        </a>
+        <a class="search-start-card" href="/ipam">
+            <strong>Direccionamiento IP</strong>
+            <span>Prefijos, pools disponibles, VRF y localidad.</span>
+        </a>
+        <a class="search-start-card" href="/racks">
+            <strong>Racks</strong>
+            <span>Ubicación, capacidad, ocupación y elevación 2D.</span>
+        </a>
+        <a class="search-start-card" href="/device-types">
+            <strong>Modelos y plantillas</strong>
+            <span>Fabricantes, modelos y creación rápida de interfaces.</span>
+        </a>
+    </div>
+</section>
+{% else %}
+<section class="search-overview">
+    <strong>{{ total }} resultados visibles</strong>
+    <span>para “{{ query }}”</span>
+</section>
+
+<div class="search-section-grid">
+    {% for section in sections %}
+    <section class="search-section">
+        <header>
+            <div>
+                <h2>{{ section.label }}</h2>
+                <p>{{ section.count }} coincidencias en NetBox</p>
+            </div>
+            <span>{{ section.results | length }}</span>
+        </header>
+
+        {% if section.error %}
+        <div class="search-error">{{ section.error }}</div>
+        {% elif section.results %}
+        <div class="search-results">
+            {% for item in section.results %}
+            <a class="search-result" href="{{ item.url }}">
+                <span class="search-result-icon">{{ item.title[0] | upper }}</span>
+                <div>
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.subtitle }}</small>
+                </div>
+                <em>{{ item.badge }}</em>
+                <b>→</b>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="search-empty">Sin coincidencias en este módulo.</div>
+        {% endif %}
+    </section>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

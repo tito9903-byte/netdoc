@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Acceso restringido | NetDoc{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <div class="empty-state">
+        <div class="empty-icon">⊘</div>
+        <h3>No tienes permiso para esta sección</h3>
+        <p>Tu cuenta está activa, pero el rol asignado no incluye este permiso.</p>
+        <p><a class="secondary-button" href="/">Volver al inicio</a></p>
+    </div>
+</section>
+{% endblock %}

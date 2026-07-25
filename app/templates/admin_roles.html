@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Roles y permisos | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin_extras.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="admin-alert success">{{ message }}</div>
+{% endif %}
+
+<div class="admin-heading-actions">
+    <div>
+        <strong>{{ roles | length }} roles configurados</strong>
+        <span>Los roles del sistema no se eliminan.</span>
+    </div>
+    <a class="admin-primary" href="/admin/roles/new">＋ Crear rol</a>
+</div>
+
+<section class="role-grid">
+    {% for role in roles %}
+    <article class="role-card">
+        <div class="role-card-top">
+            <div class="role-icon">{% if role.code == "administrador" %}◆{% else %}◇{% endif %}</div>
+            <div>
+                <h2>{{ role.name }}</h2>
+                <span>{{ role.code }}{% if role.is_system %} · Sistema{% endif %}</span>
+            </div>
+        </div>
+
+        <p>{{ role.description or "Sin descripción." }}</p>
+
+        <div class="role-stats">
+            <a class="role-stat-link" href="/admin/users?role_id={{ role.id }}"><strong>{{ role.users | length }}</strong><span>usuarios</span></a>
+            <div><strong>{{ role.permissions | length }}</strong><span>permisos</span></div>
+        </div>
+
+        <div class="permission-preview">
+            {% for permission in role.permissions[:5] %}
+                <span>{{ permission.name }}</span>
+            {% endfor %}
+            {% if role.permissions | length > 5 %}
+                <span>+{{ role.permissions | length - 5 }} más</span>
+            {% endif %}
+        </div>
+
+        <div class="role-actions">
+            <a class="admin-secondary" href="/admin/roles/{{ role.id }}/edit">Editar</a>
+            {% if not role.is_system %}
+            <form method="post" action="/admin/roles/{{ role.id }}/delete"
+                  onsubmit="return confirm('¿Eliminar este rol?');">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <button class="danger-button" type="submit">Eliminar</button>
+            </form>
+            {% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% endblock %}

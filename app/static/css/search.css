@@ -1,0 +1,229 @@
+.global-search-hero {
+    max-width: 980px;
+    margin: 0 auto 22px;
+    padding: 26px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--surface), var(--surface-soft));
+}
+
+.global-search-form > label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.global-search-form > div {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+}
+
+.global-search-form input {
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    color: var(--text);
+    outline: none;
+    background: var(--background);
+}
+
+.global-search-form input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.global-search-form button {
+    padding: 0 22px;
+    border: 0;
+    border-radius: 11px;
+    color: #061116;
+    font-weight: 750;
+    background: var(--accent);
+    cursor: pointer;
+}
+
+.global-search-form p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.search-welcome {
+    padding: 70px 20px;
+    text-align: center;
+}
+
+.search-welcome-icon {
+    color: var(--accent);
+    font-size: 48px;
+}
+
+.search-welcome h2 {
+    margin: 12px 0 0;
+}
+
+.search-welcome p,
+.search-overview span {
+    color: var(--muted);
+}
+
+.search-overview {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin: 0 0 16px;
+}
+
+.search-section-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.search-section {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+.search-section > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 17px 18px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.search-section h2,
+.search-section p {
+    margin: 0;
+}
+
+.search-section h2 {
+    font-size: 15px;
+}
+
+.search-section p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.search-section > header > span {
+    display: grid;
+    min-width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.search-results {
+    display: flex;
+    flex-direction: column;
+}
+
+.search-result {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 17px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.search-result:last-child {
+    border-bottom: 0;
+}
+
+.search-result:hover {
+    background: var(--surface-hover);
+}
+
+.search-result-icon {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 700;
+}
+
+.search-result strong,
+.search-result small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.search-result strong {
+    font-size: 12px;
+}
+
+.search-result small {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.search-result em {
+    padding: 4px 7px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 9px;
+    font-style: normal;
+}
+
+.search-result b {
+    color: var(--accent);
+}
+
+.search-empty,
+.search-error {
+    padding: 34px 18px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+}
+
+.search-error {
+    color: var(--danger);
+}
+
+@media (max-width: 900px) {
+    .search-section-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .global-search-form > div {
+        grid-template-columns: 1fr;
+    }
+
+    .global-search-form button {
+        min-height: 44px;
+    }
+
+    .search-result {
+        grid-template-columns: 34px minmax(0, 1fr) 18px;
+    }
+
+    .search-result em {
+        display: none;
+    }
+}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Sistema | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/system.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="system-overview">
+    <article class="system-card {{ health.cpu.severity }}">
+        <header><span>CPU</span><strong>{{ health.cpu.load_percent }}%</strong></header>
+        <div class="health-bar"><i style="width: {{ [health.cpu.load_percent, 100] | min }}%"></i></div>
+        <p>{{ health.cpu.logical_count }} CPU lógicas · carga 1 min {{ health.cpu.load_1 }}</p>
+    </article>
+
+    <article class="system-card {{ health.memory.severity }}">
+        <header><span>Memoria RAM</span><strong>{{ health.memory.percent }}%</strong></header>
+        <div class="health-bar"><i style="width: {{ [health.memory.percent, 100] | min }}%"></i></div>
+        <p>{{ health.memory.used_label }} usados de {{ health.memory.total_label }}</p>
+    </article>
+
+    <article class="system-card {{ health.disk.severity }}">
+        <header><span>Disco {{ health.disk.path }}</span><strong>{{ health.disk.percent }}%</strong></header>
+        <div class="health-bar"><i style="width: {{ [health.disk.percent, 100] | min }}%"></i></div>
+        <p>{{ health.disk.used_label }} usados · {{ health.disk.free_label }} libres</p>
+    </article>
+
+    <article class="system-card healthy">
+        <header><span>Red acumulada</span><strong>↕</strong></header>
+        <div class="network-values">
+            <span>↓ {{ health.network.received_label }}</span>
+            <span>↑ {{ health.network.transmitted_label }}</span>
+        </div>
+        <p>Contadores desde el último inicio del servidor.</p>
+    </article>
+</section>
+
+<section class="system-grid">
+    <article class="system-panel">
+        <header>
+            <div>
+                <h2>Identidad del host</h2>
+                <p>Información no sensible del entorno de ejecución.</p>
+            </div>
+        </header>
+        <dl>
+            <div><dt>Hostname</dt><dd>{{ health.host.hostname }}</dd></div>
+            <div><dt>Plataforma</dt><dd>{{ health.host.platform }}</dd></div>
+            <div><dt>Python</dt><dd>{{ health.host.python }}</dd></div>
+            <div><dt>PID de NetDoc</dt><dd>{{ health.host.process_id }}</dd></div>
+            <div><dt>Tiempo encendido</dt><dd>{{ health.host.uptime_label }}</dd></div>
+        </dl>
+    </article>
+
+    <article class="system-panel">
+        <header>
+            <div>
+                <h2>Carga y capacidad</h2>
+                <p>Lecturas instantáneas del sistema operativo.</p>
+            </div>
+        </header>
+        <dl>
+            <div><dt>Carga 1 minuto</dt><dd>{{ health.cpu.load_1 }}</dd></div>
+            <div><dt>Carga 5 minutos</dt><dd>{{ health.cpu.load_5 }}</dd></div>
+            <div><dt>Carga 15 minutos</dt><dd>{{ health.cpu.load_15 }}</dd></div>
+            <div><dt>RAM disponible</dt><dd>{{ health.memory.available_label }}</dd></div>
+            <div><dt>Disco total</dt><dd>{{ health.disk.total_label }}</dd></div>
+        </dl>
+    </article>
+</section>
+
+<div class="system-note">
+    Esta pantalla es de solo lectura. No ejecuta comandos privilegiados ni modifica servicios.
+</div>
+{% endblock %}

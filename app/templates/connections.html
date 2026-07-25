@@ -21,6 +21,16 @@
 </div>
 {% endif %}
 
+{% if not write_enabled %}
+<div class="read-only-callout">
+    <span>◌</span>
+    <div>
+        <strong>Desarrollo está en modo de solo lectura.</strong>
+        <span>Puedes revisar el flujo y consultar cables, pero el botón de creación permanece bloqueado.</span>
+    </div>
+</div>
+{% endif %}
+
 <section class="connection-form-panel">
     <form id="connectionForm" method="post" action="/connections">
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
@@ -30,7 +40,9 @@
                 <h2>Nueva conexión</h2>
                 <p>Selecciona dos interfaces libres y documenta el cable.</p>
             </div>
-            <span class="write-badge">Escritura controlada</span>
+            <span class="write-badge">
+                {% if write_enabled %}Escritura controlada{% else %}Vista previa{% endif %}
+            </span>
         </div>
 
         <div class="endpoints-grid">
@@ -156,7 +168,13 @@
             </div>
             <div class="action-buttons">
                 <a class="secondary-connection-button" href="/devices">Cancelar</a>
-                <button class="primary-connection-button" type="submit">Crear conexión</button>
+                <button
+                    class="primary-connection-button"
+                    type="submit"
+                    {% if not write_enabled %}disabled{% endif %}
+                >
+                    Crear conexión
+                </button>
             </div>
         </div>
     </form>
@@ -166,7 +184,7 @@
     <div class="connection-panel-header">
         <div>
             <h2>Conexiones recientes</h2>
-            <p>Últimos cables registrados en NetBox.</p>
+            <p>Equipo e interfaz de cada extremo, datos físicos y estado documentado.</p>
         </div>
         <span class="result-count">{{ recent_cables | length }} mostrados</span>
     </div>
@@ -176,29 +194,29 @@
         <table class="connections-table">
             <thead>
                 <tr>
-                    <th>ID</th><th>Extremo A</th><th>Extremo B</th><th>Tipo</th><th>Etiqueta</th><th>Estado</th><th>Longitud</th>
+                    <th>ID</th>
+                    <th>Extremo A</th>
+                    <th>Extremo B</th>
+                    <th>Tipo</th>
+                    <th>Etiqueta</th>
+                    <th>Estado</th>
+                    <th>Longitud</th>
                 </tr>
             </thead>
             <tbody>
                 {% for cable in recent_cables %}
-                {% set a_term = (cable.get("a_terminations") or [{}])[0] %}
-                {% set b_term = (cable.get("b_terminations") or [{}])[0] %}
-                {% set a_object = a_term.get("object") or a_term %}
-                {% set b_object = b_term.get("object") or b_term %}
-                {% set type_data = cable.get("type") or {} %}
-                {% set status_data = cable.get("status") or {} %}
                 <tr>
                     <td class="mono-value">{{ cable.get("id") or "—" }}</td>
-                    <td>{{ a_object.get("display") or a_term.get("display") or a_term.get("object_id") or "—" }}</td>
-                    <td>{{ b_object.get("display") or b_term.get("display") or b_term.get("object_id") or "—" }}</td>
-                    <td>{{ type_data.get("label") or type_data.get("value") or "—" }}</td>
+                    <td><strong>{{ cable.get("_a_label") or "—" }}</strong></td>
+                    <td><strong>{{ cable.get("_b_label") or "—" }}</strong></td>
+                    <td>{{ cable.get("_type_label") or "—" }}</td>
                     <td>{{ cable.get("label") or "—" }}</td>
-                    <td><span class="cable-status">{{ status_data.get("label") or status_data.get("value") or "—" }}</span></td>
                     <td>
-                        {% if cable.get("length") %}
-                            {{ cable.get("length") }} {{ (cable.get("length_unit") or {}).get("value", "") }}
-                        {% else %}—{% endif %}
+                        <span class="cable-status">
+                            {{ cable.get("_status_label") or "—" }}
+                        </span>
                     </td>
+                    <td>{{ cable.get("_length_label") or "—" }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -206,7 +224,9 @@
     </div>
     {% else %}
     <div class="connections-empty">
-        <div>⇄</div><h3>No hay cables para mostrar</h3><p>Las conexiones creadas aparecerán aquí.</p>
+        <div>⇄</div>
+        <h3>No hay cables para mostrar</h3>
+        <p>Las conexiones creadas aparecerán aquí.</p>
     </div>
     {% endif %}
 </section>

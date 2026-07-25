@@ -2,6 +2,8 @@
 
 Ejecute en el servidor solo cuando esté autorizado. Codex no probó estos comandos contra el servidor.
 
+## Estado de servicios, puertos y repositorios
+
 ```bash
 systemctl status netdoc-prod
 systemctl status netdoc-dev
@@ -21,17 +23,62 @@ stat -c '%a %U:%G %n' /opt/netdoc-prod/.env /opt/netdoc-dev/.env
 [[ -f /opt/netdoc-dev/.env ]] && echo '.env de desarrollo presente'
 ```
 
-Actualice con `netdoc-deploy-dev` o `netdoc-deploy-prod` según [DEPLOYMENT](DEPLOYMENT.md); no intercambie directorios ni servicios. Los comandos de despliegue se invocan como root porque controlan systemd, pero todas las operaciones Git, pip y Python internas se ejecutan como `sshtelenord`.
+Actualice con `netdoc-deploy-dev` o `netdoc-deploy-prod` según [DEPLOYMENT](DEPLOYMENT.md); no intercambie directorios ni servicios. Los comandos de despliegue se invocan como root porque controlan systemd, pero las operaciones Git, pip, Python y Alembic se ejecutan como `sshtelenord`.
 
-Para rollback manual siga el documento de despliegue. El respaldo `/opt/netbox-documental` solo puede recuperarse mediante un procedimiento formal, sin asumir que esté listo.
+## Estado de la base y migraciones
 
-Diagnóstico recomendado:
+Alembic obtiene `DATABASE_URL` desde el `.env` del entorno, por lo que los comandos deben ejecutarse desde el directorio correspondiente:
+
+```bash
+runuser -u sshtelenord -- bash -lc 'cd /opt/netdoc-dev && .venv/bin/alembic current'
+runuser -u sshtelenord -- bash -lc 'cd /opt/netdoc-dev && .venv/bin/alembic heads'
+runuser -u sshtelenord -- bash -lc 'cd /opt/netdoc-prod && .venv/bin/alembic current'
+runuser -u sshtelenord -- bash -lc 'cd /opt/netdoc-prod && .venv/bin/alembic heads'
+```
+
+En esta rama la cabeza esperada es `20260724_0001`. `current` debe coincidir con `heads` después del arranque. No ejecute `stamp`, `upgrade`, `downgrade` ni edite `alembic_version` manualmente durante una incidencia sin revisar antes la base y el procedimiento de recuperación.
+
+Para una base SQLite predeterminada, verifique existencia y propietario sin leer datos:
+
+```bash
+stat -c '%a %U:%G %s bytes %n' /opt/netdoc-dev/data/netdoc.db
+stat -c '%a %U:%G %s bytes %n' /opt/netdoc-prod/data/netdoc.db
+find /opt/netdoc-dev/data -maxdepth 1 -type f -name 'netdoc.db.pre-migration-*' -printf '%M %u:%g %s %TY-%Tm-%Td %TH:%TM %p\n'
+find /opt/netdoc-prod/data -maxdepth 1 -type f -name 'netdoc.db.pre-migration-*' -printf '%M %u:%g %s %TY-%Tm-%Td %TH:%TM %p\n'
+```
+
+Las rutas anteriores solo aplican cuando `DATABASE_URL` usa el valor predeterminado. No copie bases entre desarrollo y producción.
+
+## Diagnóstico recomendado
 
 1. Confirme servicio y puerto.
 2. Confirme rama y commit usando `runuser -u sshtelenord`.
 3. Confirme presencia y permisos de `.env` sin leer su contenido.
-4. Revise logs.
-5. Compruebe `/login` mediante GET.
-6. Confirme que no existan errores evidentes ni escrituras inesperadas.
+4. Revise `alembic current` y `alembic heads`.
+5. Revise logs buscando errores de migración, esquema parcial, SQLite o permisos.
+6. Compruebe `/login` mediante GET.
+7. Confirme que la base pertenece a `sshtelenord` y que existe un respaldo previo a la migración.
+8. Confirme que no existan escrituras inesperadas hacia NetBox.
 
-Escale un incidente si hay exposición de secretos, indisponibilidad persistente, escritura inesperada, rollback fallido, propietarios incorrectos o dudas sobre la integridad del repositorio.
+Búsqueda rápida de errores relevantes:
+
+```bash
+journalctl -u netdoc-dev -n 300 --no-pager | grep -Ei 'alembic|migration|schema|sqlite|database|permission|traceback|error'
+journalctl -u netdoc-prod -n 300 --no-pager | grep -Ei 'alembic|migration|schema|sqlite|database|permission|traceback|error'
+```
+
+## Recuperación
+
+Para rollback de código siga [DEPLOYMENT](DEPLOYMENT.md). El script no revierte el esquema ni restaura la base. Si la aplicación deja de arrancar después de una migración:
+
+1. Detenga únicamente el servicio afectado.
+2. No elimine ni modifique la base fallida.
+3. Copie la base fallida con otro nombre para análisis.
+4. Verifique el respaldo previo.
+5. Restaure el respaldo con propietario `sshtelenord` y permisos restrictivos.
+6. Restaure el commit compatible.
+7. Inicie el servicio y valide `/login`, `alembic current` y logs.
+
+El respaldo `/opt/netbox-documental` solo puede recuperarse mediante un procedimiento formal; no debe asumirse que contiene la base nueva ni que está listo para sustituir producción.
+
+Escale un incidente si hay exposición de secretos, indisponibilidad persistente, escritura inesperada, migración o rollback fallido, esquema parcial, propietarios incorrectos, pérdida de respaldo o dudas sobre la integridad del repositorio o la base.

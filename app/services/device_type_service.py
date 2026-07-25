@@ -116,7 +116,7 @@ class DeviceTypeService:
             "Authorization": authorization,
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": "NetDoc/0.10.0",
+            "User-Agent": "NetDoc/0.10.1",
         }
 
     @staticmethod
@@ -287,7 +287,11 @@ class DeviceTypeService:
                 ),
             })
 
-        return prepared
+        # Importación local para evitar un ciclo durante la definición del error
+        # compartido por ambos servicios.
+        from app.services.device_image_service import DeviceImageService
+
+        return DeviceImageService().decorate_device_types(prepared)
 
     async def get_device_type(self, device_type_id: int) -> dict[str, Any]:
         payload = await self.request(
@@ -298,7 +302,10 @@ class DeviceTypeService:
             raise DeviceTypeServiceError(
                 "NetBox devolvió un modelo inesperado."
             )
-        return payload
+
+        from app.services.device_image_service import DeviceImageService
+
+        return DeviceImageService().decorate_device_type(payload)
 
     async def list_interface_templates(
         self,

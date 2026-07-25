@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import asyncio
 from typing import Any
+from weakref import WeakKeyDictionary
 
 import httpx
 
@@ -19,24 +22,79 @@ class NetBoxError(Exception):
         self.status_code = status_code
 
 
+_clients: WeakKeyDictionary[asyncio.AbstractEventLoop, httpx.AsyncClient] = (
+    WeakKeyDictionary()
+)
+_client_locks: WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Lock] = (
+    WeakKeyDictionary()
+)
+
+
+def _authorization_header() -> str:
+    settings = get_settings()
+    token_type = settings.netbox_token_type.strip().lower()
+    return (
+        f"Bearer {settings.netbox_token}"
+        if token_type == "bearer"
+        else f"Token {settings.netbox_token}"
+    )
+
+
+async def get_shared_netbox_client() -> httpx.AsyncClient:
+    """Reutiliza conexiones TCP/TLS dentro del loop activo de FastAPI."""
+
+    loop = asyncio.get_running_loop()
+    client = _clients.get(loop)
+    if client is not None and not client.is_closed:
+        return client
+
+    lock = _client_locks.get(loop)
+    if lock is None:
+        lock = asyncio.Lock()
+        _client_locks[loop] = lock
+
+    async with lock:
+        client = _clients.get(loop)
+        if client is not None and not client.is_closed:
+            return client
+
+        settings = get_settings()
+        client = httpx.AsyncClient(
+            base_url=f"{settings.netbox_url.rstrip('/')}/",
+            headers={
+                "Authorization": _authorization_header(),
+                "User-Agent": f"NetDoc/{settings.app_version}",
+            },
+            verify=settings.netbox_verify_ssl,
+            timeout=httpx.Timeout(settings.netbox_timeout),
+            limits=httpx.Limits(
+                max_connections=50,
+                max_keepalive_connections=20,
+                keepalive_expiry=45.0,
+            ),
+            follow_redirects=True,
+        )
+        _clients[loop] = client
+        return client
+
+
+async def close_shared_netbox_clients() -> None:
+    """Cierra los pools creados en el proceso actual."""
+
+    clients = list(_clients.values())
+    _clients.clear()
+    _client_locks.clear()
+    if clients:
+        await asyncio.gather(
+            *(client.aclose() for client in clients if not client.is_closed),
+            return_exceptions=True,
+        )
+
+
 class NetBoxClient:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.base_url = self.settings.netbox_url.rstrip("/")
-
-    def _headers(self) -> dict[str, str]:
-        token_type = self.settings.netbox_token_type.strip().lower()
-
-        if token_type == "bearer":
-            authorization = f"Bearer {self.settings.netbox_token}"
-        else:
-            authorization = f"Token {self.settings.netbox_token}"
-
-        return {
-            "Authorization": authorization,
-            "Accept": "application/json",
-            "User-Agent": "NetDoc/0.4.0",
-        }
 
     @staticmethod
     def _response_detail(response: httpx.Response) -> str | None:
@@ -49,19 +107,13 @@ class NetBoxClient:
             return None
 
         detail = payload.get("detail")
-
-        if isinstance(detail, str):
-            return detail
-
-        return None
+        return detail if isinstance(detail, str) else None
 
     async def get(
         self,
         endpoint: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
-
         clean_params = {
             key: value
             for key, value in (params or {}).items()
@@ -69,24 +121,17 @@ class NetBoxClient:
         }
 
         try:
-            async with httpx.AsyncClient(
-                headers=self._headers(),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(
-                    url,
-                    params=clean_params,
-                )
-
+            client = await get_shared_netbox_client()
+            response = await client.get(
+                endpoint.lstrip("/"),
+                params=clean_params,
+                headers={"Accept": "application/json"},
+            )
             response.raise_for_status()
             payload = response.json()
 
             if not isinstance(payload, dict):
-                raise NetBoxError(
-                    "NetBox devolvió un formato inesperado."
-                )
+                raise NetBoxError("NetBox devolvió un formato inesperado.")
 
             return payload
 
@@ -94,40 +139,26 @@ class NetBoxClient:
             raise NetBoxError(
                 f"No fue posible conectar con NetBox en {self.base_url}."
             ) from exc
-
         except httpx.TimeoutException as exc:
             raise NetBoxError(
                 "NetBox no respondió dentro del tiempo configurado."
             ) from exc
-
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             detail = self._response_detail(exc.response)
 
             if status_code == 401:
                 message = detail or "El token de NetBox no es válido."
-
             elif status_code == 403:
                 message = detail or (
-                    "El usuario del token no tiene permiso "
-                    "para realizar esta consulta."
+                    "El usuario del token no tiene permiso para realizar esta consulta."
                 )
-
             elif status_code == 404:
-                message = detail or (
-                    "El objeto solicitado no existe en NetBox."
-                )
-
+                message = detail or "El objeto solicitado no existe en NetBox."
             else:
-                message = detail or (
-                    f"NetBox respondió con HTTP {status_code}."
-                )
+                message = detail or f"NetBox respondió con HTTP {status_code}."
 
-            raise NetBoxError(
-                message=message,
-                status_code=status_code,
-            ) from exc
-
+            raise NetBoxError(message=message, status_code=status_code) from exc
         except ValueError as exc:
             raise NetBoxError(
                 "NetBox no devolvió una respuesta JSON válida."
@@ -138,16 +169,9 @@ class NetBoxClient:
         endpoint: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        payload = await self.get(
-            endpoint,
-            params=params,
-        )
-
+        payload = await self.get(endpoint, params=params)
         if not isinstance(payload.get("results"), list):
-            raise NetBoxError(
-                "La respuesta no contiene un listado válido."
-            )
-
+            raise NetBoxError("La respuesta no contiene un listado válido.")
         return payload
 
     async def get_all(
@@ -159,7 +183,6 @@ class NetBoxClient:
     ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
         offset = 0
-
         base_params = dict(params or {})
 
         for _ in range(maximum_pages):
@@ -168,41 +191,23 @@ class NetBoxClient:
                 "limit": page_limit,
                 "offset": offset,
             }
-
-            payload = await self.get_list(
-                endpoint,
-                params=request_params,
-            )
-
+            payload = await self.get_list(endpoint, params=request_params)
             page_results = payload.get("results", [])
             results.extend(page_results)
 
-            if not payload.get("next"):
+            if not payload.get("next") or not page_results:
                 break
-
-            if not page_results:
-                break
-
             offset += page_limit
 
         return results
 
     async def count(self, endpoint: str) -> int:
-        payload = await self.get_list(
-            endpoint,
-            params={"limit": 1},
-        )
-
+        payload = await self.get_list(endpoint, params={"limit": 1})
         count = payload.get("count", 0)
-
-        if isinstance(count, int):
-            return count
-
-        return 0
+        return count if isinstance(count, int) else 0
 
     async def test_connection(self) -> dict[str, Any]:
         site_count = await self.count("/api/dcim/sites/")
-
         return {
             "connected": True,
             "url": self.base_url,
@@ -223,40 +228,20 @@ class NetBoxClient:
             endpoint: str,
         ) -> tuple[str, dict[str, Any]]:
             try:
-                value = await self.count(endpoint)
-
-                return name, {
-                    "value": value,
-                    "error": None,
-                }
-
+                return name, {"value": await self.count(endpoint), "error": None}
             except NetBoxError as exc:
-                return name, {
-                    "value": None,
-                    "error": exc.message,
-                }
+                return name, {"value": None, "error": exc.message}
 
-        tasks = [
+        return dict(await asyncio.gather(*(
             load_metric(name, endpoint)
             for name, endpoint in endpoints.items()
-        ]
+        )))
 
-        results = await asyncio.gather(*tasks)
-
-        return dict(results)
-
-    async def recent_devices(
-        self,
-        limit: int = 8,
-    ) -> list[dict[str, Any]]:
+    async def recent_devices(self, limit: int = 8) -> list[dict[str, Any]]:
         payload = await self.get_list(
             "/api/dcim/devices/",
-            params={
-                "limit": limit,
-                "ordering": "-last_updated",
-            },
+            params={"limit": limit, "ordering": "-last_updated"},
         )
-
         return payload["results"]
 
     async def list_sites(self) -> list[dict[str, Any]]:
@@ -281,38 +266,23 @@ class NetBoxClient:
         role_id: int | None = None,
     ) -> dict[str, Any]:
         safe_page = max(page, 1)
-        offset = (safe_page - 1) * page_size
-
         params: dict[str, Any] = {
             "limit": page_size,
-            "offset": offset,
+            "offset": (safe_page - 1) * page_size,
             "ordering": "name",
         }
-
         if query.strip():
             params["q"] = query.strip()
-
         if site_id:
             params["site_id"] = site_id
-
         if status.strip():
             params["status"] = status.strip()
-
         if role_id:
             params["role_id"] = role_id
+        return await self.get_list("/api/dcim/devices/", params=params)
 
-        return await self.get_list(
-            "/api/dcim/devices/",
-            params=params,
-        )
-
-    async def get_device(
-        self,
-        device_id: int,
-    ) -> dict[str, Any]:
-        return await self.get(
-            f"/api/dcim/devices/{device_id}/"
-        )
+    async def get_device(self, device_id: int) -> dict[str, Any]:
+        return await self.get(f"/api/dcim/devices/{device_id}/")
 
     async def get_device_interfaces(
         self,
@@ -320,9 +290,6 @@ class NetBoxClient:
     ) -> list[dict[str, Any]]:
         return await self.get_all(
             "/api/dcim/interfaces/",
-            params={
-                "device_id": device_id,
-                "ordering": "name",
-            },
+            params={"device_id": device_id, "ordering": "name"},
             page_limit=200,
         )

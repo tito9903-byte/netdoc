@@ -26,11 +26,15 @@
 }
 
 .rack-single-topology {
+    --rack-unit-count: 42;
+    --rack-fit-unit-height: 17px;
+    --rack-detail-unit-height: 30px;
+
     position: relative;
     isolation: isolate;
-    min-height: 720px;
+    min-height: 780px;
     background:
-        radial-gradient(circle at 50% 24%, rgba(71, 117, 139, 0.24), transparent 34%),
+        radial-gradient(circle at 50% 24%, rgba(71, 117, 139, 0.27), transparent 35%),
         linear-gradient(180deg, #101b23 0%, #0a1218 58%, #05090d 100%);
 }
 
@@ -65,14 +69,14 @@
 
 .rack-single-topology-scene {
     position: relative;
-    width: min(100%, 690px);
-    min-height: 640px;
+    width: min(100%, 780px);
+    min-height: 700px;
     align-content: center;
-    padding: 26px 26px 46px;
+    padding: 26px 26px 52px;
 }
 
 .rack-single-topology .topology-rack-card {
-    width: min(100%, 480px);
+    width: min(100%, 560px);
 }
 
 .rack-single-topology .topology-rack-heading {
@@ -84,7 +88,7 @@
 
 .rack-single-topology .topology-rack-perspective {
     position: relative;
-    padding: 28px 40px 22px;
+    padding: 30px 54px 26px;
     filter: drop-shadow(0 34px 28px rgba(0, 0, 0, 0.52));
 }
 
@@ -102,21 +106,50 @@
 }
 
 .rack-single-topology[data-scale="fit"] .topology-rack-frame {
-    width: 300px;
-    height: 630px;
+    width: 350px;
+    height: calc(var(--rack-unit-count) * var(--rack-fit-unit-height) + 49px);
+    max-height: 780px;
 }
 
 .rack-single-topology[data-scale="detail"] {
-    min-height: 920px;
+    min-height: 760px;
+    max-height: calc(100vh - 205px);
+    align-items: start;
+    overflow: auto;
+    scrollbar-gutter: stable both-edges;
 }
 
 .rack-single-topology[data-scale="detail"] .rack-single-topology-scene {
-    min-height: 840px;
+    min-height: calc(var(--rack-unit-count) * var(--rack-detail-unit-height) + 260px);
+    align-content: start;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-card {
+    width: min(100%, 680px);
 }
 
 .rack-single-topology[data-scale="detail"] .topology-rack-frame {
-    width: 370px;
-    height: 790px;
+    width: 500px;
+    height: calc(var(--rack-unit-count) * var(--rack-detail-unit-height) + 49px);
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-perspective {
+    padding-top: 24px;
+}
+
+.rack-single-topology::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.rack-single-topology::-webkit-scrollbar-thumb {
+    border: 3px solid #091118;
+    border-radius: 999px;
+    background: #3a5668;
+}
+
+.rack-single-topology::-webkit-scrollbar-track {
+    background: #091118;
 }
 
 .rack-single-topology .topology-rack-frame {
@@ -131,6 +164,7 @@
         inset 0 0 0 2px #0b1217,
         inset 0 0 28px rgba(0, 0, 0, 0.92),
         0 0 0 1px rgba(139, 164, 177, 0.24);
+    transition: width 180ms ease, height 220ms ease;
 }
 
 .rack-single-topology .topology-rack-frame::before {
@@ -195,7 +229,7 @@
 .rack-single-topology .topology-device {
     right: 13px;
     left: 13px;
-    min-height: 4px;
+    min-height: 5px;
     border-color: rgba(87, 210, 220, 0.58);
     border-radius: 2px;
     background:
@@ -210,6 +244,7 @@
     position: absolute;
     top: 50%;
     left: 4px;
+    z-index: 3;
     width: 4px;
     height: 4px;
     border-radius: 50%;
@@ -224,10 +259,11 @@
     top: 2px;
     right: 5px;
     bottom: 2px;
-    width: 12%;
-    background: repeating-linear-gradient(90deg, rgba(127, 150, 161, 0.35) 0 1px, transparent 1px 3px);
+    z-index: 2;
+    width: 10%;
+    background: repeating-linear-gradient(90deg, rgba(127, 150, 161, 0.30) 0 1px, transparent 1px 3px);
     content: "";
-    opacity: 0.48;
+    opacity: 0.38;
     pointer-events: none;
 }
 
@@ -245,21 +281,37 @@
 
 .rack-single-topology .topology-device img {
     position: absolute;
-    inset: 1px 5px;
-    width: calc(100% - 10px);
+    inset: 1px 7px;
+    z-index: 1;
+    width: calc(100% - 14px);
     height: calc(100% - 2px);
-    padding: 0 8px;
+    max-width: none;
     object-fit: contain;
     object-position: center;
-    background: rgba(2, 6, 8, 0.92);
+    background: rgba(2, 6, 8, 0.98);
     opacity: 1;
-    filter: contrast(1.04) saturate(0.96);
+    filter: contrast(1.08) saturate(1.02) brightness(1.03);
+    transform: scale(1.08);
+    transform-origin: center;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-device img {
+    inset: 1px 5px;
+    width: calc(100% - 10px);
+    transform: scale(1.18);
+}
+
+.rack-single-topology[data-scale="detail"] .topology-device[data-device-units="0.5"] img,
+.rack-single-topology[data-scale="detail"] .topology-device[data-device-units="1.0"] img,
+.rack-single-topology[data-scale="detail"] .topology-device[data-device-units="1"] img {
+    transform: scale(1.30);
 }
 
 .rack-single-topology .topology-device-label {
     right: 22px;
     bottom: 3px;
     left: 22px;
+    z-index: 4;
     padding: 2px 5px;
     background: rgba(1, 6, 9, 0.82);
     font-size: 8px;
@@ -309,16 +361,20 @@
         justify-content: center;
     }
 
-    .rack-single-topology[data-scale="detail"] .topology-rack-frame,
     .rack-single-topology[data-scale="fit"] .topology-rack-frame {
-        width: 270px;
-        height: 590px;
+        width: 300px;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 420px;
     }
 }
 
 @media (max-width: 640px) {
     .rack-single-topology {
-        min-height: 650px;
+        --rack-fit-unit-height: 14px;
+        --rack-detail-unit-height: 23px;
+        min-height: 680px;
         padding-right: 0;
         padding-left: 0;
     }
@@ -329,13 +385,15 @@
     }
 
     .rack-single-topology .topology-rack-perspective {
-        padding-right: 20px;
-        padding-left: 20px;
+        padding-right: 26px;
+        padding-left: 26px;
     }
 
-    .rack-single-topology[data-scale="detail"] .topology-rack-frame,
     .rack-single-topology[data-scale="fit"] .topology-rack-frame {
-        width: 225px;
-        height: 500px;
+        width: 245px;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 320px;
     }
 }

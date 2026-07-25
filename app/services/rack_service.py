@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from hashlib import sha256
 from time import monotonic
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -8,6 +9,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 
 from app.core.config import get_settings
+from app.services.device_image_service import DeviceImageService
 
 
 class RackServiceError(Exception):
@@ -40,7 +42,7 @@ class RackService:
         return {
             "Authorization": authorization,
             "Accept": accept,
-            "User-Agent": "NetDoc/0.10.0",
+            "User-Agent": "NetDoc/0.10.1",
         }
 
     @staticmethod
@@ -191,6 +193,7 @@ class RackService:
         payload = await self.request(
             f"/api/dcim/device-types/{device_type_id}/"
         )
+        payload = DeviceImageService().decorate_device_type(payload)
         type(self)._device_type_cache[device_type_id] = (
             now + self._device_type_cache_seconds,
             payload,
@@ -235,6 +238,7 @@ class RackService:
             for device_type_id, payload in loaded
             if isinstance(payload, dict)
         }
+        local_summaries = DeviceImageService().summaries(type_ids)
 
         hydrated: list[dict[str, Any]] = []
         for device in devices:
@@ -242,13 +246,20 @@ class RackService:
             if not isinstance(device_type, dict):
                 device_type = {}
             device_type_id = self._device_type_id(device)
-            detail = details.get(device_type_id) if device_type_id else None
+            combined = {
+                **device_type,
+                **(details.get(device_type_id) or {}),
+            }
+            if device_type_id and device_type_id in local_summaries:
+                local = local_summaries[device_type_id]
+                for face in ("front", "rear"):
+                    if face in local:
+                        combined[f"_local_{face}_image"] = True
+                        combined[f"_{face}_image_available"] = True
+                        combined[f"_{face}_image_source"] = "netdoc"
             hydrated.append({
                 **device,
-                "device_type": {
-                    **device_type,
-                    **(detail or {}),
-                },
+                "device_type": combined,
             })
         return hydrated
 
@@ -310,9 +321,13 @@ class RackService:
         self,
         device_type_id: int,
         face: str,
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes, str, str]:
         if face not in {"front", "rear"}:
             raise RackServiceError("La cara solicitada no es válida.", 400)
+
+        local = DeviceImageService().get_local_image(device_type_id, face)
+        if local is not None:
+            return local
 
         device_type = await self.get_device_type(device_type_id)
         image_url = self._safe_image_url(
@@ -353,4 +368,8 @@ class RackService:
                 "La imagen supera el límite de 5 MB.",
                 status_code=413,
             )
-        return response.content, content_type
+        return (
+            response.content,
+            content_type,
+            sha256(response.content).hexdigest(),
+        )

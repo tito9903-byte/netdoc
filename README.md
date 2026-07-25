@@ -17,14 +17,14 @@ La versión `0.10.0` fue promovida a `main` y contiene:
 - persistencia local versionada con Alembic;
 - planes seguros y vista previa de conexiones para el futuro asistente.
 
-La rama `feature/local-device-type-images` prepara la versión `0.10.1`. Cambia únicamente la persistencia visual de los modelos:
+`develop` ya incluye la versión `0.10.1` con imágenes frontal y trasera almacenadas por NetDoc. La rama `feature/rack-datacenter-report` agrega:
 
-- NetBox conserva fabricante, modelo, dimensiones y componentes;
-- NetDoc guarda las imágenes frontal y trasera en su base local;
-- la asociación usa el `device_type_id` real de NetBox;
-- una imagen local tiene prioridad y una imagen antigua de NetBox funciona como fallback;
-- las mismas rutas alimentan catálogo, ficha, rack 2D y rack 3D;
-- los archivos se validan por firma, MIME y tamaño, y se entregan con ETag.
+- vista 3D estilo datacenter disponible únicamente dentro de cada rack;
+- escalas **Ajustar** y **Detalle** para equipos de 1U;
+- fotografías sin deformación en 2D y 3D;
+- reemplazo explícito de la imagen frontal, trasera o ambas;
+- revalidación inmediata después de sustituir una imagen;
+- reporte PDF descargable con elevación e inventario paginado.
 
 Esta rama debe validarse primero en desarrollo, puerto 8101, antes de fusionarse.
 
@@ -62,7 +62,9 @@ NetBox mantiene dispositivos, componentes, racks, cables e IPAM. La base configu
 - auditoría;
 - imágenes frontal y trasera asociadas a tipos de dispositivo.
 
-Consulte [arquitectura](docs/ARCHITECTURE.md), [escrituras seguras](docs/NETBOX_WRITE_SAFETY.md) y [racks e imágenes](docs/RACKS_AND_DEVICE_IMAGES.md).
+Los reportes PDF se generan en memoria mediante primitivas internas y no se guardan permanentemente.
+
+Consulte [arquitectura](docs/ARCHITECTURE.md), [escrituras seguras](docs/NETBOX_WRITE_SAFETY.md) y [racks, imágenes y reportes](docs/RACKS_AND_DEVICE_IMAGES.md).
 
 ## Fundamento de cambios seguros
 
@@ -80,7 +82,7 @@ La primera etapa no admite `DELETE`. La IA futura podrá preparar operaciones, p
 - `app/core`: configuración, sesiones, seguridad, autorización, base y migraciones.
 - `app/models`: entidades persistentes propias de NetDoc.
 - `app/routers`: rutas web, API y flujos guiados.
-- `app/services`: reglas, planes e integración NetBox.
+- `app/services`: reglas, planes, reportes e integración NetBox.
 - `app/templates` y `app/static`: interfaz.
 - `migrations`: revisiones Alembic del esquema local.
 - `tests`: pruebas automatizadas.
@@ -91,7 +93,7 @@ La primera etapa no admite `DELETE`. La IA futura podrá preparar operaciones, p
 
 `DATABASE_URL` selecciona la base de NetDoc. El valor inicial es `sqlite:///./data/netdoc.db`; desarrollo y producción deben usar bases independientes.
 
-La cabeza Alembic de esta rama es `20260725_0002`:
+La cabeza Alembic actual es `20260725_0002`:
 
 - `20260724_0001`: cuentas, roles, permisos y auditoría;
 - `20260725_0002`: imágenes de modelos.
@@ -109,7 +111,7 @@ Antes de una migración debe respaldarse la base. Desde `0.10.1`, ese respaldo t
 
 `feature/*` se crea desde `develop`; se abre PR a `develop`, se prueba en 8101 y después se promueve mediante otro PR hacia `main`. Producción usa 8100. No programe directamente en `main` ni modifique producción manualmente.
 
-Desarrollo y producción deben usar `.env`, cookie de sesión y base independientes. Desarrollo debe conservar `NETBOX_WRITE_ENABLED=false` para operaciones sobre NetBox. La carga local de imágenes sigue protegida por sesión, permiso y CSRF.
+Desarrollo y producción deben usar `.env`, cookie de sesión y base independientes. El entorno manual de desarrollo puede usar `NETBOX_WRITE_ENABLED=true` para validar creaciones y modificaciones antes de producción. Las pruebas automatizadas siempre reemplazan esa configuración por `NETBOX_WRITE_ENABLED=false`, usan una base temporal y nunca deben escribir en NetBox.
 
 ## Inicio rápido local
 
@@ -135,4 +137,4 @@ No versionar `.env`, bases, tokens, contraseñas, hashes, secretos de sesión o 
 
 ## Documentación
 
-[Índice](docs/README.md) · [Estado](docs/PROJECT_STATUS.md) · [Roadmap](docs/ROADMAP.md) · [Integración NetBox](docs/NETBOX_INTEGRATION.md) · [Escrituras seguras](docs/NETBOX_WRITE_SAFETY.md) · [Cobertura de módulos](docs/NETBOX_MODULE_COVERAGE.md) · [Arquitectura IA](docs/AI_ASSISTANT_ARCHITECTURE.md) · [Racks e imágenes](docs/RACKS_AND_DEVICE_IMAGES.md) · [Pruebas](docs/TESTING.md) · [Seguridad](docs/SECURITY.md) · [ADR](docs/adr/README.md).
+[Índice](docs/README.md) · [Estado](docs/PROJECT_STATUS.md) · [Roadmap](docs/ROADMAP.md) · [Integración NetBox](docs/NETBOX_INTEGRATION.md) · [Escrituras seguras](docs/NETBOX_WRITE_SAFETY.md) · [Cobertura de módulos](docs/NETBOX_MODULE_COVERAGE.md) · [Arquitectura IA](docs/AI_ASSISTANT_ARCHITECTURE.md) · [Racks, imágenes y reportes](docs/RACKS_AND_DEVICE_IMAGES.md) · [Pruebas](docs/TESTING.md) · [Seguridad](docs/SECURITY.md) · [ADR](docs/adr/README.md).

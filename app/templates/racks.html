@@ -14,12 +14,11 @@
         <h2>Ubica cada equipo y revisa la capacidad real del rack</h2>
         <p>
             La ocupación se calcula con la posición, cara y altura U del modelo.
-            Los equipos de 0U se mantienen asociados sin consumir espacio vertical.
+            Abre un rack para alternar su elevación 2D, vista 3D y reporte de inventario.
         </p>
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/device-types">Preparar modelos</a>
-        <a class="button secondary" href="/topology">Topología 3D</a>
         {% if "devices.create" in current_permissions %}
         <a class="button secondary" href="/racks/actions/new">Crear rack</a>
         <a class="button primary" href="/devices/actions/new">Ubicar un equipo</a>
@@ -56,7 +55,7 @@
         <h2>Inventario de racks</h2>
         <p>{{ racks | length }} bastidores con ocupación calculada</p>
     </div>
-    <a class="rack-result-badge" href="/topology">Vista 3D disponible</a>
+    <span class="rack-result-badge">2D, 3D y reporte dentro del rack</span>
 </section>
 
 {% if racks %}
@@ -102,7 +101,7 @@
                 {% endif %}
                 {% if rack.get("facility_id") %} · {{ rack.get("facility_id") }}{% endif %}
             </span>
-            <strong>Ver elevación →</strong>
+            <strong>Abrir rack →</strong>
         </div>
     </a>
     {% endfor %}

@@ -25,6 +25,7 @@
             class="rack-report-button"
             href="/racks/{{ rack.get('id') }}/report.pdf?face={{ selected_face }}"
             title="Descargar elevación e inventario en PDF"
+            download
         >
             <span>⇩</span>
             Descargar reporte PDF
@@ -106,8 +107,8 @@
             <div>
                 <h3>Vista 3D estilo datacenter</h3>
                 <p>
-                    La altura y posición provienen de NetBox. Las fotografías del modelo
-                    pueden estar guardadas en NetDoc o provenir de NetBox como respaldo.
+                    Usa <strong>Detalle ampliado</strong> para que cada unidad U tenga más altura
+                    y las fotografías de switches, OLT y servidores puedan revisarse con claridad.
                 </p>
             </div>
             <div class="rack-view-controls rack-view-controls-3d">
@@ -120,8 +121,8 @@
                     <button class="topology-toggle" type="button" data-topology-face="rear">Trasera</button>
                 </div>
                 <div class="topology-toggle-group" aria-label="Escala del rack">
-                    <button class="topology-toggle active" type="button" data-topology-scale="fit">Ajustar</button>
-                    <button class="topology-toggle" type="button" data-topology-scale="detail">Detalle</button>
+                    <button class="topology-toggle active" type="button" data-topology-scale="fit">Rack completo</button>
+                    <button class="topology-toggle" type="button" data-topology-scale="detail">Detalle ampliado</button>
                 </div>
             </div>
         </div>
@@ -132,6 +133,7 @@
             data-view="isometric"
             data-face="{{ selected_face }}"
             data-scale="fit"
+            style="--rack-unit-count: {{ rack_height }};"
         >
             <div class="rack-single-topology-scene">
                 <article
@@ -178,7 +180,8 @@
                                 <img
                                     src="{{ device.get('_front_image') or device.get('_rear_image') }}"
                                     alt="Imagen del modelo {{ device.get('_model') }}"
-                                    loading="eager"
+                                    loading="lazy"
+                                    decoding="async"
                                     data-topology-device-image
                                 >
                                 {% endif %}
@@ -258,6 +261,7 @@
                             src="{{ device.get('_selected_image') }}"
                             alt="{{ selected_face | capitalize }} del modelo {{ device.get('_model') }}"
                             loading="lazy"
+                            decoding="async"
                         >
                         {% endif %}
                         <span class="rack-device-name">{{ device.get("name") or device.get("display") or "Sin nombre" }}</span>

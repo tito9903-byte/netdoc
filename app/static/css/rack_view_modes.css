@@ -88,3 +88,71 @@
         height: 450px;
     }
 }
+
+/*
+ * El gabinete conserva una medida estándar aunque aumente el ancho de la
+ * ventana. Solo la altura cambia al seleccionar Detalle ampliado.
+ */
+.rack-single-topology-scene {
+    width: 620px !important;
+    max-width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.rack-single-topology .topology-rack-frame {
+    box-sizing: border-box;
+    transition: height 220ms ease !important;
+}
+
+.rack-single-topology[data-scale="fit"] .topology-rack-frame {
+    width: 310px !important;
+    min-width: 310px !important;
+    max-width: 310px !important;
+    flex: 0 0 310px !important;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-frame {
+    width: 400px !important;
+    min-width: 400px !important;
+    max-width: 400px !important;
+    flex: 0 0 400px !important;
+}
+
+.rack-single-topology .topology-rack-card {
+    width: 540px !important;
+    min-width: 540px;
+    max-width: 540px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-card {
+    width: 580px !important;
+    min-width: 580px;
+    max-width: 580px;
+}
+
+@media (max-width: 700px) {
+    .rack-single-topology-scene,
+    .rack-single-topology .topology-rack-card,
+    .rack-single-topology[data-scale="detail"] .topology-rack-card {
+        width: 100% !important;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .rack-single-topology[data-scale="fit"] .topology-rack-frame {
+        width: 245px !important;
+        min-width: 245px !important;
+        max-width: 245px !important;
+        flex-basis: 245px !important;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 320px !important;
+        min-width: 320px !important;
+        max-width: 320px !important;
+        flex-basis: 320px !important;
+    }
+}

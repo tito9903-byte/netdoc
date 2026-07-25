@@ -184,3 +184,46 @@
         flex-direction: column;
     }
 }
+
+/*
+ * Mantiene la vista 3D con una proporción estable de gabinete de 19 pulgadas.
+ * El ancho no aumenta al ampliar la ventana; solo cambia la altura entre
+ * Rack completo y Detalle ampliado.
+ */
+.rack-single-topology[data-scale="fit"] .topology-rack-frame {
+    width: 310px !important;
+    max-width: 310px;
+    flex: 0 0 310px;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-frame {
+    width: 400px !important;
+    max-width: 400px;
+    flex: 0 0 400px;
+}
+
+.rack-single-topology .topology-rack-card {
+    width: min(100%, 540px) !important;
+    max-width: 540px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-card {
+    width: min(100%, 580px) !important;
+    max-width: 580px;
+}
+
+@media (max-width: 640px) {
+    .rack-single-topology[data-scale="fit"] .topology-rack-frame {
+        width: 245px !important;
+        max-width: 245px;
+        flex-basis: 245px;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 320px !important;
+        max-width: 320px;
+        flex-basis: 320px;
+    }
+}

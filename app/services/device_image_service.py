@@ -209,7 +209,11 @@ class DeviceImageService:
         self,
         device_type_ids: Iterable[int],
     ) -> dict[int, dict[str, dict[str, Any]]]:
-        ids = sorted({int(item) for item in device_type_ids if int(item) > 0})
+        ids = sorted({
+            item
+            for item in device_type_ids
+            if isinstance(item, int) and item > 0
+        })
         if not ids:
             return {}
 
@@ -264,6 +268,12 @@ class DeviceImageService:
                     "netdoc" if has_local else "netbox" if has_netbox else ""
                 )
                 item[f"_{face}_image_metadata"] = local.get(face)
+                if has_local and isinstance(device_type_id, int):
+                    # Mantiene compatibilidad con las plantillas y elevaciones que
+                    # ya verifican ``front_image``/``rear_image`` antes de renderizar.
+                    item[f"{face}_image"] = (
+                        f"/media/device-types/{device_type_id}/{face}"
+                    )
             decorated.append(item)
         return decorated
 

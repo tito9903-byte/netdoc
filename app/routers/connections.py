@@ -5,17 +5,17 @@ import secrets
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import (
-    HTMLResponse,
-    JSONResponse,
-    RedirectResponse,
-)
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
 from app.services.connection_service import (
     ConnectionService,
     ConnectionServiceError,
+)
+from app.services.navigation_read_service import (
+    NavigationReadError,
+    NavigationReadService,
 )
 
 
@@ -31,29 +31,22 @@ def is_authenticated(request: Request) -> bool:
     )
 
 
-def login_redirect(
-    request: Request,
-) -> RedirectResponse | None:
+def login_redirect(request: Request) -> RedirectResponse | None:
     if is_authenticated(request):
         return None
 
     next_url = request.url.path
-
     if request.url.query:
         next_url = f"{next_url}?{request.url.query}"
-
     return RedirectResponse(
         url=f"/login?{urlencode({'next': next_url})}",
         status_code=303,
     )
 
 
-def api_unauthorized(
-    request: Request,
-) -> JSONResponse | None:
+def api_unauthorized(request: Request) -> JSONResponse | None:
     if is_authenticated(request):
         return None
-
     return JSONResponse(
         status_code=401,
         content={
@@ -65,20 +58,14 @@ def api_unauthorized(
 
 def csrf_token(request: Request) -> str:
     token = request.session.get("csrf_token")
-
     if not isinstance(token, str) or not token:
         token = secrets.token_urlsafe(32)
         request.session["csrf_token"] = token
-
     return token
 
 
-def valid_csrf(
-    request: Request,
-    submitted: str,
-) -> bool:
+def valid_csrf(request: Request, submitted: str) -> bool:
     stored = request.session.get("csrf_token")
-
     return (
         isinstance(stored, str)
         and bool(stored)
@@ -86,10 +73,7 @@ def valid_csrf(
     )
 
 
-def context(
-    request: Request,
-    **extra: object,
-) -> dict[str, object]:
+def context(request: Request, **extra: object) -> dict[str, object]:
     return {
         "current_page": "connections",
         "current_user": request.session.get("username", ""),
@@ -108,13 +92,12 @@ async def render_connections(
     created_id: int | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
-    service = ConnectionService()
-
     try:
-        sites = await service.list_sites()
-        choices = await service.get_cable_choices()
-        recent_cables = await service.list_recent_cables()
-    except ConnectionServiceError as exc:
+        data = await NavigationReadService().connection_page_data()
+        sites = data["sites"]
+        choices = data["choices"]
+        recent_cables = data["recent_cables"]
+    except NavigationReadError as exc:
         sites = []
         choices = {
             "types": [],
@@ -122,7 +105,6 @@ async def render_connections(
             "length_units": [],
         }
         recent_cables = []
-
         if error is None:
             error = exc.message
 
@@ -134,8 +116,7 @@ async def render_connections(
             request,
             page_title="Conexiones",
             page_subtitle=(
-                "Creación guiada de cables entre "
-                "interfaces documentadas"
+                "Creación guiada de cables entre interfaces documentadas"
             ),
             sites=sites,
             cable_types=choices["types"],
@@ -150,38 +131,25 @@ async def render_connections(
     )
 
 
-@router.get(
-    "/connections",
-    response_class=HTMLResponse,
-)
+@router.get("/connections", response_class=HTMLResponse)
 async def connections_page(
     request: Request,
     created: int | None = None,
 ):
     redirect = login_redirect(request)
-
     if redirect:
         return redirect
-
-    return await render_connections(
-        request,
-        created_id=created,
-    )
+    return await render_connections(request, created_id=created)
 
 
 @router.get("/api/connections/devices")
-async def connection_devices(
-    request: Request,
-    site_id: int,
-):
+async def connection_devices(request: Request, site_id: int):
     unauthorized = api_unauthorized(request)
-
     if unauthorized:
         return unauthorized
 
     try:
         devices = await ConnectionService().list_devices(site_id)
-
         return {
             "ok": True,
             "results": [
@@ -200,7 +168,6 @@ async def connection_devices(
                 for device in devices
             ],
         }
-
     except ConnectionServiceError as exc:
         return JSONResponse(
             status_code=503,
@@ -212,25 +179,17 @@ async def connection_devices(
 
 
 @router.get("/api/connections/interfaces")
-async def connection_interfaces(
-    request: Request,
-    device_id: int,
-):
+async def connection_interfaces(request: Request, device_id: int):
     unauthorized = api_unauthorized(request)
-
     if unauthorized:
         return unauthorized
 
     try:
-        interfaces = (
-            await ConnectionService().list_free_interfaces(device_id)
-        )
-
+        interfaces = await ConnectionService().list_free_interfaces(device_id)
         return {
             "ok": True,
             "results": interfaces,
         }
-
     except ConnectionServiceError as exc:
         return JSONResponse(
             status_code=503,
@@ -241,10 +200,7 @@ async def connection_interfaces(
         )
 
 
-@router.post(
-    "/connections",
-    response_class=HTMLResponse,
-)
+@router.post("/connections", response_class=HTMLResponse)
 async def create_connection(
     request: Request,
     csrf: str = Form(...),
@@ -259,7 +215,6 @@ async def create_connection(
     description: str = Form(""),
 ):
     redirect = login_redirect(request)
-
     if redirect:
         return redirect
 
@@ -300,15 +255,12 @@ async def create_connection(
     if interface_a_id == interface_b_id:
         return await render_connections(
             request,
-            error=(
-                "No puedes conectar una interfaz consigo misma."
-            ),
+            error="No puedes conectar una interfaz consigo misma.",
             form_data=form_data,
             status_code=400,
         )
 
     parsed_length: Decimal | None = None
-
     if length.strip():
         try:
             parsed_length = Decimal(length.strip())
@@ -329,7 +281,6 @@ async def create_connection(
             )
 
     service = ConnectionService()
-
     try:
         interface_a = await service.get_interface(interface_a_id)
         interface_b = await service.get_interface(interface_b_id)
@@ -338,7 +289,6 @@ async def create_connection(
             raise ConnectionServiceError(
                 "La interfaz del extremo A ya está conectada."
             )
-
         if service.interface_is_connected(interface_b):
             raise ConnectionServiceError(
                 "La interfaz del extremo B ya está conectada."
@@ -358,21 +308,17 @@ async def create_connection(
                 request.session.get("username", "desconocido")
             ),
         )
-
     except ConnectionServiceError as exc:
         return await render_connections(
             request,
             error=exc.message,
             form_data=form_data,
             status_code=(
-                400
-                if exc.status_code in (400, 409)
-                else 503
+                400 if exc.status_code in (400, 409) else 503
             ),
         )
 
     cable_id = created.get("id")
-
     if not isinstance(cable_id, int):
         return await render_connections(
             request,

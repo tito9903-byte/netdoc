@@ -8,11 +8,12 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import get_settings
 from app.core.database import Base
 from app.models import access as _access_models
+from app.models import device_media as _device_media_models
 
 
 config = context.config
 settings = get_settings()
-_ = _access_models
+_ = (_access_models, _device_media_models)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

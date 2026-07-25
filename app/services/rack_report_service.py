@@ -8,14 +8,22 @@ from typing import Any, Iterable
 
 PAGE_WIDTH = 841.89
 PAGE_HEIGHT = 595.28
-MARGIN = 34.0
-CYAN = (0.08, 0.66, 0.72)
-DARK = (0.07, 0.11, 0.15)
-SLATE = (0.14, 0.20, 0.25)
-MUTED = (0.40, 0.48, 0.54)
-LIGHT = (0.94, 0.97, 0.98)
-RED = (0.78, 0.20, 0.25)
-GREEN = (0.12, 0.55, 0.32)
+MARGIN = 32.0
+
+BG = (0.025, 0.047, 0.063)
+BG_SOFT = (0.043, 0.078, 0.098)
+PANEL = (0.055, 0.105, 0.132)
+PANEL_ALT = (0.070, 0.128, 0.155)
+FRAME = (0.120, 0.190, 0.225)
+FRAME_LIGHT = (0.285, 0.370, 0.405)
+CYAN = (0.090, 0.750, 0.790)
+CYAN_SOFT = (0.080, 0.330, 0.360)
+TEXT = (0.930, 0.970, 0.980)
+MUTED = (0.530, 0.650, 0.700)
+GRID = (0.100, 0.170, 0.205)
+RED = (0.920, 0.310, 0.350)
+GREEN = (0.260, 0.860, 0.580)
+BLACK = (0.008, 0.015, 0.020)
 
 
 class RackReportError(RuntimeError):
@@ -37,8 +45,7 @@ def _label(value: Any, fallback: str = "-") -> str:
 
 
 def _clean_text(value: Any) -> str:
-    text = str(value or "-")
-    return " ".join(text.replace("\r", " ").replace("\n", " ").split())
+    return " ".join(str(value or "-").replace("\r", " ").replace("\n", " ").split())
 
 
 def _pdf_string(value: Any) -> bytes:
@@ -46,18 +53,6 @@ def _pdf_string(value: Any) -> bytes:
     raw = raw.replace(b"\\", b"\\\\")
     raw = raw.replace(b"(", b"\\(").replace(b")", b"\\)")
     return b"(" + raw + b")"
-
-
-def _fmt_number(value: Any, default: str = "-") -> str:
-    if value in (None, ""):
-        return default
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return _clean_text(value)
-    if number.is_integer():
-        return str(int(number))
-    return f"{number:.1f}".rstrip("0").rstrip(".")
 
 
 def _face_label(value: Any) -> str:
@@ -111,6 +106,22 @@ class _Canvas:
     def line(self, x1: float, y1: float, x2: float, y2: float) -> None:
         self.command(f"{x1:.2f} {y1:.2f} m {x2:.2f} {y2:.2f} l S")
 
+    def polygon(
+        self,
+        points: list[tuple[float, float]],
+        *,
+        fill: bool = True,
+        stroke: bool = True,
+    ) -> None:
+        if len(points) < 3:
+            return
+        first_x, first_y = points[0]
+        self.command(f"{first_x:.2f} {first_y:.2f} m")
+        for x, y in points[1:]:
+            self.command(f"{x:.2f} {y:.2f} l")
+        operator = "b" if fill and stroke else "f" if fill else "s"
+        self.command(f"h {operator}")
+
     def text(
         self,
         x: float,
@@ -119,12 +130,16 @@ class _Canvas:
         *,
         size: float = 9,
         bold: bool = False,
-        color: tuple[float, float, float] = DARK,
+        color: tuple[float, float, float] = TEXT,
     ) -> None:
         self.set_fill(color)
         font = "F2" if bold else "F1"
         self.command(b"BT /" + font.encode("ascii") + f" {size:.2f} Tf ".encode("ascii"))
-        self.command(f"1 0 0 1 {x:.2f} {y:.2f} Tm ".encode("ascii") + _pdf_string(value) + b" Tj ET")
+        self.command(
+            f"1 0 0 1 {x:.2f} {y:.2f} Tm ".encode("ascii")
+            + _pdf_string(value)
+            + b" Tj ET"
+        )
 
     def wrapped_text(
         self,
@@ -137,7 +152,7 @@ class _Canvas:
         leading: float | None = None,
         max_lines: int = 3,
         bold: bool = False,
-        color: tuple[float, float, float] = DARK,
+        color: tuple[float, float, float] = TEXT,
     ) -> float:
         words = _clean_text(value).split()
         if not words:
@@ -157,13 +172,11 @@ class _Canvas:
                 break
         if current and len(lines) < max_lines:
             lines.append(current)
-        if len(lines) == max_lines and words:
-            consumed = " ".join(lines)
-            original = " ".join(words)
-            if consumed != original:
-                lines[-1] = lines[-1][: max(1, char_limit - 1)].rstrip() + "…"
-        line_height = leading or size * 1.25
+        original = " ".join(words)
+        if len(lines) == max_lines and " ".join(lines) != original:
+            lines[-1] = lines[-1][: max(1, char_limit - 3)].rstrip() + "..."
         cursor = y
+        line_height = leading or size * 1.25
         for line in lines:
             self.text(x, cursor, line, size=size, bold=bold, color=color)
             cursor -= line_height
@@ -185,10 +198,26 @@ def _inventory_rows(elevation: dict[str, Any]) -> list[dict[str, Any]]:
         for item in elevation.get("zero_u_devices", [])
     )
     rows.extend(
-        dict(item, _inventory_state="Sin posición")
+        dict(item, _inventory_state="Sin posicion")
         for item in elevation.get("unpositioned_devices", [])
     )
     return rows
+
+
+def _page_background(canvas: _Canvas) -> None:
+    canvas.set_fill(BG)
+    canvas.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=True, stroke=False)
+
+    canvas.set_stroke(GRID)
+    canvas.line_width(0.35)
+    floor_top = 112.0
+    for x in range(-120, 980, 38):
+        canvas.line(PAGE_WIDTH / 2, floor_top, float(x), 0)
+    for y in range(0, 112, 18):
+        canvas.line(0, float(y), PAGE_WIDTH, float(y))
+
+    canvas.set_fill((0.025, 0.065, 0.082))
+    canvas.rect(0, floor_top, PAGE_WIDTH, PAGE_HEIGHT - floor_top, fill=True, stroke=False)
 
 
 def _draw_page_header(
@@ -198,21 +227,28 @@ def _draw_page_header(
     subtitle: str,
     page_number: int,
 ) -> None:
-    canvas.set_fill(DARK)
-    canvas.rect(0, PAGE_HEIGHT - 68, PAGE_WIDTH, 68, fill=True, stroke=False)
+    canvas.set_fill(BG_SOFT)
+    canvas.set_stroke(FRAME)
+    canvas.line_width(0.8)
+    canvas.rect(0, PAGE_HEIGHT - 70, PAGE_WIDTH, 70, fill=True, stroke=True)
+
     canvas.set_fill(CYAN)
-    canvas.rect(MARGIN, PAGE_HEIGHT - 48, 8, 28, fill=True, stroke=False)
-    canvas.text(MARGIN + 18, PAGE_HEIGHT - 32, title, size=18, bold=True, color=LIGHT)
-    canvas.text(MARGIN + 18, PAGE_HEIGHT - 49, subtitle, size=8.5, color=(0.67, 0.76, 0.81))
-    canvas.text(PAGE_WIDTH - 90, PAGE_HEIGHT - 42, f"Página {page_number}", size=8, color=(0.67, 0.76, 0.81))
+    canvas.rect(MARGIN, PAGE_HEIGHT - 51, 8, 31, fill=True, stroke=False)
+    canvas.text(MARGIN + 19, PAGE_HEIGHT - 32, title, size=18, bold=True, color=TEXT)
+    canvas.text(MARGIN + 19, PAGE_HEIGHT - 50, subtitle, size=8.5, color=MUTED)
+
+    canvas.set_fill(PANEL)
+    canvas.set_stroke(CYAN_SOFT)
+    canvas.rect(PAGE_WIDTH - 104, PAGE_HEIGHT - 52, 70, 28, fill=True, stroke=True)
+    canvas.text(PAGE_WIDTH - 91, PAGE_HEIGHT - 41, f"Pagina {page_number}", size=8, bold=True, color=CYAN)
 
 
 def _draw_footer(canvas: _Canvas, generated_at: str) -> None:
-    canvas.set_stroke((0.78, 0.82, 0.85))
+    canvas.set_stroke(FRAME)
     canvas.line_width(0.5)
     canvas.line(MARGIN, 24, PAGE_WIDTH - MARGIN, 24)
-    canvas.text(MARGIN, 11, "NetDoc - Reporte de inventario físico", size=7, color=MUTED)
-    canvas.text(PAGE_WIDTH - 235, 11, f"Generado: {generated_at} UTC", size=7, color=MUTED)
+    canvas.text(MARGIN, 10, "NetDoc - Inventario fisico de datacenter", size=7, color=MUTED)
+    canvas.text(PAGE_WIDTH - 225, 10, f"Generado: {generated_at} UTC", size=7, color=MUTED)
 
 
 def _draw_summary_card(
@@ -223,15 +259,17 @@ def _draw_summary_card(
     label: str,
     value: str,
 ) -> None:
-    canvas.set_fill((0.96, 0.98, 0.99))
-    canvas.set_stroke((0.80, 0.86, 0.88))
+    canvas.set_fill(PANEL)
+    canvas.set_stroke(FRAME)
     canvas.line_width(0.7)
-    canvas.rect(x, y, width, 45, fill=True, stroke=True)
-    canvas.text(x + 10, y + 28, label, size=7.5, color=MUTED)
-    canvas.text(x + 10, y + 10, value, size=14, bold=True, color=DARK)
+    canvas.rect(x, y, width, 46, fill=True, stroke=True)
+    canvas.set_fill(CYAN)
+    canvas.rect(x, y, 4, 46, fill=True, stroke=False)
+    canvas.text(x + 13, y + 28, label, size=7.2, color=MUTED)
+    canvas.text(x + 13, y + 10, value, size=14, bold=True, color=TEXT)
 
 
-def _draw_rack_elevation(
+def _draw_datacenter_rack(
     canvas: _Canvas,
     *,
     x: float,
@@ -242,69 +280,93 @@ def _draw_rack_elevation(
     devices: Iterable[dict[str, Any]],
     face: str,
 ) -> None:
-    side_depth = 18.0
-    frame = 10.0
-    canvas.set_fill((0.07, 0.10, 0.13))
-    canvas.set_stroke((0.18, 0.25, 0.30))
-    canvas.line_width(1.2)
+    depth = 22.0
+    frame = 12.0
+
+    canvas.set_fill((0.035, 0.065, 0.080))
+    canvas.set_stroke(FRAME_LIGHT)
+    canvas.line_width(1.0)
+    canvas.polygon(
+        [
+            (x + width, y + 8),
+            (x + width + depth, y + 21),
+            (x + width + depth, y + height + 6),
+            (x + width, y + height),
+        ],
+        fill=True,
+        stroke=True,
+    )
+
+    canvas.set_fill((0.075, 0.125, 0.150))
+    canvas.set_stroke(FRAME_LIGHT)
+    canvas.line_width(1.3)
     canvas.rect(x, y, width, height, fill=True, stroke=True)
-    canvas.set_fill((0.13, 0.19, 0.23))
-    canvas.rect(x + width, y + 8, side_depth, height - 8, fill=True, stroke=True)
-    canvas.set_fill((0.02, 0.04, 0.05))
+
+    canvas.set_fill(BLACK)
     inner_x = x + frame
     inner_y = y + frame
     inner_width = width - frame * 2
     inner_height = height - frame * 2
     canvas.rect(inner_x, inner_y, inner_width, inner_height, fill=True, stroke=False)
 
+    canvas.set_fill(FRAME_LIGHT)
+    for rail_x in (inner_x + 4, inner_x + inner_width - 8):
+        canvas.rect(rail_x, inner_y, 4, inner_height, fill=True, stroke=False)
+
+    canvas.set_stroke((0.080, 0.135, 0.160))
+    canvas.line_width(0.35)
     rack_units = max(1, rack_height)
     unit_height = inner_height / rack_units
-    canvas.set_stroke((0.13, 0.18, 0.21))
-    canvas.line_width(0.35)
     for unit in range(1, rack_units):
-        line_y = inner_y + unit * unit_height
-        canvas.line(inner_x, line_y, inner_x + inner_width, line_y)
-    canvas.text(x, y + height + 9, f"Elevación {face}", size=8.5, bold=True, color=DARK)
+        unit_y = inner_y + unit * unit_height
+        canvas.line(inner_x + 9, unit_y, inner_x + inner_width - 9, unit_y)
 
+    canvas.text(x, y + height + 11, f"Elevacion {face}", size=8.5, bold=True, color=CYAN)
     for unit in range(rack_units, 0, -2):
         top_from_bottom = unit * unit_height
-        canvas.text(x - 23, inner_y + top_from_bottom - 3, f"U{unit}", size=5.8, color=MUTED)
+        canvas.text(x - 25, inner_y + top_from_bottom - 3, f"U{unit}", size=5.8, color=MUTED)
 
     for device in devices:
         top = float(device.get("_top_percent") or 0) / 100.0
         percentage_height = float(device.get("_height_percent") or 0) / 100.0
-        device_height = max(2.6, percentage_height * inner_height)
+        device_height = max(3.2, percentage_height * inner_height)
         device_y = inner_y + inner_height - (top * inner_height) - device_height
         conflict = bool(device.get("_has_conflict"))
-        canvas.set_fill((0.34, 0.10, 0.13) if conflict else (0.08, 0.35, 0.39))
+
+        canvas.set_fill((0.360, 0.090, 0.115) if conflict else (0.045, 0.190, 0.220))
         canvas.set_stroke(RED if conflict else CYAN)
-        canvas.line_width(0.7)
+        canvas.line_width(0.75)
         canvas.rect(
-            inner_x + 3,
+            inner_x + 11,
             device_y + 0.7,
-            inner_width - 6,
-            max(1.5, device_height - 1.4),
+            inner_width - 22,
+            max(1.8, device_height - 1.4),
             fill=True,
             stroke=True,
         )
-        if device_height >= 10:
+
+        canvas.set_fill(GREEN)
+        canvas.rect(inner_x + 14, device_y + max(1.5, device_height / 2 - 1.5), 3, 3, fill=True, stroke=False)
+
+        if device_height >= 11:
             canvas.wrapped_text(
-                inner_x + 7,
+                inner_x + 23,
                 device_y + device_height / 2 + 1,
                 device.get("name") or device.get("display") or "Equipo",
-                width=inner_width - 28,
-                size=6.3,
+                width=inner_width - 54,
+                size=6.2,
                 max_lines=1,
                 bold=True,
-                color=LIGHT,
+                color=TEXT,
             )
-        if device.get("_has_image"):
-            canvas.set_fill(GREEN)
-            canvas.rect(inner_x + inner_width - 12, device_y + max(2, device_height / 2 - 2), 4, 4, fill=True, stroke=False)
 
-    canvas.set_fill((0.17, 0.23, 0.27))
-    canvas.rect(x + 13, y - 7, 18, 7, fill=True, stroke=False)
-    canvas.rect(x + width - 31, y - 7, 18, 7, fill=True, stroke=False)
+        if device.get("_has_image"):
+            canvas.set_fill(CYAN)
+            canvas.rect(inner_x + inner_width - 19, device_y + max(1.5, device_height / 2 - 1.5), 3, 3, fill=True, stroke=False)
+
+    canvas.set_fill(FRAME)
+    canvas.rect(x + 18, y - 8, 20, 8, fill=True, stroke=False)
+    canvas.rect(x + width - 38, y - 8, 20, 8, fill=True, stroke=False)
 
 
 def _draw_first_page(
@@ -315,61 +377,70 @@ def _draw_first_page(
     generated_at: str,
 ) -> bytes:
     canvas = _Canvas([])
+    _page_background(canvas)
+
     rack_name = _clean_text(rack.get("name") or rack.get("display") or "Rack")
     site = _label(rack.get("site"), "Sin sitio")
-    location = _label(rack.get("location"), "Sin ubicación")
+    location = _label(rack.get("location"), "Sin ubicacion")
     _draw_page_header(
         canvas,
         title=f"Rack {rack_name}",
-        subtitle=f"Inventario físico - {site} - {location}",
+        subtitle=f"Reporte datacenter - {site} - {location}",
         page_number=1,
     )
 
-    card_y = PAGE_HEIGHT - 126
+    card_y = PAGE_HEIGHT - 128
     card_width = 145
     cards = [
         ("Altura", f"{elevation.get('rack_height', 0)}U"),
         ("Ocupadas", f"{elevation.get('used_units_label', '0')}U"),
         ("Libres", f"{elevation.get('free_units_label', '0')}U"),
-        ("Utilización", f"{elevation.get('utilization', 0)}%"),
+        ("Utilizacion", f"{elevation.get('utilization', 0)}%"),
         ("Equipos", str(len(_inventory_rows(elevation)))),
     ]
     for index, (label, value) in enumerate(cards):
-        _draw_summary_card(canvas, MARGIN + index * (card_width + 10), card_y, card_width, label, value)
+        _draw_summary_card(
+            canvas,
+            MARGIN + index * (card_width + 10),
+            card_y,
+            card_width,
+            label,
+            value,
+        )
 
-    rack_x = 82
-    rack_y = 72
-    rack_width = 225
-    rack_visual_height = 335
-    visible = elevation.get("visible_devices", [])
-    _draw_rack_elevation(
+    rack_x = 78
+    rack_y = 65
+    rack_width = 236
+    rack_visual_height = 342
+    _draw_datacenter_rack(
         canvas,
         x=rack_x,
         y=rack_y,
         width=rack_width,
         height=rack_visual_height,
         rack_height=int(elevation.get("rack_height") or 42),
-        devices=visible,
+        devices=elevation.get("visible_devices", []),
         face="frontal" if face == "front" else "trasera",
     )
 
-    info_x = 365
-    info_y = 389
-    canvas.text(info_x, info_y, "Información del rack", size=13, bold=True, color=DARK)
+    info_x = 374
+    info_y = 392
+    canvas.text(info_x, info_y, "Informacion del rack", size=13, bold=True, color=TEXT)
     info = [
         ("Sitio", site),
-        ("Ubicación", location),
+        ("Ubicacion", location),
         ("Estado", _label(rack.get("status"), "Sin estado")),
         ("Ancho", _label(rack.get("width"), "-")),
         ("Serial", rack.get("serial") or "-"),
         ("Etiqueta de activo", rack.get("asset_tag") or "-"),
-        ("Numeración", "Descendente" if elevation.get("descending_units") else "Ascendente"),
+        ("Numeracion", "Descendente" if elevation.get("descending_units") else "Ascendente"),
         ("Cara del reporte", "Frontal" if face == "front" else "Trasera"),
     ]
+
     cursor = info_y - 24
-    for label, value in info:
-        canvas.set_fill((0.96, 0.98, 0.99))
-        canvas.set_stroke((0.84, 0.88, 0.90))
+    for index, (label, value) in enumerate(info):
+        canvas.set_fill(PANEL if index % 2 == 0 else PANEL_ALT)
+        canvas.set_stroke(FRAME)
         canvas.rect(info_x, cursor - 12, 405, 27, fill=True, stroke=True)
         canvas.text(info_x + 10, cursor - 1, label, size=7.2, color=MUTED)
         canvas.wrapped_text(
@@ -380,30 +451,26 @@ def _draw_first_page(
             size=8.2,
             max_lines=1,
             bold=True,
-            color=DARK,
+            color=TEXT,
         )
         cursor -= 31
 
-    canvas.text(info_x, 119, "Lectura del reporte", size=10, bold=True, color=DARK)
+    canvas.set_fill(PANEL)
+    canvas.set_stroke(FRAME)
+    canvas.rect(info_x, 65, 405, 87, fill=True, stroke=True)
+    canvas.text(info_x + 12, 134, "Lectura del reporte", size=10, bold=True, color=CYAN)
     notes = [
-        "La posición y la altura provienen del inventario de NetBox.",
-        "El punto verde indica que el modelo tiene una imagen documentada.",
-        "Los equipos con conflicto se presentan en rojo.",
-        "Los equipos de 0U y sin posición aparecen en el inventario de las páginas siguientes.",
+        "La posicion y la altura provienen del inventario de NetBox.",
+        "El punto cian indica que el modelo tiene una fotografia documentada.",
+        "Los equipos con conflicto fisico se presentan en rojo.",
+        "Los equipos de 0U o sin posicion aparecen en las paginas de inventario.",
     ]
-    cursor = 101
+    note_y = 117
     for note in notes:
         canvas.set_fill(CYAN)
-        canvas.rect(info_x, cursor - 2, 4, 4, fill=True, stroke=False)
-        cursor = canvas.wrapped_text(
-            info_x + 12,
-            cursor,
-            note,
-            width=385,
-            size=7.5,
-            max_lines=2,
-            color=MUTED,
-        ) - 4
+        canvas.rect(info_x + 12, note_y - 2, 4, 4, fill=True, stroke=False)
+        canvas.text(info_x + 25, note_y - 4, note, size=7.2, color=MUTED)
+        note_y -= 16
 
     _draw_footer(canvas, generated_at)
     return canvas.stream()
@@ -413,7 +480,7 @@ def _fit_cell(value: Any, maximum: int) -> str:
     text = _clean_text(value)
     if len(text) <= maximum:
         return text
-    return text[: max(1, maximum - 1)].rstrip() + "…"
+    return text[: max(1, maximum - 3)].rstrip() + "..."
 
 
 def _draw_inventory_page(
@@ -425,10 +492,11 @@ def _draw_inventory_page(
     start_index: int,
 ) -> bytes:
     canvas = _Canvas([])
+    _page_background(canvas)
     _draw_page_header(
         canvas,
         title=f"Rack {rack_name}",
-        subtitle="Listado de equipos e inventario físico",
+        subtitle="Inventario fisico de equipos",
         page_number=page_number,
     )
 
@@ -436,7 +504,7 @@ def _draw_inventory_page(
         ("#", 24),
         ("Equipo", 125),
         ("Modelo", 118),
-        ("Posición", 70),
+        ("Posicion", 70),
         ("Altura", 48),
         ("Cara", 58),
         ("Estado", 75),
@@ -447,29 +515,30 @@ def _draw_inventory_page(
     table_x = MARGIN
     table_top = PAGE_HEIGHT - 91
     row_height = 25
-    header_height = 27
+    header_height = 28
     total_width = sum(width for _, width in columns)
 
-    canvas.set_fill(SLATE)
-    canvas.set_stroke(SLATE)
+    canvas.set_fill((0.070, 0.145, 0.170))
+    canvas.set_stroke(CYAN_SOFT)
     canvas.rect(table_x, table_top - header_height, total_width, header_height, fill=True, stroke=True)
     x = table_x
     for label, width in columns:
-        canvas.text(x + 5, table_top - 18, label, size=7.2, bold=True, color=LIGHT)
+        canvas.text(x + 5, table_top - 18, label, size=7.2, bold=True, color=TEXT)
         x += width
 
     y = table_top - header_height
     for row_offset, device in enumerate(rows):
         row_index = start_index + row_offset + 1
         y -= row_height
-        canvas.set_fill((0.98, 0.99, 1.0) if row_index % 2 else (0.94, 0.97, 0.98))
-        canvas.set_stroke((0.82, 0.87, 0.89))
+        canvas.set_fill(PANEL if row_index % 2 else PANEL_ALT)
+        canvas.set_stroke(FRAME)
         canvas.line_width(0.4)
         canvas.rect(table_x, y, total_width, row_height, fill=True, stroke=True)
+
         position = (
             device.get("_position_label")
             or device.get("_inventory_state")
-            or "Sin posición"
+            or "Sin posicion"
         )
         values = [
             str(row_index),
@@ -481,15 +550,21 @@ def _draw_inventory_page(
             _fit_cell(device.get("_status"), 12),
             _fit_cell(device.get("serial") or "-", 16),
             _fit_cell(device.get("asset_tag") or "-", 14),
-            "Sí" if device.get("_has_image") else "No",
+            "Si" if device.get("_has_image") else "No",
         ]
         x = table_x
         for value, (_, width) in zip(values, columns):
-            canvas.text(x + 5, y + 9, value, size=6.7, color=DARK)
+            canvas.text(x + 5, y + 9, value, size=6.7, color=TEXT)
             x += width
 
     if not rows:
-        canvas.text(table_x + 10, table_top - 60, "No hay equipos asociados a este rack.", size=10, color=MUTED)
+        canvas.text(
+            table_x + 10,
+            table_top - 60,
+            "No hay equipos asociados a este rack.",
+            size=10,
+            color=MUTED,
+        )
 
     _draw_footer(canvas, generated_at)
     return canvas.stream()
@@ -516,7 +591,11 @@ def _assemble_pdf(page_streams: list[bytes], *, title: str) -> bytes:
 
     for stream in page_streams:
         content_object = add_object(
-            b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"endstream"
+            b"<< /Length "
+            + str(len(stream)).encode("ascii")
+            + b" >>\nstream\n"
+            + stream
+            + b"endstream"
         )
         page_object = add_object(
             (
@@ -596,6 +675,6 @@ def build_rack_report(
             )
         )
 
-    pdf = _assemble_pdf(pages, title=f"Rack {rack_name} - Inventario")
+    pdf = _assemble_pdf(pages, title=f"Rack {rack_name} - Inventario datacenter")
     filename = f"rack-{_safe_filename(rack_name)}-inventario.pdf"
     return pdf, filename

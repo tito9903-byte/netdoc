@@ -12,6 +12,9 @@ sustituye al código versionado. Actualice primero la fuente oficial indicada.
 | [SECURITY](SECURITY.md) | Reglas de seguridad | Todo el equipo | Seguridad |
 | [ROADMAP](ROADMAP.md) | Trabajo futuro | Producto | Planificación |
 | [NETBOX_INTEGRATION](NETBOX_INTEGRATION.md) | Integración | Desarrollo | Integración |
+| [NETBOX_WRITE_SAFETY](NETBOX_WRITE_SAFETY.md) | Planes, permisos y escrituras seguras | Desarrollo, seguridad y operación | Límite de escritura |
+| [NETBOX_MODULE_COVERAGE](NETBOX_MODULE_COVERAGE.md) | Cobertura actual y futura de módulos | Producto y desarrollo | Mapa funcional |
+| [AI_ASSISTANT_ARCHITECTURE](AI_ASSISTANT_ARCHITECTURE.md) | Asistente conversacional y ejecución guiada | Producto, desarrollo y seguridad | Arquitectura de IA |
 | [RACKS_AND_DEVICE_IMAGES](RACKS_AND_DEVICE_IMAGES.md) | Racks 2D/3D, alturas e imágenes | Producto, operación y desarrollo | Flujo físico |
 | [TESTING](TESTING.md) | Estrategia de pruebas | Desarrollo | Pruebas |
 | [GLOSSARY](GLOSSARY.md) | Vocabulario | Todo el equipo | Terminología |
@@ -19,9 +22,10 @@ sustituye al código versionado. Actualice primero la fuente oficial indicada.
 | [AI handoff](AI_HANDOFF_PROMPT.md) | Transferencia de contexto | Agentes IA | Handoff |
 
 **Lectura recomendada:** nuevos desarrolladores: `AGENTS.md`, estado,
-arquitectura, seguridad, contribución y ADR; operación: despliegue, operaciones,
-racks e imágenes y seguridad; agentes IA: el prompt maestro completo y los
-documentos que ordena.
+arquitectura, seguridad, escritura segura, contribución y ADR; operación:
+despliegue, operaciones, racks e imágenes y seguridad; producto: cobertura de
+módulos y arquitectura del asistente; agentes IA: el prompt maestro completo y
+los documentos que ordena.
 
 Mantenga enlaces relativos, español claro, sin secretos ni resultados no
 verificados. Actualice la fuente oficial junto al cambio y enlace los resúmenes;
@@ -33,11 +37,14 @@ evite duplicar datos que puedan divergir.
 2. ADR: decisiones de arquitectura.
 3. `PROJECT_STATUS.md`: estado y prioridades.
 4. `ROADMAP.md`: trabajo futuro.
-5. `AI_HANDOFF_PROMPT.md`: transferencia de contexto.
-6. `DEPLOYMENT.md`: despliegue.
-7. `OPERATIONS.md`: operación rutinaria.
-8. `SECURITY.md`: reglas de seguridad.
-9. `CONTRIBUTING.md`: desarrollo y colaboración.
+5. `NETBOX_WRITE_SAFETY.md`: reglas del límite de escritura.
+6. `NETBOX_MODULE_COVERAGE.md`: alcance funcional.
+7. `AI_ASSISTANT_ARCHITECTURE.md`: diseño conversacional.
+8. `AI_HANDOFF_PROMPT.md`: transferencia de contexto.
+9. `DEPLOYMENT.md`: despliegue.
+10. `OPERATIONS.md`: operación rutinaria.
+11. `SECURITY.md`: reglas de seguridad.
+12. `CONTRIBUTING.md`: desarrollo y colaboración.
 
 Cuando cambie un dato, actualice primero su fuente oficial y solo después sus
 resúmenes o enlaces.

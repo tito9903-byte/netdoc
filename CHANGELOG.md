@@ -40,8 +40,14 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Catálogo de modelos de dispositivo y consulta de plantillas de interfaz.
 - Generación masiva de hasta 256 interfaces a partir de patrones con vista previa interactiva.
 - Creación guiada de modelos de dispositivo protegida por permiso, CSRF y modo de escritura.
+- Carga opcional de imágenes frontal y trasera en el mismo formulario de creación del modelo.
+- Galería posterior para sustituir imágenes del modelo sin recrear sus plantillas.
+- Proxy autenticado para mostrar imágenes privadas de NetBox sin exponer el token.
+- Vista 3D integrada en el detalle del rack con selector 2D/3D y cambio de cara.
+- Ocupación de rack basada en `u_height`, incluida media unidad, equipos 0U y detección de conflictos.
 - Creación guiada de racks con sitio, ubicación, capacidad, ancho, numeración, estado, rol e identificadores físicos.
-- Pruebas para patrones de interfaces, normalización de slug y capacidad/localidad IPAM.
+- Pruebas para patrones de interfaces, normalización de slug, capacidad/localidad IPAM, imágenes y presentación física de racks.
+- Guía versionada para modelos, imágenes y vistas físicas de racks.
 
 ### Changed
 
@@ -55,9 +61,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La desactivación de una cuenta y los cambios de permisos se aplican en la siguiente solicitud.
 - La inicialización del esquema deja de depender de `create_all` y utiliza Alembic durante el arranque.
 - La navegación se reorganiza alrededor de flujos de documentación y separa General, Documentación, Acciones rápidas y Administración.
+- Topología 3D deja de ocupar una opción independiente del menú y pasa a seleccionarse dentro de cada rack.
 - El dashboard funciona como centro de inicio para IPAM, modelos, racks y conexiones.
 - La búsqueda global ofrece accesos directos a los flujos principales cuando no existe una consulta.
 - La pantalla de creación de equipo explica la relación entre modelo, interfaces, ubicación y elevación.
+- El formulario de creación del modelo reúne dimensiones e imágenes físicas en una sola operación.
 - El listado de racks deja de presentar ocupación `0.0%` cuando NetBox no devuelve un valor calculado.
 - El ancho de rack se renderiza correctamente cuando la API devuelve una opción estructurada.
 - La pantalla de conexiones diferencia claramente modo de escritura y vista previa de solo lectura.
@@ -78,6 +86,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Exportación CSV protegida contra fórmulas de hoja de cálculo y limitada a 10,000 eventos.
 - El módulo Sistema usa únicamente lecturas no privilegiadas y no ejecuta comandos de administración.
 - El arranque falla ante esquemas locales parciales en lugar de crear silenciosamente tablas faltantes.
-- Las creaciones de modelos, interfaces y racks requieren autenticación, autorización, CSRF y escritura habilitada.
+- Las creaciones de modelos, interfaces, imágenes y racks requieren autenticación, autorización, CSRF y escritura habilitada.
+- Los archivos de imagen se validan por tipo y tamaño antes de crear o actualizar el modelo.
 - Desarrollo conserva los botones de escritura deshabilitados y muestra el modo de solo lectura de forma explícita.
 - El menú móvil mantiene `aria-expanded`, admite cierre con Escape y devuelve el foco al control de apertura.

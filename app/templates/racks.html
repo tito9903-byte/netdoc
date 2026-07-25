@@ -4,46 +4,49 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/racks.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}">
 {% endblock %}
 
 {% block content %}
+<section class="workflow-intro">
+    <div>
+        <span class="eyebrow">Infraestructura física</span>
+        <h2>Ubica cada equipo y revisa la capacidad real del rack</h2>
+        <p>
+            La ocupación se calcula con la posición, cara y altura U del modelo.
+            Los equipos de 0U se mantienen asociados sin consumir espacio vertical.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/device-types">Preparar modelos</a>
+        <a class="button secondary" href="/topology">Topología 3D</a>
+        {% if "devices.create" in current_permissions %}
+        <a class="button secondary" href="/racks/actions/new">Crear rack</a>
+        <a class="button primary" href="/devices/actions/new">Ubicar un equipo</a>
+        {% endif %}
+    </div>
+</section>
+
 <section class="rack-toolbar">
     <form method="get" action="/racks" class="rack-filters">
         <div class="rack-filter search">
             <label for="rack-search">Buscar rack</label>
-            <input
-                id="rack-search"
-                name="q"
-                type="search"
-                value="{{ query }}"
-                placeholder="Nombre, ubicación, etiqueta..."
-            >
+            <input id="rack-search" name="q" type="search" value="{{ query }}" placeholder="Nombre, ubicación, etiqueta...">
         </div>
-
         <div class="rack-filter">
             <label for="rack-site">Sitio</label>
             <select id="rack-site" name="site_id">
                 <option value="">Todos los sitios</option>
-
                 {% for site in sites %}
-                <option
-                    value="{{ site.get('id') }}"
-                    {% if selected_site_id == site.get('id') %}selected{% endif %}
-                >
+                <option value="{{ site.get('id') }}" {% if selected_site_id == site.get('id') %}selected{% endif %}>
                     {{ site.get("display") or site.get("name") or "Sin nombre" }}
                 </option>
                 {% endfor %}
             </select>
         </div>
-
         <div class="rack-filter-actions">
-            <button type="submit" class="rack-primary-button">
-                Buscar
-            </button>
-
-            <a href="/racks" class="rack-secondary-button">
-                Limpiar
-            </a>
+            <button type="submit" class="rack-primary-button">Buscar</button>
+            <a href="/racks" class="rack-secondary-button">Limpiar</a>
         </div>
     </form>
 </section>
@@ -51,71 +54,54 @@
 <section class="rack-list-header">
     <div>
         <h2>Inventario de racks</h2>
-        <p>{{ racks | length }} bastidores encontrados</p>
+        <p>{{ racks | length }} bastidores con ocupación calculada</p>
     </div>
-
-    <span class="rack-result-badge">
-        Vista 2D disponible
-    </span>
+    <a class="rack-result-badge" href="/topology">Vista 3D disponible</a>
 </section>
 
 {% if racks %}
 <section class="rack-card-grid">
     {% for rack in racks %}
-    <a class="rack-card" href="/racks/{{ rack.get('id') }}">
+    {% set rack_width = rack.get("width") %}
+    <a class="rack-card {% if rack.get('_has_conflicts') %}rack-card-conflict{% endif %}" href="/racks/{{ rack.get('id') }}">
         <div class="rack-card-top">
             <div class="rack-card-icon">▥</div>
-
             <div class="rack-card-identity">
-                <h3>
-                    {{ rack.get("name") or rack.get("display") or "Sin nombre" }}
-                </h3>
-
+                <h3>{{ rack.get("name") or rack.get("display") or "Sin nombre" }}</h3>
                 <p>
                     {{ rack.get("_site_label") }}
-                    {% if rack.get("_location_label") != "—" %}
-                    · {{ rack.get("_location_label") }}
-                    {% endif %}
+                    {% if rack.get("_location_label") != "—" %} · {{ rack.get("_location_label") }}{% endif %}
                 </p>
             </div>
-
-            <span class="rack-card-status">
-                {{ rack.get("_status_label") }}
-            </span>
+            <span class="rack-card-status">{{ rack.get("_status_label") }}</span>
         </div>
 
         <div class="rack-card-metrics">
-            <div>
-                <span>Altura</span>
-                <strong>{{ rack.get("_u_height") }}U</strong>
-            </div>
-
-            <div>
-                <span>Equipos</span>
-                <strong>{{ rack.get("_device_count") }}</strong>
-            </div>
-
-            <div>
-                <span>Ocupación</span>
-                <strong>{{ rack.get("_utilization") | round(1) }}%</strong>
-            </div>
+            <div><span>Altura</span><strong>{{ rack.get("_u_height") }}U</strong></div>
+            <div><span>Equipos</span><strong>{{ rack.get("_device_count") }}</strong></div>
+            <div><span>Ocupación</span><strong>{{ rack.get("_utilization") | round(1) }}%</strong></div>
         </div>
 
         <div class="rack-progress">
-            <div
-                class="rack-progress-fill"
-                style="width: {{ rack.get('_utilization') }}%;"
-            ></div>
+            <div class="rack-progress-fill" style="width: {{ rack.get('_utilization') }}%;"></div>
+        </div>
+
+        <div class="rack-card-capacity">
+            <span>{{ rack.get("_used_units_label") }}U ocupadas</span>
+            <span>{{ rack.get("_free_units_label") }}U libres</span>
+            {% if rack.get("_zero_u_devices") %}<span>{{ rack.get("_zero_u_devices") | length }} equipos de 0U</span>{% endif %}
+            {% if rack.get("_has_conflicts") %}<span class="rack-capacity-warning">Revisar superposición</span>{% endif %}
         </div>
 
         <div class="rack-card-footer">
             <span>
-                {{ rack.get("width", "—") }} pulgadas
-                {% if rack.get("facility_id") %}
-                · {{ rack.get("facility_id") }}
+                {% if rack_width is mapping %}
+                    {{ rack_width.get("label") or rack_width.get("value") or "—" }}
+                {% else %}
+                    {{ rack_width or "—" }}
                 {% endif %}
+                {% if rack.get("facility_id") %} · {{ rack.get("facility_id") }}{% endif %}
             </span>
-
             <strong>Ver elevación →</strong>
         </div>
     </a>

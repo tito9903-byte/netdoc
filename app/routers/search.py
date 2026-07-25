@@ -77,3 +77,18 @@ async def search_api(request: Request, q: str = ""):
         "ok": True,
         **(await global_search(q)),
     }
+
+
+# Estos routers se agrupan aquí para conservar compatibilidad con la estructura
+# actual. Una futura separación del bootstrap los moverá a app/main.py.
+from app.routers.change_plans import router as change_plans_router
+from app.routers.device_images import router as device_images_router
+from app.routers.documentation import router as documentation_router
+from app.routers.hardware import router as hardware_router
+from app.routers.rack_create import router as rack_create_router
+
+router.include_router(documentation_router)
+router.include_router(device_images_router)
+router.include_router(rack_create_router)
+router.include_router(change_plans_router)
+router.include_router(hardware_router)

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Modelos de equipos | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_images.css') }}">
+{% endblock %}
+
+{% block content %}
+{% if notice %}
+<div class="notice success-notice"><strong>Operación completada.</strong><span>{{ notice }}</span></div>
+{% endif %}
+{% if error %}
+<div class="notice error-notice"><strong>No fue posible completar la operación.</strong><span>{{ error }}</span></div>
+{% endif %}
+
+<section class="workflow-intro compact-workflow-intro">
+    <div>
+        <span class="eyebrow">Biblioteca de hardware</span>
+        <h2>Modelos de equipos</h2>
+        <p>
+            Consulta los modelos existentes y abre su ficha para editar información,
+            imágenes, puertos, componentes y equipos asociados.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/manufacturers">Fabricantes</a>
+        {% if can_manage_device_types %}<a class="button secondary" href="/device-types/new">Nuevo modelo</a>{% endif %}
+        <a class="button primary" href="/interface-templates{% if selected_device_type_id %}?device_type_id={{ selected_device_type_id }}{% endif %}">Plantillas de puertos</a>
+    </div>
+</section>
+
+<section class="filter-panel">
+    <form class="model-filter-bar" method="get" action="/device-types">
+        <div class="field model-search-field">
+            <label for="model-q">Buscar modelo</label>
+            <input id="model-q" name="q" type="search" value="{{ query }}" placeholder="Fabricante, modelo o part number...">
+        </div>
+        <div class="field model-filter-field">
+            <label for="model-manufacturer">Fabricante</label>
+            <select id="model-manufacturer" name="manufacturer_id">
+                <option value="">Todos los fabricantes</option>
+                {% for manufacturer in manufacturers %}
+                <option value="{{ manufacturer.get('id') }}" {% if selected_manufacturer_id == manufacturer.get('id') %}selected{% endif %}>{{ manufacturer.get("display") or manufacturer.get("name") or "Sin nombre" }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions model-filter-actions"><button class="button primary" type="submit">Buscar</button><a class="button secondary" href="/device-types">Limpiar</a></div>
+    </form>
+</section>
+
+<section class="model-library-layout">
+    <aside class="panel model-index-panel">
+        <div class="panel-header compact-panel-header">
+            <div><h2>Catálogo</h2><p>Selecciona un modelo para abrir su ficha completa.</p></div>
+            <span class="panel-badge">{{ device_types | length }}</span>
+        </div>
+
+        {% if device_types %}
+        <div class="model-index-list">
+            {% for item in device_types %}
+            {% set manufacturer_label = item.get("_manufacturer_label") or "Sin fabricante" %}
+            <a class="model-index-item {% if selected_device_type_id == item.get('id') %}active{% endif %}" href="/device-types/{{ item.get('id') }}">
+                <span class="model-index-avatar">{{ manufacturer_label[:1] | upper }}</span>
+                <span class="model-index-copy">
+                    <strong>{{ item.get("_model_label") or "Sin modelo" }}</strong>
+                    <small>{{ manufacturer_label }}{% if item.get("part_number") %} · {{ item.get("part_number") }}{% endif %}</small>
+                </span>
+                <span class="model-index-count" title="Plantillas de interfaz">{{ item.get("_interface_count") or 0 }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state compact-empty-state"><div class="empty-icon">▣</div><h3>No se encontraron modelos</h3><p>Cambia los filtros o registra el primer modelo.</p></div>
+        {% endif %}
+    </aside>
+
+    <div class="model-detail-stack">
+        {% if selected_device_type %}
+        {% set manufacturer = selected_device_type.get("manufacturer") or {} %}
+        {% set manufacturer_name = manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" %}
+        {% set model_name = selected_device_type.get("model") or selected_device_type.get("display") or "Sin modelo" %}
+        <section class="panel model-profile-panel">
+            <div class="model-profile-heading">
+                <span class="model-profile-avatar">{{ manufacturer_name[:1] | upper }}</span>
+                <div><span class="eyebrow">Vista rápida</span><h2>{{ model_name }}</h2><p>{{ manufacturer_name }}</p></div>
+            </div>
+            <div class="model-profile-facts">
+                <div><span>Part number</span><strong>{{ selected_device_type.get("part_number") or "—" }}</strong></div>
+                <div><span>Altura</span><strong>{{ selected_device_type.get("u_height") or 0 }}U</strong></div>
+                <div><span>Profundidad</span><strong>{% if selected_device_type.get("is_full_depth") %}Completa{% else %}Parcial{% endif %}</strong></div>
+                <div><span>Slug</span><strong>{{ selected_device_type.get("slug") or "—" }}</strong></div>
+            </div>
+            {% if selected_device_type.get("description") %}<div class="model-description"><span>Descripción</span><p>{{ selected_device_type.get("description") }}</p></div>{% endif %}
+        </section>
+
+        <section class="panel model-catalog-images">
+            <div class="panel-header compact-panel-header">
+                <div><h2>Imágenes para racks</h2><p>Se reutilizan en las vistas 2D y 3D.</p></div>
+                <a class="button secondary" href="/device-types/{{ selected_device_type_id }}/images">Administrar imágenes</a>
+            </div>
+            <div class="model-catalog-image-grid">
+                <div><span>Frente</span>{% if selected_device_type.get("front_image") %}<img src="/media/device-types/{{ selected_device_type_id }}/front" alt="Frente del modelo {{ model_name }}" loading="lazy">{% else %}<div class="model-catalog-image-empty">Sin imagen frontal</div>{% endif %}</div>
+                <div><span>Parte trasera</span>{% if selected_device_type.get("rear_image") %}<img src="/media/device-types/{{ selected_device_type_id }}/rear" alt="Parte trasera del modelo {{ model_name }}" loading="lazy">{% else %}<div class="model-catalog-image-empty">Sin imagen trasera</div>{% endif %}</div>
+            </div>
+        </section>
+
+        <section class="model-component-grid">
+            <article class="panel model-component-card"><span>Interfaces</span><strong>{{ selected_device_type.get("_interface_count") or 0 }}</strong><small>Plantillas que heredará cada equipo.</small></article>
+            <article class="panel model-component-card"><span>Bahías de módulos</span><strong>{{ selected_device_type.get("_module_bay_count") or 0 }}</strong><small>Espacios para módulos intercambiables.</small></article>
+            <article class="panel model-component-card"><span>Puertos de energía</span><strong>{{ selected_device_type.get("_power_port_count") or 0 }}</strong><small>Entradas eléctricas documentadas.</small></article>
+        </section>
+
+        <section class="panel model-next-step-panel">
+            <div><span class="eyebrow">Administración</span><h2>Abre la ficha completa</h2><p>Edita datos, imágenes y componentes sin mezclar modelos diferentes.</p></div>
+            <div class="model-next-actions"><a class="button primary" href="/device-types/{{ selected_device_type_id }}">Abrir modelo</a><a class="button secondary" href="/interface-templates?device_type_id={{ selected_device_type_id }}">Puertos</a></div>
+        </section>
+        {% else %}
+        <section class="panel model-empty-detail"><div class="empty-icon">▣</div><h2>No hay un modelo visible</h2><p>Cambia los filtros o registra el primer modelo.</p></section>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

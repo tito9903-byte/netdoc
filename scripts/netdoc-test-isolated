@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Ejecuta las pruebas de NetDoc sin utilizar la base ni los secretos del entorno.
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+APP_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
+PYTHON_BIN="${PYTHON_BIN:-$APP_DIR/.venv/bin/python}"
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+[[ -x "$PYTHON_BIN" ]] || fail "no existe un Python ejecutable en $PYTHON_BIN."
+[[ -d "$APP_DIR/tests" ]] || fail "no existe el directorio de pruebas."
+
+TEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/netdoc-tests.XXXXXX")
+cleanup() {
+  rm -rf -- "$TEST_DIR"
+}
+trap cleanup EXIT INT TERM
+
+export DATABASE_URL="sqlite:///$TEST_DIR/netdoc.db"
+export NETBOX_URL="https://netbox.invalid"
+export NETBOX_TOKEN="test-token"
+export NETBOX_TOKEN_TYPE="token"
+export NETBOX_VERIFY_SSL="false"
+export NETBOX_WRITE_ENABLED="false"
+export SESSION_SECRET="test-session-secret"
+export SESSION_COOKIE_NAME="netdoc_test_session"
+export ADMIN_USERNAME="admin"
+export ADMIN_PASSWORD_HASH="$($PYTHON_BIN - <<'PY'
+from argon2 import PasswordHasher
+print(PasswordHasher().hash("AdminPassword123"))
+PY
+)"
+
+cd "$APP_DIR"
+
+printf 'Base temporal: %s\n' "$TEST_DIR/netdoc.db"
+"$PYTHON_BIN" -m compileall -q app tests migrations
+"$PYTHON_BIN" -m alembic heads
+"$PYTHON_BIN" -m unittest discover -s tests -v
+
+printf 'Pruebas completadas; la base temporal será eliminada.\n'

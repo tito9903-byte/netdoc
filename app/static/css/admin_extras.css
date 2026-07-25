@@ -1,3 +1,18 @@
+.admin-summary {
+    align-items: center;
+}
+
+.admin-summary > .summary-card {
+    width: 100%;
+}
+
+.admin-summary > .admin-primary {
+    min-height: 46px;
+    align-self: center;
+    padding-inline: 18px;
+    white-space: nowrap;
+}
+
 .admin-filter-panel {
     margin-bottom: 18px;
     padding: 18px;
@@ -51,7 +66,23 @@
     white-space: nowrap;
 }
 
+.admin-table tbody tr {
+    transition: background 140ms ease;
+}
+
+.admin-table tbody tr:hover {
+    background: rgba(32, 200, 210, 0.025);
+}
+
 @media (max-width: 1050px) {
+    .admin-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-summary > .admin-primary {
+        width: 100%;
+    }
+
     .user-filters,
     .advanced-audit-filters {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -59,6 +90,7 @@
 }
 
 @media (max-width: 640px) {
+    .admin-summary,
     .user-filters,
     .advanced-audit-filters {
         grid-template-columns: 1fr;

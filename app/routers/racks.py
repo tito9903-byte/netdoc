@@ -5,14 +5,21 @@ from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from app.core.config import get_settings
-from app.services.rack_service import (
-    RackService,
-    RackServiceError,
+from app.core.auth import (
+    access_redirect,
+    api_access_response,
+    common_session_context,
 )
+from app.core.config import get_settings
+from app.services.rack_presentation import (
+    nested_label,
+    prepare_elevation,
+    prepare_topology,
+)
+from app.services.rack_service import RackService, RackServiceError
 
 
 router = APIRouter()
@@ -27,17 +34,13 @@ def is_authenticated(request: Request) -> bool:
     )
 
 
-def login_redirect(
-    request: Request,
-) -> RedirectResponse | None:
+def login_redirect(request: Request) -> RedirectResponse | None:
     if is_authenticated(request):
         return None
 
     next_url = request.url.path
-
     if request.url.query:
         next_url = f"{next_url}?{request.url.query}"
-
     return RedirectResponse(
         url=f"/login?{urlencode({'next': next_url})}",
         status_code=303,
@@ -46,11 +49,13 @@ def login_redirect(
 
 def context(
     request: Request,
+    *,
+    current_page: str = "racks",
     **extra: object,
 ) -> dict[str, object]:
     return {
-        "current_page": "racks",
-        "current_user": request.session.get("username", ""),
+        **common_session_context(request),
+        "current_page": current_page,
         "netbox_connected": True,
         "netbox_url": settings.netbox_url,
         "write_enabled": settings.netbox_write_enabled,
@@ -58,188 +63,44 @@ def context(
     }
 
 
-def nested_label(
-    value: Any,
-    fallback: str = "—",
-) -> str:
-    if isinstance(value, dict):
-        return str(
-            value.get("display")
-            or value.get("name")
-            or value.get("label")
-            or value.get("value")
-            or fallback
-        )
-
-    if value not in (None, ""):
-        return str(value)
-
-    return fallback
+def parse_optional_int(value: str | int | None) -> int | None:
+    if isinstance(value, int):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
 
-def face_value(device: dict[str, Any]) -> str:
-    face = device.get("face")
-
-    if isinstance(face, dict):
-        return str(face.get("value") or "")
-
-    return str(face or "")
-
-
-def prepare_rack_cards(
-    racks: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    cards: list[dict[str, Any]] = []
-
-    for rack in racks:
-        utilization = rack.get("utilization")
-
-        try:
-            utilization_value = float(utilization)
-        except (TypeError, ValueError):
-            utilization_value = 0.0
-
-        cards.append({
-            **rack,
-            "_site_label": nested_label(rack.get("site")),
-            "_location_label": nested_label(rack.get("location")),
-            "_status_label": nested_label(rack.get("status")),
-            "_utilization": max(0.0, min(utilization_value, 100.0)),
-            "_device_count": int(rack.get("device_count") or 0),
-            "_u_height": int(rack.get("u_height") or 0),
-        })
-
-    return cards
-
-
-def prepare_elevation(
-    rack: dict[str, Any],
-    devices: list[dict[str, Any]],
-    selected_face: str,
-) -> dict[str, Any]:
-    rack_height = int(rack.get("u_height") or 42)
-    occupied_units: set[int] = set()
-    visible_devices: list[dict[str, Any]] = []
-    unpositioned_devices: list[dict[str, Any]] = []
-
-    for device in devices:
-        position = device.get("position")
-        device_type = device.get("device_type") or {}
-
-        try:
-            unit_height = max(
-                1,
-                int(device_type.get("u_height") or 1),
-            )
-        except (TypeError, ValueError):
-            unit_height = 1
-
-        full_depth = bool(device_type.get("full_depth"))
-        current_face = face_value(device)
-
-        prepared = {
-            **device,
-            "_model": nested_label(device_type),
-            "_status": nested_label(device.get("status")),
-            "_face": current_face or "sin definir",
-            "_u_height": unit_height,
-            "_full_depth": full_depth,
-        }
-
-        if position in (None, ""):
-            unpositioned_devices.append(prepared)
-            continue
-
-        try:
-            numeric_position = int(float(position))
-        except (TypeError, ValueError):
-            unpositioned_devices.append(prepared)
-            continue
-
-        if numeric_position < 1 or numeric_position > rack_height:
-            unpositioned_devices.append(prepared)
-            continue
-
-        upper_unit = min(
-            rack_height,
-            numeric_position + unit_height - 1,
-        )
-
-        for unit in range(numeric_position, upper_unit + 1):
-            occupied_units.add(unit)
-
-        should_display = (
-            full_depth
-            or current_face == selected_face
-            or not current_face
-        )
-
-        if should_display:
-            prepared["_position"] = numeric_position
-            prepared["_grid_start"] = (
-                rack_height - upper_unit + 1
-            )
-            prepared["_span"] = upper_unit - numeric_position + 1
-            visible_devices.append(prepared)
-
-    visible_devices.sort(
-        key=lambda item: (
-            int(item.get("_grid_start") or 0),
-            str(item.get("name") or ""),
-        )
-    )
-
-    used_units = len(occupied_units)
-    free_units = max(0, rack_height - used_units)
-    utilization = (
-        round((used_units / rack_height) * 100, 1)
-        if rack_height
-        else 0.0
-    )
-
-    return {
-        "rack_height": rack_height,
-        "visible_devices": visible_devices,
-        "unpositioned_devices": unpositioned_devices,
-        "used_units": used_units,
-        "free_units": free_units,
-        "utilization": utilization,
-    }
-
-
-@router.get(
-    "/racks",
-    response_class=HTMLResponse,
-)
+@router.get("/racks", response_class=HTMLResponse)
 async def racks_page(
     request: Request,
     site_id: str = "",
     q: str = "",
 ):
-    redirect = login_redirect(request)
-
+    redirect = access_redirect(request, "racks.view")
     if redirect:
         return redirect
 
-    selected_site_id: int | None = None
-
-    if site_id.strip():
-        try:
-            selected_site_id = int(site_id)
-        except ValueError:
-            selected_site_id = None
-
+    selected_site_id = parse_optional_int(site_id)
     service = RackService()
 
     try:
-        sites, racks = await asyncio.gather(
+        sites, racks, devices = await asyncio.gather(
             service.list_sites(),
             service.list_racks(
                 site_id=selected_site_id,
                 query=q,
             ),
+            service.list_devices(site_id=selected_site_id),
         )
-
+        topology = prepare_topology(
+            sites=sites,
+            racks=racks,
+            devices=devices,
+        )
     except RackServiceError as exc:
         return templates.TemplateResponse(
             request=request,
@@ -262,37 +123,79 @@ async def racks_page(
             request,
             page_title="Racks",
             page_subtitle=(
-                "Vista rápida de bastidores, capacidad "
-                "y ocupación documentada"
+                "Capacidad física calculada desde posiciones y altura de modelos"
             ),
             sites=sites,
-            racks=prepare_rack_cards(racks),
+            racks=topology["topology_racks"],
             selected_site_id=selected_site_id,
             query=q,
         ),
     )
 
 
-@router.get(
-    "/racks/{rack_id}",
-    response_class=HTMLResponse,
-)
+@router.get("/topology")
+async def legacy_topology_redirect(
+    request: Request,
+    site_id: str = "",
+):
+    """Compatibilidad: la vista 3D ahora se selecciona dentro de cada rack."""
+
+    redirect = access_redirect(request, "racks.view")
+    if redirect:
+        return redirect
+
+    query = urlencode({"site_id": site_id}) if site_id.strip() else ""
+    target = "/racks"
+    if query:
+        target = f"{target}?{query}"
+    return RedirectResponse(target, status_code=303)
+
+
+@router.get("/media/device-types/{device_type_id}/{face}")
+async def device_type_image(
+    request: Request,
+    device_type_id: int,
+    face: str,
+):
+    denied = api_access_response(request, "racks.view")
+    if denied:
+        return denied
+
+    try:
+        content, content_type = await RackService().get_device_type_image(
+            device_type_id,
+            face,
+        )
+    except RackServiceError as exc:
+        return Response(
+            status_code=exc.status_code or 503,
+            content=b"",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "private, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/racks/{rack_id}", response_class=HTMLResponse)
 async def rack_detail_page(
     request: Request,
     rack_id: int,
     face: str = "front",
+    view: str = "2d",
 ):
-    redirect = login_redirect(request)
-
+    redirect = access_redirect(request, "racks.view")
     if redirect:
         return redirect
 
-    selected_face = (
-        face
-        if face in {"front", "rear"}
-        else "front"
-    )
-
+    selected_face = face if face in {"front", "rear"} else "front"
+    selected_view = view if view in {"2d", "3d"} else "2d"
     service = RackService()
 
     try:
@@ -300,10 +203,8 @@ async def rack_detail_page(
             service.get_rack(rack_id),
             service.list_rack_devices(rack_id),
         )
-
     except RackServiceError as exc:
         status_code = 404 if exc.status_code == 404 else 503
-
         return templates.TemplateResponse(
             request=request,
             name="error.html",
@@ -318,12 +219,7 @@ async def rack_detail_page(
             ),
         )
 
-    elevation = prepare_elevation(
-        rack,
-        devices,
-        selected_face,
-    )
-
+    elevation = prepare_elevation(rack, devices, selected_face)
     return templates.TemplateResponse(
         request=request,
         name="rack_detail.html",
@@ -335,12 +231,13 @@ async def rack_detail_page(
                 or "Rack"
             ),
             page_subtitle=(
-                "Elevación 2D basada en las posiciones "
-                "documentadas en NetBox"
+                "Vista 2D o 3D basada en posición, cara, imagen y altura del modelo"
             ),
             rack=rack,
             devices=devices,
             selected_face=selected_face,
+            selected_view=selected_view,
+            rack_site_label=nested_label(rack.get("site"), "Sin sitio"),
             **elevation,
         ),
     )

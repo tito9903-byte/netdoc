@@ -8,6 +8,40 @@
 {% endblock %}
 
 {% block content %}
+{% set action_labels = {
+    "LOGIN_SUCCESS": "Inicio de sesión correcto",
+    "LOGIN_FAILED": "Inicio de sesión fallido",
+    "LOGIN_BLOCKED": "Inicio de sesión bloqueado",
+    "LOGOUT": "Cierre de sesión",
+    "USER_CREATE": "Usuario creado",
+    "USER_UPDATE": "Usuario actualizado",
+    "USER_DELETE": "Usuario eliminado",
+    "USER_PASSWORD": "Contraseña administrativa",
+    "PROFILE_UPDATE": "Perfil actualizado",
+    "PROFILE_PASSWORD": "Contraseña personal",
+    "ROLE_CREATE": "Rol creado",
+    "ROLE_UPDATE": "Rol actualizado",
+    "ROLE_DELETE": "Rol eliminado",
+    "AUDIT_EXPORT": "Auditoría exportada",
+    "DEVICE_CREATE": "Equipo creado",
+    "CABLE_CREATE": "Conexión creada",
+    "DEVICE_TYPE_CREATE": "Modelo creado",
+    "INTERFACE_TEMPLATE_BULK_CREATE": "Interfaces generadas",
+    "RACK_CREATE": "Rack creado"
+} %}
+{% set resource_labels = {
+    "session": "Sesión",
+    "user": "Usuario",
+    "role": "Rol",
+    "profile": "Perfil",
+    "audit": "Auditoría",
+    "device": "Equipo",
+    "cable": "Cable",
+    "device_type": "Modelo",
+    "interface_template": "Plantilla de interfaz",
+    "rack": "Rack"
+} %}
+
 {% if filter_errors %}
 <div class="admin-alert error">
     {% for error in filter_errors %}<span>{{ error }}</span>{% endfor %}
@@ -25,7 +59,9 @@
             <select name="action">
                 <option value="">Todas</option>
                 {% for item in actions %}
-                <option value="{{ item }}" {% if selected_action == item %}selected{% endif %}>{{ item }}</option>
+                <option value="{{ item }}" {% if selected_action == item %}selected{% endif %}>
+                    {{ action_labels.get(item, item | replace("_", " ") | title) }}
+                </option>
                 {% endfor %}
             </select>
         </label>
@@ -34,7 +70,9 @@
             <select name="resource">
                 <option value="">Todos</option>
                 {% for item in resources %}
-                <option value="{{ item }}" {% if selected_resource == item %}selected{% endif %}>{{ item }}</option>
+                <option value="{{ item }}" {% if selected_resource == item %}selected{% endif %}>
+                    {{ resource_labels.get(item, item | replace("_", " ") | title) }}
+                </option>
                 {% endfor %}
             </select>
         </label>
@@ -94,8 +132,15 @@
                 <tr>
                     <td>{{ event.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
                     <td>{{ event.username }}</td>
-                    <td><code>{{ event.action }}</code></td>
-                    <td>{{ event.resource }}{% if event.resource_id %} #{{ event.resource_id }}{% endif %}</td>
+                    <td>
+                        <span class="audit-action-label" title="{{ event.action }}">
+                            {{ action_labels.get(event.action, event.action | replace("_", " ") | title) }}
+                        </span>
+                    </td>
+                    <td>
+                        {{ resource_labels.get(event.resource, event.resource | replace("_", " ") | title) }}
+                        {% if event.resource_id %} #{{ event.resource_id }}{% endif %}
+                    </td>
                     <td>
                         <span class="state-pill {% if event.success %}active{% else %}inactive{% endif %}">
                             {% if event.success %}Correcto{% else %}Fallido{% endif %}
@@ -105,7 +150,14 @@
                     <td>{{ event.ip_address or "—" }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7"><div class="empty-state"><h3>Sin eventos</h3><p>No hay resultados para los filtros seleccionados.</p></div></td></tr>
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <h3>Sin eventos</h3>
+                            <p>No hay resultados para los filtros seleccionados.</p>
+                        </div>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

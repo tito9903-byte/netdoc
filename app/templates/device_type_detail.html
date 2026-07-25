@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}{{ device_type.get('_model_label') }} | Modelos | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/hardware.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_images.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set manufacturer = device_type.get("manufacturer") or {} %}
+{% set model_name = device_type.get("_model_label") %}
+{% if notice %}<div class="notice success-notice"><strong>Operación completada.</strong><span>{{ notice }}</span></div>{% endif %}
+{% if error %}<div class="notice error-notice"><strong>No fue posible completar la operación.</strong><span>{{ error }}</span></div>{% endif %}
+
+<div class="hardware-breadcrumbs"><a href="/device-types">Modelos</a><span>›</span><a href="/manufacturers/{{ manufacturer.get('id') }}">{{ device_type.get("_manufacturer_label") }}</a><span>›</span><strong>{{ model_name }}</strong></div>
+
+<section class="workflow-intro compact-workflow-intro hardware-model-hero">
+    <div>
+        <span class="eyebrow">Ficha del modelo</span>
+        <h2>{{ model_name }}</h2>
+        <p>{{ device_type.get("_manufacturer_label") }}{% if device_type.get("part_number") %} · {{ device_type.get("part_number") }}{% endif %}</p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/device-types/{{ device_type.get('id') }}/images">Imágenes</a>
+        <a class="button secondary" href="/interface-templates?device_type_id={{ device_type.get('id') }}">Plantillas de puertos</a>
+        <a class="button primary" href="/devices/actions/new">Crear equipo</a>
+    </div>
+</section>
+
+<nav class="hardware-section-nav" aria-label="Secciones del modelo">
+    <a href="#general">Información general</a>
+    <a href="#images">Imágenes</a>
+    <a href="#components">Componentes</a>
+    <a href="#interfaces">Puertos</a>
+    <a href="#devices">Equipos asociados</a>
+</nav>
+
+<section class="hardware-detail-grid" id="general">
+    <article class="panel hardware-form-panel">
+        <div class="panel-header compact-panel-header"><div><h2>Información general</h2><p>Edita la ficha física que heredarán los equipos.</p></div><span class="panel-badge">ID {{ device_type.get("id") }}</span></div>
+        {% if not write_enabled %}<div class="read-only-callout compact-callout"><span>◌</span><div><strong>Solo lectura</strong><span>Puedes revisar todos los datos, pero la actualización está bloqueada.</span></div></div>{% endif %}
+        <form method="post" action="/device-types/{{ device_type.get('id') }}/actions/update" class="hardware-form hardware-model-form">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <div class="hardware-form-grid">
+                <div class="field"><label for="model-manufacturer">Fabricante</label><select id="model-manufacturer" name="manufacturer_id" required>{% for item in manufacturers %}<option value="{{ item.get('id') }}" {% if item.get('id') == manufacturer.get('id') %}selected{% endif %}>{{ item.get("display") or item.get("name") }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="model-name">Modelo</label><input id="model-name" name="model" required value="{{ device_type.get('model') or model_name }}"></div>
+                <div class="field"><label for="model-part-number">Part number</label><input id="model-part-number" name="part_number" value="{{ device_type.get('part_number') or '' }}"></div>
+                <div class="field"><label for="model-slug">Slug</label><input id="model-slug" name="slug" value="{{ device_type.get('slug') or '' }}"></div>
+                <div class="field"><label for="model-height">Altura U</label><input id="model-height" name="u_height" type="number" min="0" step="0.5" value="{{ device_type.get('u_height') or 0 }}"></div>
+                <div class="field checkbox-field hardware-checkbox"><label><input type="checkbox" name="is_full_depth" value="true" {% if device_type.get('is_full_depth') %}checked{% endif %}><span>Profundidad completa</span></label></div>
+                <div class="field hardware-description-field"><label for="model-description">Descripción</label><textarea id="model-description" name="description" rows="5">{{ device_type.get("description") or "" }}</textarea></div>
+            </div>
+            <button class="button primary hardware-submit" type="submit" {% if not write_enabled %}disabled{% endif %}>Guardar ficha del modelo</button>
+        </form>
+    </article>
+
+    <aside class="panel hardware-model-overview">
+        <div class="panel-header compact-panel-header"><div><h2>Resumen físico</h2><p>Datos utilizados en dispositivos y racks.</p></div></div>
+        <dl class="hardware-facts">
+            <div><dt>Fabricante</dt><dd>{{ device_type.get("_manufacturer_label") }}</dd></div>
+            <div><dt>Altura</dt><dd>{{ device_type.get("u_height") or 0 }}U</dd></div>
+            <div><dt>Profundidad</dt><dd>{% if device_type.get("is_full_depth") %}Completa{% else %}Parcial{% endif %}</dd></div>
+            <div><dt>Part number</dt><dd>{{ device_type.get("part_number") or "—" }}</dd></div>
+            <div><dt>Slug</dt><dd class="mono-value">{{ device_type.get("slug") or "—" }}</dd></div>
+            <div><dt>Equipos creados</dt><dd>{{ component_summary.devices }}</dd></div>
+        </dl>
+    </aside>
+</section>
+
+<section class="panel hardware-image-section" id="images">
+    <div class="panel-header compact-panel-header"><div><h2>Imágenes del modelo</h2><p>Se reutilizan automáticamente en los racks 2D y 3D.</p></div><a class="button secondary" href="/device-types/{{ device_type.get('id') }}/images">Administrar imágenes</a></div>
+    <div class="hardware-image-grid">
+        <article><span>Frente</span>{% if device_type.get("front_image") %}<img src="/media/device-types/{{ device_type.get('id') }}/front" alt="Frente de {{ model_name }}" loading="lazy">{% else %}<div class="hardware-image-empty">Sin imagen frontal</div>{% endif %}</article>
+        <article><span>Parte trasera</span>{% if device_type.get("rear_image") %}<img src="/media/device-types/{{ device_type.get('id') }}/rear" alt="Parte trasera de {{ model_name }}" loading="lazy">{% else %}<div class="hardware-image-empty">Sin imagen trasera</div>{% endif %}</article>
+    </div>
+</section>
+
+<section class="panel" id="components">
+    <div class="panel-header compact-panel-header"><div><h2>Componentes reutilizables</h2><p>Se crean automáticamente en cada dispositivo basado en este modelo.</p></div></div>
+    <div class="hardware-component-grid">
+        <a href="#interfaces"><span>Interfaces</span><strong>{{ component_summary.interfaces }}</strong><small>Plantillas de red</small></a>
+        <article><span>Bahías de módulos</span><strong>{{ component_summary.module_bays }}</strong><small>Tarjetas y módulos</small></article>
+        <article><span>Puertos de energía</span><strong>{{ component_summary.power_ports }}</strong><small>Entradas eléctricas</small></article>
+        <article><span>Puertos de consola</span><strong>{{ component_summary.console_ports }}</strong><small>Administración fuera de banda</small></article>
+        <article><span>Puertos frontales</span><strong>{{ component_summary.front_ports }}</strong><small>Patch panel frontal</small></article>
+        <article><span>Puertos traseros</span><strong>{{ component_summary.rear_ports }}</strong><small>Patch panel trasero</small></article>
+    </div>
+    <div class="hardware-component-note"><strong>Siguiente etapa:</strong><span>cada tipo de componente tendrá su propio generador y editor, siguiendo el mismo patrón seguro de las interfaces.</span></div>
+</section>
+
+<section class="panel hardware-table-panel" id="interfaces">
+    <div class="panel-header compact-panel-header"><div><h2>Plantillas de interfaces</h2><p>Puertos que heredará cada equipo nuevo.</p></div><a class="button primary" href="/interface-templates?device_type_id={{ device_type.get('id') }}">Administrar puertos</a></div>
+    {% if interfaces %}
+    <div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Tipo</th><th>Etiqueta</th><th>Gestión</th></tr></thead><tbody>{% for interface in interfaces[:100] %}<tr><td><strong>{{ interface.get("name") }}</strong></td><td>{{ interface.get("_type_label") }}</td><td>{{ interface.get("label") or "—" }}</td><td>{% if interface.get("mgmt_only") %}<span class="status-pill accent">Solo gestión</span>{% else %}<span class="muted">Normal</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="empty-state compact-empty-state"><div class="empty-icon">⇆</div><h3>El modelo no tiene interfaces</h3><p>Usa el generador de plantillas para crearlas en lote.</p></div>{% endif %}
+</section>
+
+<section class="panel hardware-table-panel" id="devices">
+    <div class="panel-header compact-panel-header"><div><h2>Equipos asociados</h2><p>Dispositivos de NetBox creados con este modelo.</p></div><span class="panel-badge">{{ devices | length }}</span></div>
+    {% if devices %}
+    <div class="hardware-device-list">{% for device in devices %}{% set site = device.get("site") or {} %}{% set rack = device.get("rack") or {} %}<a href="/devices/{{ device.get('id') }}"><span><strong>{{ device.get("name") or device.get("display") }}</strong><small>{{ site.get("display") or site.get("name") or "Sin sitio" }}{% if rack %} · {{ rack.get("display") or rack.get("name") }}{% endif %}</small></span><span class="status-pill neutral">{{ (device.get("status") or {}).get("label") or "Sin estado" }}</span></a>{% endfor %}</div>
+    {% else %}<div class="empty-state compact-empty-state"><div class="empty-icon">▣</div><h3>Todavía no hay equipos asociados</h3><p>Cuando crees un dispositivo con este modelo aparecerá aquí.</p></div>{% endif %}
+</section>
+{% endblock %}

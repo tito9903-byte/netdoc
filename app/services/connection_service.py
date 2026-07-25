@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from decimal import Decimal
 from typing import Any
 
@@ -24,6 +25,54 @@ class ConnectionServiceError(Exception):
 
 
 class ConnectionService:
+    TERMINATION_ENDPOINTS = {
+        "dcim.interface": "/api/dcim/interfaces/{id}/",
+        "dcim.frontport": "/api/dcim/front-ports/{id}/",
+        "dcim.rearport": "/api/dcim/rear-ports/{id}/",
+        "dcim.consoleport": "/api/dcim/console-ports/{id}/",
+        "dcim.consoleserverport": "/api/dcim/console-server-ports/{id}/",
+        "dcim.powerport": "/api/dcim/power-ports/{id}/",
+        "dcim.poweroutlet": "/api/dcim/power-outlets/{id}/",
+        "circuits.circuittermination": "/api/circuits/circuit-terminations/{id}/",
+    }
+
+    CABLE_TYPE_LABELS = {
+        "cat3": "Cobre CAT3",
+        "cat5e": "Cobre CAT5e",
+        "cat6": "Cobre CAT6",
+        "cat6a": "Cobre CAT6A",
+        "cat7": "Cobre CAT7",
+        "dac-active": "DAC activo",
+        "dac-passive": "DAC pasivo",
+        "coaxial": "Coaxial",
+        "mmf-om1": "Fibra multimodo OM1",
+        "mmf-om2": "Fibra multimodo OM2",
+        "mmf-om3": "Fibra multimodo OM3",
+        "mmf-om4": "Fibra multimodo OM4",
+        "mmf-om5": "Fibra multimodo OM5",
+        "smf-os1": "Fibra monomodo OS1",
+        "smf-os2": "Fibra monomodo OS2",
+        "aoc": "Cable óptico activo",
+        "power": "Energía",
+    }
+
+    STATUS_LABELS = {
+        "connected": "Conectado",
+        "planned": "Planificado",
+        "decommissioning": "En retiro",
+    }
+
+    UNIT_LABELS = {
+        "mm": "mm",
+        "cm": "cm",
+        "m": "m",
+        "km": "km",
+        "in": "pulg",
+        "ft": "pies",
+        "yd": "yardas",
+        "mi": "millas",
+    }
+
     def __init__(self) -> None:
         self.settings = get_settings()
         self.base_url = self.settings.netbox_url.rstrip("/")
@@ -39,7 +88,7 @@ class ConnectionService:
         return {
             "Authorization": authorization,
             "Accept": "application/json",
-            "User-Agent": "NetDoc/0.6.0",
+            "User-Agent": "NetDoc/0.10.0",
         }
 
     @staticmethod
@@ -179,6 +228,46 @@ class ConnectionService:
 
         return results
 
+    @staticmethod
+    def _choice_value(value: Any) -> str:
+        if isinstance(value, dict):
+            return str(
+                value.get("value")
+                or value.get("slug")
+                or value.get("name")
+                or ""
+            )
+        return str(value or "")
+
+    @staticmethod
+    def _choice_display(value: Any) -> str:
+        if isinstance(value, dict):
+            return str(
+                value.get("label")
+                or value.get("display")
+                or value.get("name")
+                or value.get("value")
+                or ""
+            )
+        return str(value or "")
+
+    @classmethod
+    def _translated_choice(
+        cls,
+        value: Any,
+        translations: dict[str, str],
+        fallback: str = "—",
+    ) -> str:
+        raw_value = cls._choice_value(value).strip()
+        display = cls._choice_display(value).strip()
+        return (
+            translations.get(raw_value.lower())
+            or translations.get(display.lower())
+            or display
+            or raw_value
+            or fallback
+        )
+
     async def get_cable_choices(
         self,
     ) -> dict[str, list[dict[str, str]]]:
@@ -197,7 +286,10 @@ class ConnectionService:
             payload = response.json()
             fields = payload.get("actions", {}).get("POST", {})
 
-            def choices(name: str) -> list[dict[str, str]]:
+            def choices(
+                name: str,
+                translations: dict[str, str] | None = None,
+            ) -> list[dict[str, str]]:
                 raw = fields.get(name, {}).get("choices", [])
                 output: list[dict[str, str]] = []
 
@@ -210,43 +302,39 @@ class ConnectionService:
                     )
 
                     if value:
+                        translated = (
+                            (translations or {}).get(str(value).lower())
+                            or (translations or {}).get(str(label).lower())
+                            or str(label)
+                        )
                         output.append({
                             "value": str(value),
-                            "label": str(label),
+                            "label": translated,
                         })
 
                 return output
 
             return {
-                "types": choices("type"),
-                "statuses": choices("status"),
-                "length_units": choices("length_unit"),
+                "types": choices("type", self.CABLE_TYPE_LABELS),
+                "statuses": choices("status", self.STATUS_LABELS),
+                "length_units": choices("length_unit", self.UNIT_LABELS),
             }
 
         except (httpx.HTTPError, ValueError, AttributeError):
             return {
                 "types": [
-                    {"value": "cat6", "label": "CAT6"},
-                    {
-                        "value": "dac-passive",
-                        "label": "Direct Attach Copper (Passive)",
-                    },
-                    {
-                        "value": "mmf-om4",
-                        "label": "Multimode Fiber (OM4)",
-                    },
-                    {
-                        "value": "smf-os2",
-                        "label": "Single-mode Fiber (OS2)",
-                    },
+                    {"value": "cat6", "label": "Cobre CAT6"},
+                    {"value": "dac-passive", "label": "DAC pasivo"},
+                    {"value": "mmf-om4", "label": "Fibra multimodo OM4"},
+                    {"value": "smf-os2", "label": "Fibra monomodo OS2"},
                 ],
                 "statuses": [
-                    {"value": "connected", "label": "Connected"},
-                    {"value": "planned", "label": "Planned"},
+                    {"value": "connected", "label": "Conectado"},
+                    {"value": "planned", "label": "Planificado"},
                 ],
                 "length_units": [
-                    {"value": "m", "label": "Meters"},
-                    {"value": "ft", "label": "Feet"},
+                    {"value": "m", "label": "m"},
+                    {"value": "ft", "label": "pies"},
                 ],
             }
 
@@ -325,6 +413,152 @@ class ConnectionService:
             or interface.get("connected_endpoints")
         )
 
+    @classmethod
+    def _termination_key(
+        cls,
+        termination: Any,
+    ) -> tuple[str, int] | None:
+        if not isinstance(termination, dict):
+            return None
+
+        object_type = termination.get("object_type")
+        if isinstance(object_type, dict):
+            object_type = (
+                object_type.get("value")
+                or object_type.get("model")
+                or object_type.get("display")
+            )
+
+        object_id = termination.get("object_id")
+        nested_object = termination.get("object")
+        if not isinstance(object_id, int) and isinstance(nested_object, dict):
+            object_id = nested_object.get("id")
+
+        if not isinstance(object_type, str) or not isinstance(object_id, int):
+            return None
+
+        normalized_type = object_type.strip().lower()
+        if normalized_type not in cls.TERMINATION_ENDPOINTS:
+            return None
+
+        return normalized_type, object_id
+
+    @staticmethod
+    def _meaningful_text(value: Any) -> str:
+        text = str(value or "").strip()
+        return "" if not text or text.isdigit() else text
+
+    @classmethod
+    def _object_label(
+        cls,
+        value: Any,
+        object_type: str = "",
+    ) -> str:
+        if not isinstance(value, dict):
+            return cls._meaningful_text(value)
+
+        device = value.get("device") or value.get("parent") or {}
+        device_label = ""
+        if isinstance(device, dict):
+            device_label = cls._meaningful_text(
+                device.get("display") or device.get("name")
+            )
+
+        name = cls._meaningful_text(
+            value.get("name")
+            or value.get("label")
+            or value.get("display")
+        )
+
+        if device_label and name:
+            if device_label.casefold() in name.casefold():
+                return name
+            return f"{device_label} · {name}"
+
+        circuit = value.get("circuit") or {}
+        if isinstance(circuit, dict):
+            circuit_label = cls._meaningful_text(
+                circuit.get("display") or circuit.get("cid")
+            )
+            side = cls._meaningful_text(value.get("term_side"))
+            if circuit_label:
+                return (
+                    f"{circuit_label} · extremo {side}"
+                    if side
+                    else circuit_label
+                )
+
+        return name or device_label
+
+    @classmethod
+    def _termination_label(
+        cls,
+        termination: Any,
+        hydrated: dict[str, Any] | None = None,
+    ) -> str:
+        if not isinstance(termination, dict):
+            return "—"
+
+        key = cls._termination_key(termination)
+        object_type = key[0] if key else ""
+        nested = termination.get("object")
+
+        for candidate in (
+            hydrated,
+            nested,
+            termination,
+        ):
+            label = cls._object_label(candidate, object_type)
+            if label:
+                return label
+
+        if key:
+            friendly = {
+                "dcim.interface": "Interfaz",
+                "dcim.frontport": "Puerto frontal",
+                "dcim.rearport": "Puerto trasero",
+                "dcim.consoleport": "Puerto de consola",
+                "dcim.consoleserverport": "Puerto de servidor de consola",
+                "dcim.powerport": "Puerto de energía",
+                "dcim.poweroutlet": "Toma de energía",
+                "circuits.circuittermination": "Terminación de circuito",
+            }.get(key[0], "Terminación")
+            return f"{friendly} #{key[1]}"
+
+        return "—"
+
+    async def _load_termination_objects(
+        self,
+        cables: list[dict[str, Any]],
+    ) -> dict[tuple[str, int], dict[str, Any]]:
+        keys: set[tuple[str, int]] = set()
+        for cable in cables:
+            for side in ("a_terminations", "b_terminations"):
+                terminations = cable.get(side) or []
+                if isinstance(terminations, list) and terminations:
+                    key = self._termination_key(terminations[0])
+                    if key:
+                        keys.add(key)
+
+        semaphore = asyncio.Semaphore(8)
+
+        async def load(
+            key: tuple[str, int],
+        ) -> tuple[tuple[str, int], dict[str, Any] | None]:
+            endpoint = self.TERMINATION_ENDPOINTS[key[0]].format(id=key[1])
+            try:
+                async with semaphore:
+                    return key, await self.request("GET", endpoint)
+            except ConnectionServiceError:
+                return key, None
+
+        loaded = await asyncio.gather(*(load(key) for key in keys))
+        return {
+            key: value
+            for key, value in loaded
+            if isinstance(value, dict)
+        }
+
     async def list_recent_cables(
         self,
         limit: int = 20,
@@ -338,7 +572,51 @@ class ConnectionService:
             },
         )
         results = payload.get("results")
-        return results if isinstance(results, list) else []
+        cables = results if isinstance(results, list) else []
+        hydrated = await self._load_termination_objects(cables)
+        prepared: list[dict[str, Any]] = []
+
+        for cable in cables:
+            a_terminations = cable.get("a_terminations") or []
+            b_terminations = cable.get("b_terminations") or []
+            a_term = a_terminations[0] if isinstance(a_terminations, list) and a_terminations else {}
+            b_term = b_terminations[0] if isinstance(b_terminations, list) and b_terminations else {}
+            a_key = self._termination_key(a_term)
+            b_key = self._termination_key(b_term)
+
+            length = cable.get("length")
+            unit_label = self._translated_choice(
+                cable.get("length_unit"),
+                self.UNIT_LABELS,
+                "",
+            )
+
+            prepared.append({
+                **cable,
+                "_a_label": self._termination_label(
+                    a_term,
+                    hydrated.get(a_key) if a_key else None,
+                ),
+                "_b_label": self._termination_label(
+                    b_term,
+                    hydrated.get(b_key) if b_key else None,
+                ),
+                "_type_label": self._translated_choice(
+                    cable.get("type"),
+                    self.CABLE_TYPE_LABELS,
+                ),
+                "_status_label": self._translated_choice(
+                    cable.get("status"),
+                    self.STATUS_LABELS,
+                ),
+                "_length_label": (
+                    f"{length} {unit_label}".strip()
+                    if length not in (None, "")
+                    else "—"
+                ),
+            })
+
+        return prepared
 
     async def create_interface_cable(
         self,

@@ -9,7 +9,7 @@
 {% block content %}
 <section class="global-search-hero">
     <form action="/search" method="get" class="global-search-form">
-        <label for="global-search-input">Buscar en la documentación</label>
+        <label for="global-search-input">Buscar en toda la documentación</label>
         <div>
             <input
                 id="global-search-input"
@@ -18,19 +18,41 @@
                 value="{{ query }}"
                 minlength="2"
                 autofocus
-                placeholder="Equipo, interfaz, rack, sitio, cable, serial..."
+                placeholder="Equipo, interfaz, rack, sitio, cable o serial..."
             >
             <button type="submit">Buscar</button>
         </div>
-        <p>La consulta se ejecuta en NetBox sin modificar el inventario.</p>
+        <p>
+            Consulta varios módulos de NetBox al mismo tiempo sin modificar
+            el inventario.
+        </p>
     </form>
 </section>
 
 {% if not searched %}
 <section class="search-welcome">
     <div class="search-welcome-icon">⌕</div>
-    <h2>Una búsqueda para toda la infraestructura</h2>
-    <p>Escribe al menos dos caracteres para consultar varios módulos a la vez.</p>
+    <h2>Encuentra la infraestructura sin navegar pantalla por pantalla</h2>
+    <p>Escribe al menos dos caracteres o entra directamente a un flujo frecuente.</p>
+
+    <div class="search-start-grid">
+        <a class="search-start-card" href="/devices">
+            <strong>Dispositivos</strong>
+            <span>Nombre, serial, modelo, sitio o dirección principal.</span>
+        </a>
+        <a class="search-start-card" href="/ipam">
+            <strong>Direccionamiento IP</strong>
+            <span>Prefijos, pools disponibles, VRF y localidad.</span>
+        </a>
+        <a class="search-start-card" href="/racks">
+            <strong>Racks</strong>
+            <span>Ubicación, capacidad, ocupación y elevación 2D.</span>
+        </a>
+        <a class="search-start-card" href="/device-types">
+            <strong>Modelos y plantillas</strong>
+            <span>Fabricantes, modelos y creación rápida de interfaces.</span>
+        </a>
+    </div>
 </section>
 {% else %}
 <section class="search-overview">

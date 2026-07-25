@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Topología 3D | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/topology.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="workflow-intro topology-intro">
+    <div>
+        <span class="eyebrow">Infraestructura física</span>
+        <h2>Topología 3D por sitio y rack</h2>
+        <p>
+            Explora los equipos según el rack, la cara y las unidades que ocupan.
+            La escena se construye directamente con la ubicación física documentada en NetBox.
+        </p>
+    </div>
+    <div class="workflow-intro-actions">
+        <a class="button secondary" href="/racks">Ver elevaciones 2D</a>
+        <a class="button primary" href="/devices/actions/new">Ubicar un equipo</a>
+    </div>
+</section>
+
+<section class="summary-grid summary-grid-four topology-summary">
+    <article class="summary-card">
+        <span>Sitios visibles</span>
+        <strong>{{ topology_summary.sites }}</strong>
+        <small>Con racks documentados</small>
+    </article>
+    <article class="summary-card">
+        <span>Racks visibles</span>
+        <strong>{{ topology_summary.racks }}</strong>
+        <small>{{ topology_summary.capacity_units }}U de capacidad</small>
+    </article>
+    <article class="summary-card">
+        <span>Equipos posicionados</span>
+        <strong>{{ topology_summary.devices }}</strong>
+        <small>{{ topology_summary.devices_with_images }} con imagen de modelo</small>
+    </article>
+    <article class="summary-card">
+        <span>Ocupación física</span>
+        <strong>{{ topology_summary.utilization }}%</strong>
+        <small>{{ topology_summary.used_units_label }}U documentadas</small>
+    </article>
+</section>
+
+<section class="topology-toolbar panel">
+    <form method="get" action="/topology" class="topology-site-filter">
+        <div class="field">
+            <label for="topology-site">Sitio</label>
+            <select id="topology-site" name="site_id">
+                <option value="">Todos los sitios</option>
+                {% for site in sites %}
+                <option
+                    value="{{ site.get('id') }}"
+                    {% if selected_site_id == site.get('id') %}selected{% endif %}
+                >
+                    {{ site.get("display") or site.get("name") or "Sin nombre" }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="button primary" type="submit">Aplicar</button>
+        <a class="button secondary" href="/topology">Limpiar</a>
+    </form>
+
+    <div class="topology-local-controls">
+        <div class="field topology-search-control">
+            <label for="topology-search">Filtrar en esta vista</label>
+            <input id="topology-search" type="search" placeholder="Rack, sitio o equipo..." data-topology-search>
+        </div>
+        <div class="topology-toggle-group" aria-label="Perspectiva">
+            <button class="topology-toggle active" type="button" data-topology-view="isometric">3D</button>
+            <button class="topology-toggle" type="button" data-topology-view="front">Frontal</button>
+        </div>
+        <div class="topology-toggle-group" aria-label="Cara del rack">
+            <button class="topology-toggle active" type="button" data-topology-face="front">Frente</button>
+            <button class="topology-toggle" type="button" data-topology-face="rear">Trasera</button>
+        </div>
+    </div>
+</section>
+
+<div class="topology-methodology">
+    <strong>Primera etapa: topología física.</strong>
+    <span>
+        Esta vista representa sitio → rack → equipo y la altura U del modelo.
+        Las líneas de cables y dependencias lógicas se agregarán sobre esta misma base.
+    </span>
+</div>
+
+{% if topology_sites %}
+<div class="topology-sites" data-topology-root data-view="isometric" data-face="front">
+    {% for site in topology_sites %}
+    <section
+        class="topology-site"
+        data-topology-site
+        data-search-text="{{ site.name }}"
+    >
+        <header class="topology-site-header">
+            <div>
+                <span class="eyebrow">Sitio</span>
+                <h2>{{ site.name }}</h2>
+                <p>
+                    {{ site.racks | length }} racks · {{ site.device_count }} equipos ·
+                    {{ site.used_units_label }}U ocupadas
+                </p>
+            </div>
+            <span class="status-pill accent">{{ site.utilization }}%</span>
+        </header>
+
+        <div class="topology-scene">
+            {% for rack in site.racks %}
+            <article
+                class="topology-rack-card {% if rack.get('_has_conflicts') %}has-conflicts{% endif %}"
+                data-topology-rack
+                data-search-text="{{ site.name }} {{ rack.get('name') or rack.get('display') }} {% for device in rack.get('_devices', []) %} {{ device.get('name') or device.get('display') }}{% endfor %}"
+            >
+                <div class="topology-rack-heading">
+                    <div>
+                        <a href="/racks/{{ rack.get('id') }}">
+                            {{ rack.get("name") or rack.get("display") or "Rack" }}
+                        </a>
+                        <span>{{ rack.get("_location_label") }}</span>
+                    </div>
+                    <span>{{ rack.get("_used_units_label") }} / {{ rack.get("_u_height") }}U</span>
+                </div>
+
+                <div class="topology-rack-perspective">
+                    <div class="topology-rack-frame">
+                        <div class="topology-rack-units" aria-hidden="true">
+                            {% for unit in range(rack.get('_u_height') | int, 0, -1) %}
+                            <span></span>
+                            {% endfor %}
+                        </div>
+
+                        {% for device in rack.get("_devices", []) %}
+                        <a
+                            class="topology-device {% if device.get('_has_conflict') %}conflict{% endif %}"
+                            href="/devices/{{ device.get('id') }}"
+                            style="top: {{ device.get('_top_percent') }}%; height: {{ device.get('_height_percent') }}%;"
+                            data-topology-device
+                            data-device-face="{{ device.get('_face') }}"
+                            data-full-depth="{{ 'true' if device.get('_full_depth') else 'false' }}"
+                            data-front-image="{{ device.get('_front_image') }}"
+                            data-rear-image="{{ device.get('_rear_image') }}"
+                            title="{{ device.get('name') or device.get('display') }} · {{ device.get('_position_label') }} · {{ device.get('_u_height_label') }}"
+                        >
+                            {% if device.get("_front_image") or device.get("_rear_image") %}
+                            <img
+                                src="{{ device.get('_front_image') or device.get('_rear_image') }}"
+                                alt="Frente del modelo {{ device.get('_model') }}"
+                                loading="lazy"
+                                data-topology-device-image
+                            >
+                            {% endif %}
+                            <span class="topology-device-label">
+                                {{ device.get("name") or device.get("display") or "Equipo" }}
+                            </span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <footer class="topology-rack-footer">
+                    <span>{{ rack.get("_mounted_count") }} posicionados</span>
+                    <span>{{ rack.get("_free_units_label") }}U libres</span>
+                    {% if rack.get("_zero_u_devices") %}
+                    <span>{{ rack.get("_zero_u_devices") | length }} de 0U</span>
+                    {% endif %}
+                </footer>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+</div>
+{% else %}
+<section class="panel model-empty-detail">
+    <div class="empty-icon">⬡</div>
+    <h2>No hay racks para construir la topología</h2>
+    <p>Selecciona otro sitio o completa la documentación física en NetBox.</p>
+</section>
+{% endif %}
+
+{% if unracked_devices %}
+<details class="topology-unracked panel">
+    <summary>
+        <span>
+            <strong>Equipos sin rack</strong>
+            <small>No aparecen en la escena porque no tienen un rack asociado.</small>
+        </span>
+        <span class="panel-badge">{{ unracked_devices | length }}</span>
+    </summary>
+    <div class="topology-unracked-list">
+        {% for device in unracked_devices %}
+        <a href="/devices/{{ device.get('id') }}">
+            <strong>{{ device.get("name") or device.get("display") or "Equipo" }}</strong>
+            <span>{{ device.get("_model") }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</details>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/topology.js') }}"></script>
+{% endblock %}

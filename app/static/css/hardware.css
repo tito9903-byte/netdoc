@@ -1,0 +1,358 @@
+.hardware-summary {
+    margin-top: 18px;
+}
+
+.hardware-layout,
+.hardware-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.45fr);
+    gap: 18px;
+    margin-top: 18px;
+    align-items: start;
+}
+
+.hardware-table-panel,
+.hardware-form-panel,
+.hardware-model-overview,
+.hardware-image-section {
+    overflow: hidden;
+}
+
+.hardware-search {
+    display: flex;
+    min-width: min(420px, 100%);
+    gap: 8px;
+}
+
+.hardware-search input {
+    min-width: 0;
+    flex: 1;
+}
+
+.hardware-form {
+    padding: 18px;
+}
+
+.hardware-form > .field + .field {
+    margin-top: 14px;
+}
+
+.hardware-submit {
+    width: 100%;
+    margin-top: 18px;
+}
+
+.compact-callout {
+    margin: 14px 18px 0;
+}
+
+.hardware-breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.hardware-breadcrumbs a:hover {
+    color: var(--accent);
+}
+
+.hardware-card-list,
+.hardware-device-list {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+}
+
+.hardware-model-card,
+.hardware-device-list a {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    background: var(--surface-soft);
+}
+
+.hardware-model-card:hover,
+.hardware-device-list a:hover {
+    border-color: rgba(32, 200, 210, 0.35);
+    background: var(--surface-hover);
+}
+
+.hardware-model-avatar {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border: 1px solid rgba(32, 200, 210, 0.25);
+    border-radius: 11px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 800;
+}
+
+.hardware-model-copy,
+.hardware-model-copy strong,
+.hardware-model-copy small,
+.hardware-device-list a > span:first-child,
+.hardware-device-list strong,
+.hardware-device-list small {
+    display: block;
+    min-width: 0;
+}
+
+.hardware-model-copy {
+    flex: 1;
+}
+
+.hardware-model-copy strong,
+.hardware-model-copy small,
+.hardware-device-list strong,
+.hardware-device-list small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hardware-model-copy small,
+.hardware-device-list small {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.hardware-model-stats {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.hardware-section-nav {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    display: flex;
+    gap: 6px;
+    margin: 16px 0;
+    padding: 7px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(10, 18, 25, 0.94);
+    backdrop-filter: blur(12px);
+}
+
+.hardware-section-nav a {
+    flex: 0 0 auto;
+    padding: 8px 11px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.hardware-section-nav a:hover,
+.hardware-section-nav a:focus-visible {
+    color: var(--text);
+    background: var(--surface-hover);
+}
+
+.hardware-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.hardware-description-field {
+    grid-column: 1 / -1;
+}
+
+.hardware-checkbox {
+    align-self: end;
+    padding-bottom: 10px;
+}
+
+.hardware-facts {
+    margin: 0;
+    padding: 12px 18px 18px;
+}
+
+.hardware-facts > div {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.65fr) minmax(0, 1fr);
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.hardware-facts > div:last-child {
+    border-bottom: 0;
+}
+
+.hardware-facts dt {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.hardware-facts dd {
+    margin: 0;
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: right;
+    text-overflow: ellipsis;
+}
+
+.hardware-image-section,
+.hardware-table-panel#interfaces,
+.hardware-table-panel#devices,
+#components {
+    margin-top: 18px;
+}
+
+.hardware-image-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 18px;
+}
+
+.hardware-image-grid article {
+    min-width: 0;
+}
+
+.hardware-image-grid article > span {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.hardware-image-grid img,
+.hardware-image-empty {
+    width: 100%;
+    height: 180px;
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    background: #060c11;
+}
+
+.hardware-image-grid img {
+    object-fit: contain;
+}
+
+.hardware-image-empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.hardware-component-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    padding: 18px;
+}
+
+.hardware-component-grid article,
+.hardware-component-grid a {
+    padding: 16px;
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    background: var(--surface-soft);
+}
+
+.hardware-component-grid a:hover {
+    border-color: rgba(32, 200, 210, 0.35);
+}
+
+.hardware-component-grid span,
+.hardware-component-grid strong,
+.hardware-component-grid small {
+    display: block;
+}
+
+.hardware-component-grid span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.hardware-component-grid strong {
+    margin-top: 7px;
+    font-size: 24px;
+}
+
+.hardware-component-grid small {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.hardware-component-note {
+    display: flex;
+    gap: 8px;
+    margin: 0 18px 18px;
+    padding: 12px 14px;
+    border: 1px solid rgba(32, 200, 210, 0.2);
+    border-radius: 9px;
+    color: var(--muted);
+    background: rgba(32, 200, 210, 0.05);
+    font-size: 10px;
+}
+
+.hardware-component-note strong {
+    flex: 0 0 auto;
+    color: var(--text);
+}
+
+.hardware-device-list a {
+    justify-content: space-between;
+}
+
+.hardware-device-list a > span:first-child {
+    flex: 1;
+}
+
+@media (max-width: 1100px) {
+    .hardware-layout,
+    .hardware-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .hardware-search,
+    .hardware-section-nav,
+    .hardware-component-note {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .hardware-form-grid,
+    .hardware-image-grid,
+    .hardware-component-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hardware-description-field {
+        grid-column: auto;
+    }
+
+    .hardware-model-stats {
+        display: none;
+    }
+}

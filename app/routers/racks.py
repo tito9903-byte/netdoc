@@ -183,7 +183,7 @@ async def device_type_image(
         return Response(
             status_code=304,
             headers={
-                "Cache-Control": "private, max-age=300",
+                "Cache-Control": "private, no-cache",
                 "ETag": etag,
             },
         )
@@ -192,7 +192,7 @@ async def device_type_image(
         content=content,
         media_type=content_type,
         headers={
-            "Cache-Control": "private, max-age=300",
+            "Cache-Control": "private, no-cache",
             "ETag": etag,
             "X-Content-Type-Options": "nosniff",
         },

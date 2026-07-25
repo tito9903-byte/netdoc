@@ -6,14 +6,17 @@
 
 ```mermaid
 flowchart LR
- F[feature/*] --> D[develop] --> B[respaldo de base] --> DEV[despliegue 8101] --> T[pruebas] --> M[PR a main] --> BP[respaldo producción] --> P[despliegue 8100]
+ F[feature/*] --> D[develop] --> B[respaldo de base] --> DEV[despliegue 8101] --> T[pruebas manuales de lectura y escritura] --> M[PR a main] --> BP[respaldo producción] --> P[despliegue 8100]
 ```
 
 ## Entornos
 
 - Producción: `/opt/netdoc-prod`, `main`, `netdoc-prod`, 8100 y `http://127.0.0.1:8100/login`.
-- Desarrollo: `/opt/netdoc-dev`, `develop`, `netdoc-dev`, 8101 y `http://127.0.0.1:8101/login`.
+- Desarrollo: `/opt/netdoc-dev`, rama en revisión o `develop`, `netdoc-dev`, 8101 y `http://127.0.0.1:8101/login`.
 - Usuario propietario de repositorios, entornos virtuales y base local: `sshtelenord`.
+- Suite automatizada: base temporal, credenciales de prueba y `NETBOX_WRITE_ENABLED=false` forzado por `tests/test_000_environment.py`.
+
+El entorno manual de desarrollo puede usar `NETBOX_WRITE_ENABLED=true` para validar creaciones y modificaciones reales antes de producción. Esto no habilita escritura en la suite automatizada.
 
 ## Prerrequisitos e instalación
 
@@ -92,9 +95,13 @@ Antes de una migración confirme además:
 
 - una sola cabeza Alembic con `.venv/bin/alembic heads`;
 - desarrollo y producción apuntan a bases diferentes;
-- desarrollo conserva `NETBOX_WRITE_ENABLED=false` para escrituras hacia NetBox;
+- el valor de `NETBOX_WRITE_ENABLED` corresponde al propósito del entorno;
+- desarrollo puede usar `true` durante pruebas manuales controladas;
+- producción conserva únicamente funciones ya validadas y promovidas;
 - la base es escribible por `sshtelenord`;
 - no hay otro proceso de migración o respaldo en ejecución.
+
+Nunca ejecute la suite automatizada directamente heredando el `.env` de desarrollo. Use `scripts/netdoc-test-isolated`, que reemplaza las variables sensibles, crea una base temporal y fuerza escritura deshabilitada.
 
 ## Actualización, migración y validación
 
@@ -127,7 +134,7 @@ La inicialización de la base sigue estas reglas:
 
 ## Revisión Alembic esperada
 
-En la rama `feature/local-device-type-images` y después de su integración, la cabeza esperada es:
+La cabeza esperada es:
 
 ```text
 20260725_0002
@@ -145,17 +152,20 @@ cd /opt/netdoc-dev
 
 Ajuste la ruta a producción solo después de la promoción formal a `main`.
 
-## Verificación funcional de imágenes
+## Verificación funcional de imágenes y racks
 
-Después de aplicar `20260725_0002` en desarrollo:
+Después de desplegar en desarrollo:
 
 1. Abra un modelo existente.
-2. Cargue una imagen frontal desde `/device-types/{id}/images`.
+2. Cargue o reemplace una imagen frontal desde `/device-types/{id}/images`.
 3. Confirme que la pantalla indica **Guardada en NetDoc**.
 4. Compruebe que `/media/device-types/{id}/front` devuelve HTTP 200 con una sesión autorizada.
-5. Revise el modelo en catálogo, ficha, rack 2D y rack 3D.
-6. Sustituya la imagen y verifique que cambia el encabezado `ETag`.
-7. Confirme que NetBox no registra una modificación de imagen.
+5. Sustituya la imagen y verifique que cambia al recargar; la respuesta usa ETag y revalidación privada.
+6. Revise el modelo en catálogo, ficha y rack 2D.
+7. Abra `/racks/{rack_id}?view=3d` y pruebe perspectiva, cara y escalas **Ajustar/Detalle**.
+8. Confirme que `/topology` solo redirige al catálogo de racks.
+9. Descargue `/racks/{rack_id}/report.pdf?face=front` y revise elevación e inventario.
+10. Confirme que NetBox no registra una modificación de imagen local.
 
 ## Rollback
 
@@ -197,8 +207,10 @@ Ajuste ruta y servicio para producción.
 - Login, roles, perfil, auditoría, búsqueda y Sistema funcionan según el permiso.
 - Catálogo, ficha de modelo y racks se cargan sin errores.
 - La ruta de medios exige autenticación y devuelve `nosniff`, caché privada y ETag.
+- El reporte PDF exige `racks.view` y responde `application/pdf`.
 - Propietarios de repositorio, `.venv` y base siguen siendo `sshtelenord`.
 - `.env` permanece presente, ignorado y no versionado.
-- Desarrollo sigue sin escrituras hacia NetBox.
+- Desarrollo permite las escrituras manuales que se estén validando.
+- La suite aislada mantiene `NETBOX_WRITE_ENABLED=false`.
 
-Los scripts están versionados, pero no debe afirmarse que una migración o función nueva está probada en el servidor hasta realizar un despliegue controlado en 8101.
+Los scripts están versionados, pero no debe afirmarse que una función nueva está probada en el servidor hasta realizar un despliegue controlado en 8101.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from time import monotonic
 from typing import Any
 from weakref import WeakKeyDictionary
 
@@ -84,6 +85,7 @@ async def close_shared_netbox_clients() -> None:
     clients = list(_clients.values())
     _clients.clear()
     _client_locks.clear()
+    NetBoxClient._dashboard_cache = None
     if clients:
         await asyncio.gather(
             *(client.aclose() for client in clients if not client.is_closed),
@@ -92,6 +94,14 @@ async def close_shared_netbox_clients() -> None:
 
 
 class NetBoxClient:
+    _dashboard_cache: tuple[
+        float,
+        dict[str, dict[str, Any]],
+        list[dict[str, Any]],
+        str | None,
+    ] | None = None
+    _dashboard_cache_seconds = 30.0
+
     def __init__(self) -> None:
         self.settings = get_settings()
         self.base_url = self.settings.netbox_url.rstrip("/")
@@ -108,6 +118,15 @@ class NetBoxClient:
 
         detail = payload.get("detail")
         return detail if isinstance(detail, str) else None
+
+    @staticmethod
+    def _copy_summary(
+        summary: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        return {
+            name: dict(metric)
+            for name, metric in summary.items()
+        }
 
     async def get(
         self,
@@ -215,6 +234,11 @@ class NetBoxClient:
         }
 
     async def dashboard_summary(self) -> dict[str, dict[str, Any]]:
+        now = monotonic()
+        cached = type(self)._dashboard_cache
+        if cached is not None and cached[0] > now:
+            return self._copy_summary(cached[1])
+
         endpoints = {
             "sites": "/api/dcim/sites/",
             "devices": "/api/dcim/devices/",
@@ -232,17 +256,43 @@ class NetBoxClient:
             except NetBoxError as exc:
                 return name, {"value": None, "error": exc.message}
 
-        return dict(await asyncio.gather(*(
-            load_metric(name, endpoint)
-            for name, endpoint in endpoints.items()
-        )))
+        async def load_recent() -> tuple[list[dict[str, Any]], str | None]:
+            try:
+                return await self._fetch_recent_devices(8), None
+            except NetBoxError as exc:
+                return [], exc.message
 
-    async def recent_devices(self, limit: int = 8) -> list[dict[str, Any]]:
+        results = await asyncio.gather(
+            *(load_metric(name, endpoint) for name, endpoint in endpoints.items()),
+            load_recent(),
+        )
+        summary = dict(results[:-1])
+        recent_devices, recent_error = results[-1]
+        type(self)._dashboard_cache = (
+            monotonic() + self._dashboard_cache_seconds,
+            self._copy_summary(summary),
+            [dict(item) for item in recent_devices],
+            recent_error,
+        )
+        return summary
+
+    async def _fetch_recent_devices(
+        self,
+        limit: int,
+    ) -> list[dict[str, Any]]:
         payload = await self.get_list(
             "/api/dcim/devices/",
             params={"limit": limit, "ordering": "-last_updated"},
         )
         return payload["results"]
+
+    async def recent_devices(self, limit: int = 8) -> list[dict[str, Any]]:
+        cached = type(self)._dashboard_cache
+        if cached is not None and cached[0] > monotonic() and limit == 8:
+            if cached[3]:
+                raise NetBoxError(cached[3])
+            return [dict(item) for item in cached[2]]
+        return await self._fetch_recent_devices(limit)
 
     async def list_sites(self) -> list[dict[str, Any]]:
         return await self.get_all(

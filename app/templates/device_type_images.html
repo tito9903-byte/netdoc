@@ -12,6 +12,8 @@
 {% set model_name = device_type.get("model") or device_type.get("display") or "Sin modelo" %}
 {% set front_source = device_type.get("_front_image_source") %}
 {% set rear_source = device_type.get("_rear_image_source") %}
+{% set front_metadata = device_type.get("_front_image_metadata") or {} %}
+{% set rear_metadata = device_type.get("_rear_image_metadata") or {} %}
 
 <div class="model-image-navigation">
     <a href="/device-types/{{ device_type.get('id') }}">← Volver al modelo</a>
@@ -74,6 +76,12 @@
             </div>
             {% endif %}
         </div>
+        {% if front_metadata %}
+        <footer class="model-image-metadata">
+            <span>{{ front_metadata.get("filename") or "Imagen frontal" }}</span>
+            <span>{% if front_metadata.get("updated_by") %}Actualizada por {{ front_metadata.get("updated_by") }}{% endif %}</span>
+        </footer>
+        {% endif %}
     </article>
 
     <article class="panel model-image-card">
@@ -101,17 +109,23 @@
             </div>
             {% endif %}
         </div>
+        {% if rear_metadata %}
+        <footer class="model-image-metadata">
+            <span>{{ rear_metadata.get("filename") or "Imagen trasera" }}</span>
+            <span>{% if rear_metadata.get("updated_by") %}Actualizada por {{ rear_metadata.get("updated_by") }}{% endif %}</span>
+        </footer>
+        {% endif %}
     </article>
 </section>
 
 <section class="panel model-image-upload-panel">
     <div class="panel-header compact-panel-header">
         <div>
-            <h2>Actualizar imágenes del modelo</h2>
-            <p>JPG, PNG, WEBP o GIF; máximo 5 MB por archivo.</p>
+            <h2>Agregar o reemplazar imágenes</h2>
+            <p>La nueva fotografía sustituye únicamente la cara seleccionada. JPG, PNG, WEBP o GIF; máximo 5 MB.</p>
         </div>
         {% if media_write_enabled and "devices.create" in current_permissions %}
-        <span class="status-pill healthy">Almacenamiento local habilitado</span>
+        <span class="status-pill healthy">Reemplazo habilitado</span>
         {% else %}
         <span class="status-pill neutral">Sin permiso de edición</span>
         {% endif %}
@@ -122,9 +136,9 @@
         <div>
             <strong>Las nuevas imágenes se guardan en NetDoc.</strong>
             <span>
-                NetBox conserva el modelo, fabricante, altura y componentes. NetDoc
-                guarda únicamente los archivos frontal y trasero en su base local,
-                evitando depender de permisos sobre el directorio MEDIA_ROOT de NetBox.
+                Puedes seleccionar solo el frente, solo la parte trasera o ambas. Una
+                cara que no selecciones conserva su imagen actual. El cambio se refleja
+                en los racks 2D y 3D después de recargar la vista.
             </span>
         </div>
     </div>
@@ -137,25 +151,25 @@
     >
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
         <label class="model-image-file">
-            <span>Imagen frontal</span>
+            <span>{% if device_type.get("front_image") %}Reemplazar imagen frontal{% else %}Agregar imagen frontal{% endif %}</span>
             <input type="file" name="front_image" accept="image/jpeg,image/png,image/webp,image/gif">
-            <small>Representación frontal del equipo en el rack.</small>
+            <small>Fotografía o diagrama recortado del frente del chasis.</small>
         </label>
         <label class="model-image-file">
-            <span>Imagen trasera</span>
+            <span>{% if device_type.get("rear_image") %}Reemplazar imagen trasera{% else %}Agregar imagen trasera{% endif %}</span>
             <input type="file" name="rear_image" accept="image/jpeg,image/png,image/webp,image/gif">
             <small>Puertos, ventiladores o conectores vistos desde atrás.</small>
         </label>
         <div class="model-image-guidance">
             <strong>Recomendación visual</strong>
-            <span>Usa una imagen horizontal, recortada al chasis y con fondo transparente o uniforme para que se ajuste bien a la altura U.</span>
+            <span>Usa una imagen horizontal, recortada al chasis y con fondo transparente u oscuro. El rack conserva la proporción sin estirar la fotografía.</span>
         </div>
         <button
             class="button primary"
             type="submit"
             {% if not media_write_enabled or "devices.create" not in current_permissions %}disabled{% endif %}
         >
-            Guardar imágenes en NetDoc
+            Guardar o reemplazar imágenes
         </button>
     </form>
 </section>

@@ -1,24 +1,39 @@
 # Pruebas
 
-## Estado actual
+## Estrategia
 
-El repositorio incluye pruebas de servicios de acceso, rutas administrativas, búsqueda, sistema, perfil, protección de login y migraciones en `tests/`. Las validaciones generales incluyen compilación, grafo Alembic, importación de `app.main`, sintaxis Bash, revisión de plantillas y pruebas manuales en desarrollo. Las pruebas HTTP contra los puertos del servidor deben ejecutarse únicamente en el servidor autorizado.
+NetDoc utiliza dos niveles distintos de validación:
+
+1. **Suite automatizada aislada:** base temporal, credenciales de prueba, URL de NetBox inválida y `NETBOX_WRITE_ENABLED=false` forzado antes de importar la aplicación.
+2. **Prueba manual en desarrollo:** puerto 8101, base propia de desarrollo y escritura controlada habilitada cuando sea necesaria para comprobar creaciones, ediciones, imágenes, racks y cables reales.
+
+Nunca se debe ejecutar la suite automatizada heredando directamente el `.env` de desarrollo o producción.
+
+## Cobertura actual
 
 | Módulo | Cobertura actual | Pendiente |
 |---|---|---|
 | Autenticación y roles | Inicialización, usuario, contraseña, permisos, persistencia, actualización inmediata y bloqueo temporal | concurrencia y rate limiting distribuido |
-| Usuarios administrativos | Login, acceso, denegación, desactivación, cambio de rol y eliminación de otra cuenta | último administrador, autoeliminación y CSRF inválido |
-| Perfil | Acceso, actualización de datos, verificación de contraseña actual y cambio de contraseña | correo inválido, CSRF inválido y sesión concurrente |
-| Auditoría | Creación, login fallido, login bloqueado y exportación CSV | fechas extremas, retención y carga |
-| Búsqueda global | Agrupación, enlaces seguros y consulta corta | integración real con filtros `q` de NetBox |
-| Sistema | Parsers de memoria/red, carga y métricas seguras | valores de servidor real, umbrales y compatibilidad no Linux |
-| Migraciones | base vacía, esquema heredado completo, idempotencia y esquema parcial | respaldo/restauración y próxima revisión incremental |
-| Dispositivos/interfaces | Manual | unitarias e integración con NetBox simulado |
-| Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
-| Racks | Manual | datos de borde y UI |
-| Despliegue | Sintaxis y ejecución manual conocida | ensayo del nuevo esquema y respaldo |
+| Usuarios administrativos | Login, acceso, denegación, desactivación, cambio de rol y eliminación de otra cuenta | último administrador y autoeliminación |
+| Perfil | Acceso, actualización de datos, verificación de contraseña actual y cambio de contraseña | sesión concurrente |
+| Auditoría | Creación, login fallido, login bloqueado y exportación CSV | retención y carga |
+| Búsqueda global | Agrupación, enlaces seguros y consulta corta | integración exhaustiva con plugins |
+| Sistema | Parsers de memoria/red, carga y métricas seguras | compatibilidad no Linux |
+| Migraciones | base vacía, esquema heredado completo, idempotencia, esquema parcial y revisión incremental `0002` | ensayo formal de restauración |
+| Dispositivos/interfaces | rutas principales y validación manual | integración más amplia con NetBox simulado |
+| Creación/cables | plan, validaciones y pruebas manuales | ejecución conversacional confirmada |
+| Imágenes de modelos | persistencia, sustitución, firma, MIME, ETag y ruta autenticada | carga elevada y limpieza de huérfanos |
+| Racks | alturas, media unidad, 0U, caras, conflictos, imágenes e inspector | accesibilidad y navegador móvil real |
+| Reporte PDF | estructura PDF, ruta autenticada, descarga y nombre de archivo | inspección visual en varios lectores PDF |
+| Despliegue | sintaxis y ejecución manual conocida | ensayo completo de respaldo/restauración |
 
-## Comandos
+## Comando recomendado
+
+```bash
+bash scripts/netdoc-test-isolated
+```
+
+El script prepara un entorno temporal y luego ejecuta, entre otras validaciones:
 
 ```bash
 python -m compileall app tests migrations
@@ -29,67 +44,78 @@ bash -n scripts/netdoc-deploy-dev
 bash -n scripts/netdoc-deploy-prod
 ```
 
-## Resultados de la rama `feature/access-control-audit`
-
-Se ejecutaron en un entorno aislado, no en el servidor:
-
-- Compilación de `app`, `tests` y `migrations`: correcta.
-- Grafo Alembic: una sola cabeza `20260724_0001`.
-- Migración de una base vacía: correcta.
-- Segunda ejecución sobre una base versionada: idempotente.
-- Adopción de una base heredada completa mediante `stamp`: correcta.
-- Rechazo de una base con esquema parcial: correcto.
-- Inicialización de SQLite en memoria y archivo temporal: correcta.
-- Creación de 11 permisos y tres roles iniciales: correcta.
-- Creación y autenticación de usuarios de prueba: correcta.
-- Rechazo de contraseña débil: correcto.
-- Creación de rol personalizado y evento de auditoría: correcta.
-- Persistencia de permisos personalizados del rol Operador tras repetir la inicialización: correcta.
-- Carga sintáctica de 19 plantillas: correcta.
-- Importación de la aplicación con 41 rutas: correcta.
-- 27 pruebas automatizadas: superadas localmente y por GitHub Actions.
-- TestClient: login administrativo y acceso a Usuarios, Roles y Auditoría: correctos.
-- TestClient: rol Consulta redirigido a `/forbidden` al intentar administrar usuarios: correcto.
-- TestClient: intento de login fallido visible en Auditoría: correcto.
-- TestClient: cinco fallos recientes bloquean temporalmente el siguiente intento y devuelven HTTP 429 con `Retry-After`: correcto.
-- Servicio de acceso: fallos expirados o procedentes de otra IP no bloquean: correcto.
-- TestClient: la desactivación invalida una sesión existente en la siguiente solicitud: correcto.
-- TestClient: el cambio de rol actualiza permisos en la siguiente solicitud: correcto.
-- TestClient: eliminación controlada de otra cuenta y exportación CSV: correctas.
-- TestClient: Consulta puede usar Búsqueda y no puede abrir Sistema: correcto.
-- TestClient: perfil disponible, edición de nombre/correo y cambio de contraseña propia: correctos.
-- TestClient: contraseña actual incorrecta impide el cambio: correcto.
-- Búsqueda: agrupación de resultados y enlaces internos seguros con cliente simulado: correcta.
-- Sistema: parsers de `/proc`, carga defensiva y recolección de métricas: correctos.
-
 ## Integración continua
 
-`.github/workflows/ci.yml` instala `requirements-lock.txt`, compila `app`, `tests` y `migrations`, valida `alembic heads`, ejecuta la suite, importa `app.main`, analiza todas las plantillas Jinja2 y valida los scripts de despliegue. `NetDoc CI` completó correctamente cada etapa para la revisión inicial Alembic.
+`.github/workflows/ci.yml` instala `requirements-lock.txt`, compila `app`, `tests` y `migrations`, valida `alembic heads`, ejecuta la suite, importa `app.main`, analiza todas las plantillas Jinja2 y valida los scripts de despliegue.
 
-Estos resultados no validan systemd, el puerto 8101, una base persistente real del servidor, la restauración de un respaldo, la IP observada detrás de un proxy, el navegador con datos reales ni NetBox.
+CI no valida:
+
+- systemd;
+- los puertos 8100/8101;
+- el navegador con datos reales;
+- permisos reales del token de NetBox;
+- restauración de respaldos;
+- apariencia visual exacta del rack o del PDF en el equipo del usuario.
+
+## Pruebas de racks y reportes
+
+Las pruebas automatizadas deben confirmar:
+
+- `u_height` completo y fraccionario;
+- equipos de 0U;
+- posición frontal y trasera;
+- profundidad completa;
+- conflictos de ocupación;
+- rutas autenticadas de fotografías;
+- creación del PDF con encabezado `%PDF-1.4` y tabla de referencias;
+- respuesta `application/pdf` y `Content-Disposition` de descarga;
+- inclusión de equipos posicionados, de 0U y sin posición válida.
+
+La inspección visual del PDF continúa siendo manual. Debe abrirse el archivo descargado, revisar todas las páginas y confirmar que no existen columnas cortadas o textos superpuestos.
 
 ## Prueba manual requerida en desarrollo
 
 1. Confirmar el `DATABASE_URL` de desarrollo sin mostrar credenciales.
-2. Respaldar la base existente y comprobar tamaño, propietario y permisos del respaldo.
-3. Confirmar `alembic heads` y una sola cabeza.
-4. Desplegar únicamente `develop` en el puerto 8101.
-5. Revisar logs del arranque y confirmar que la base fue creada, marcada o actualizada sin pérdida.
-6. Iniciar sesión con la cuenta administrativa existente.
-7. Crear usuarios de los roles Administrador, Operador y Consulta.
-8. Confirmar que cada menú y URL respeta sus permisos, incluyendo Búsqueda y Sistema.
-9. Probar creación, edición, activación y cambio de contraseña desde administración.
-10. Abrir Mi perfil con cada rol, actualizar nombre/correo y cambiar la contraseña propia.
-11. Confirmar que una contraseña actual incorrecta no permite el cambio.
-12. Realizar cinco fallos controlados con una cuenta de prueba y confirmar HTTP 429, `Retry-After` y el evento `LOGIN_BLOCKED`.
-13. Confirmar que la desactivación y los cambios de rol se aplican sin volver a iniciar sesión.
-14. Crear y editar un rol personalizado.
-15. Verificar filtros por fecha/recurso y exportar un CSV de Auditoría.
-16. Probar Búsqueda con dispositivos, interfaces, racks, sitios y cables reales.
-17. Revisar CPU, RAM, disco, red y uptime en Sistema sin acciones de escritura.
-18. Confirmar que desarrollo sigue sin escritura hacia NetBox.
-19. Revisar logs, permisos del archivo de base y que Git lo ignore.
+2. Respaldar la base existente y comprobar tamaño, propietario y permisos.
+3. Confirmar `alembic current` y `alembic heads` en `20260725_0002`.
+4. Desplegar la rama o `develop` únicamente en el puerto 8101.
+5. Revisar logs del arranque y confirmar que no hubo pérdida de datos.
+6. Confirmar que `NETBOX_WRITE_ENABLED=true` cuando la prueba requiera modificar NetBox.
+7. Crear o editar un objeto de prueba autorizado y verificar auditoría.
+8. Abrir un modelo existente, agregar una imagen frontal y reemplazarla.
+9. Confirmar que la nueva imagen cambia al recargar y que la otra cara permanece intacta.
+10. Revisar el mismo modelo en catálogo, ficha y rack 2D.
+11. Abrir un rack de 42U en 3D y comparar **Ajustar** con **Detalle**.
+12. Revisar equipos de 1U, 2U y chasis altos, frente y parte trasera.
+13. Confirmar que el inspector lateral responde también en 3D.
+14. Comprobar que `/topology` redirige al catálogo y que no existe un selector 3D global.
+15. Descargar el reporte PDF de ambas caras.
+16. Revisar resumen, elevación, inventario, paginación, seriales y etiquetas de activo.
+17. Probar un usuario sin `racks.view` y confirmar que no descarga el reporte.
+18. Revisar auditoría, logs y permisos de la base local.
+19. Confirmar que producción permanece en su commit anterior.
 
-## Estrategia siguiente
+## Regla de seguridad de la suite
 
-Agregar pruebas de CSRF inválido, protección del último administrador, rangos de fecha, fallos de base, correo de perfil, proxy/IP real, respaldo/restauración y una segunda revisión Alembic de prueba. Antes de `main`: diff y documentación revisados, pruebas existentes, despliegue en desarrollo, revisión de permisos y validación manual del propietario sin inventar resultados.
+`tests/test_000_environment.py` asigna directamente, no con `setdefault`:
+
+```text
+DATABASE_URL=<archivo temporal>
+NETBOX_URL=https://netbox.invalid
+NETBOX_WRITE_ENABLED=false
+```
+
+Por tanto, habilitar escritura en el `.env` manual de desarrollo no cambia el comportamiento de la suite aislada. Esta separación es obligatoria y debe mantenerse en futuras pruebas.
+
+## Criterio antes de producción
+
+Antes de abrir o fusionar una promoción hacia `main` se exige:
+
+- CI correcto;
+- una sola cabeza Alembic;
+- despliegue manual en 8101;
+- pruebas de lectura y escritura relevantes;
+- revisión visual del rack 2D/3D y del PDF;
+- documentación actualizada;
+- confirmación explícita del propietario;
+- respaldo separado de producción.

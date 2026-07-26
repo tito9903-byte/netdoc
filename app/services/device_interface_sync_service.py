@@ -150,14 +150,22 @@ class DeviceInterfaceSyncService:
                 missing.append(template)
                 continue
 
-            template_type = nested_label(template.get("type"), "")
-            existing_type = nested_label(existing.get("type"), "")
+            template_type_value = str(
+                self._choice_value(template.get("type")) or ""
+            )
+            existing_type_value = str(
+                self._choice_value(existing.get("type")) or ""
+            )
             comparison = {
                 "name": name,
-                "template_type": template_type or "Sin tipo",
-                "existing_type": existing_type or "Sin tipo",
+                "template_type": nested_label(template.get("type"), "Sin tipo"),
+                "existing_type": nested_label(existing.get("type"), "Sin tipo"),
             }
-            if template_type and existing_type and template_type != existing_type:
+            if (
+                template_type_value
+                and existing_type_value
+                and template_type_value != existing_type_value
+            ):
                 conflicts.append(comparison)
             else:
                 matching.append(comparison)

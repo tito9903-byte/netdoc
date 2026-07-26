@@ -175,7 +175,7 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         call_next,
     ) -> Response:
         self._normalize_optional_device_filters(request)
-        self._ensure_lldp_routes(request)
+        self._ensure_lldp_routes()
 
         permission = self._required_permission(
             request.url.path,
@@ -219,30 +219,26 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         return response
 
     @classmethod
-    def _ensure_lldp_routes(cls, request: StarletteRequest) -> None:
-        """Monta LLDP una sola vez sobre la aplicación que atiende la solicitud.
+    def _ensure_lldp_routes(cls) -> None:
+        """Monta LLDP una sola vez sobre la instancia FastAPI exportada por main."""
 
-        El proyecto todavía agrupa varios routers para conservar compatibilidad con
-        su bootstrap histórico. Durante importaciones parciales o pruebas aisladas,
-        esa agrupación puede quedar disponible después de crear la instancia de
-        FastAPI. Esta verificación hace que el primer request —incluido /health— deje
-        las rutas LLDP registradas sin duplicarlas.
-        """
+        # Dentro de BaseHTTPMiddleware, request.app puede apuntar a una capa ASGI
+        # intermedia y no necesariamente a la instancia FastAPI que expone routes.
+        # Importar aquí evita el ciclo durante el arranque y modifica la aplicación
+        # real que utiliza uvicorn y que importan las pruebas.
+        from app.main import app as application
 
-        application = request.app
-        include_router = getattr(application, "include_router", None)
-        routes = getattr(application, "routes", None)
-        if not callable(include_router) or routes is None:
-            return
-
-        existing = {getattr(route, "path", "") for route in routes}
+        existing = {
+            getattr(route, "path", "")
+            for route in application.routes
+        }
         if cls._lldp_paths.issubset(existing):
             return
 
         with cls._route_bootstrap_lock:
             existing = {
                 getattr(route, "path", "")
-                for route in getattr(application, "routes", [])
+                for route in application.routes
             }
             if cls._lldp_paths.issubset(existing):
                 return
@@ -255,7 +251,7 @@ class PermissionMiddleware(BaseHTTPMiddleware):
 
             from app.routers.lldp_discovery import router as lldp_router
 
-            include_router(lldp_router)
+            application.include_router(lldp_router)
 
     @staticmethod
     def _normalize_optional_device_filters(
@@ -301,8 +297,6 @@ class PermissionMiddleware(BaseHTTPMiddleware):
             doseq=True,
         ).encode("utf-8")
 
-        # Starlette puede haber calculado estas propiedades en middleware externo.
-        # Eliminarlas obliga a reconstruirlas desde el query_string normalizado.
         request.__dict__.pop("_url", None)
         request.__dict__.pop("_query_params", None)
 

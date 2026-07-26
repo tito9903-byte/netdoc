@@ -24,9 +24,25 @@
         }
     }
 
+    const interfaceActions = document.querySelector(".interface-panel-actions");
+    if (
+        interfaceActions instanceof HTMLElement &&
+        !interfaceActions.querySelector("[data-lldp-discovery-action]")
+    ) {
+        const lldpAction = document.createElement("a");
+        lldpAction.href = `/devices/${deviceId}/lldp-discovery`;
+        lldpAction.className = "interface-sync-link";
+        lldpAction.dataset.createModal = "";
+        lldpAction.dataset.modalTitle = "Descubrir conexiones LLDP";
+        lldpAction.dataset.lldpDiscoveryAction = "";
+        lldpAction.innerHTML = '<span aria-hidden="true">⌁</span> Descubrir LLDP';
+        interfaceActions.prepend(lldpAction);
+    }
+
     const parameters = new URLSearchParams(window.location.search);
+    const main = document.getElementById("main-content");
+
     if (parameters.get("primary_ip_saved") === "1") {
-        const main = document.getElementById("main-content");
         if (main && !main.querySelector("[data-primary-ip-success]")) {
             const banner = document.createElement("div");
             banner.className = "primary-ip-success-banner";
@@ -35,8 +51,23 @@
             main.prepend(banner);
         }
         parameters.delete("primary_ip_saved");
-        const cleanQuery = parameters.toString();
-        const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}${window.location.hash}`;
+    }
+
+    if (parameters.get("lldp_documented") === "1") {
+        if (main && !main.querySelector("[data-lldp-success]")) {
+            const banner = document.createElement("div");
+            banner.className = "primary-ip-success-banner";
+            banner.dataset.lldpSuccess = "";
+            banner.innerHTML = "<strong>Conexión LLDP documentada.</strong><span>NetBox ya contiene el cable en ambos extremos.</span>";
+            main.prepend(banner);
+        }
+        parameters.delete("lldp_documented");
+        parameters.delete("cable_id");
+    }
+
+    const cleanQuery = parameters.toString();
+    const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}${window.location.hash}`;
+    if (cleanUrl !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
         window.history.replaceState({}, "", cleanUrl);
     }
 })();

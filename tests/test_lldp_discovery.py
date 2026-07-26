@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock
 
+from fastapi.routing import iter_route_contexts
 from fastapi.testclient import TestClient
 
 from app.services.lldp_discovery_service import (
@@ -159,38 +160,55 @@ class LldpMatchingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class LldpRouteRegistrationTests(unittest.TestCase):
+    LLDP_PATHS = (
+        "/devices/{device_id}/lldp-discovery",
+        "/devices/{device_id}/lldp-discovery/run",
+        "/devices/{device_id}/lldp-discovery/confirm",
+    )
+
     @staticmethod
     def serving_application():
-        """Obtiene la instancia vigente y evita conservar una referencia obsoleta."""
-
         return import_module("app.main").app
 
-    def test_lldp_routes_exist_before_first_request(self):
+    @staticmethod
+    def effective_paths(application) -> tuple[str, ...]:
+        return tuple(
+            route_context.path
+            for route_context in iter_route_contexts(application.routes)
+            if route_context.path
+        )
+
+    def test_lldp_routes_exist_once_in_effective_route_tree(self):
         application = self.serving_application()
-        paths = {getattr(route, "path", "") for route in application.routes}
+        paths = self.effective_paths(application)
 
         self.assertIn("/system", paths)
-        self.assertIn("/devices/{device_id}/lldp-discovery", paths)
-        self.assertIn("/devices/{device_id}/lldp-discovery/run", paths)
-        self.assertIn("/devices/{device_id}/lldp-discovery/confirm", paths)
+        for path in self.LLDP_PATHS:
+            with self.subTest(path=path):
+                self.assertEqual(1, paths.count(path))
 
-    def test_health_request_does_not_mutate_route_table(self):
-        application = self.serving_application()
-        paths_before = tuple(
-            getattr(route, "path", "")
-            for route in application.routes
+        self.assertEqual(
+            "/devices/42/lldp-discovery",
+            str(application.url_path_for(
+                "lldp_discovery_page",
+                device_id=42,
+            )),
         )
+
+    def test_health_request_does_not_mutate_route_tree(self):
+        application = self.serving_application()
+        top_level_count_before = len(application.routes)
+        effective_paths_before = self.effective_paths(application)
 
         with TestClient(application) as client:
             response = client.get("/health")
 
-        paths_after = tuple(
-            getattr(route, "path", "")
-            for route in application.routes
-        )
-
         self.assertEqual(200, response.status_code)
-        self.assertEqual(paths_before, paths_after)
+        self.assertEqual(top_level_count_before, len(application.routes))
+        self.assertEqual(
+            effective_paths_before,
+            self.effective_paths(application),
+        )
 
 
 if __name__ == "__main__":

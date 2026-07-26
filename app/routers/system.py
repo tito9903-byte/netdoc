@@ -25,9 +25,11 @@ router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
 
-# El módulo de sistema ya está registrado directamente en app.main y actúa como
-# punto estable para montar el descubrimiento LLDP sin acoplarlo a racks/modelos.
-router.include_router(lldp_discovery_router)
+# FastAPI copia las rutas cuando se incluye un APIRouter dentro de otro. En este
+# proyecto el router de sistema se importa durante el arranque principal; anexar
+# explícitamente las rutas evita que el descubrimiento quede fuera si el módulo
+# ya estaba parcialmente cargado por otra prueba o importación.
+router.routes.extend(lldp_discovery_router.routes)
 
 
 def context(request: Request, **extra: object) -> dict[str, object]:

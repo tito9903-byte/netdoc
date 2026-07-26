@@ -10,8 +10,15 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
-from app.routers.lldp_discovery import router as lldp_discovery_router
+from app.services.lldp_privilege_support import install_lldp_privilege_support
 from app.services.system_service import collect_system_health
+
+
+# Debe instalarse antes de importar el router LLDP, porque ese router utiliza la
+# clase de servicio compartida durante las solicitudes de descubrimiento.
+install_lldp_privilege_support()
+
+from app.routers.lldp_discovery import router as lldp_discovery_router  # noqa: E402
 
 
 router = APIRouter()

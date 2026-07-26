@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from importlib import import_module
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.services.lldp_discovery_service import (
     LldpDiscoveryService,
     LldpObservation,
@@ -142,6 +142,7 @@ class LldpMatchingTests(unittest.IsolatedAsyncioTestCase):
 
         service = object.__new__(LldpDiscoveryService)
         service.client = SimpleNamespace(get_all=AsyncMock(side_effect=get_all))
+
         rows = await service._match_observations(
             local_device={"id": 10, "name": "SW-ACCESS-01"},
             observations=[
@@ -158,15 +159,38 @@ class LldpMatchingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class LldpRouteRegistrationTests(unittest.TestCase):
-    def test_first_request_bootstraps_lldp_routes_on_serving_application(self):
-        with TestClient(app) as client:
-            response = client.get("/health")
+    @staticmethod
+    def serving_application():
+        """Obtiene la instancia vigente y evita conservar una referencia obsoleta."""
 
-        self.assertEqual(200, response.status_code)
-        paths = {getattr(route, "path", "") for route in app.routes}
+        return import_module("app.main").app
+
+    def test_lldp_routes_exist_before_first_request(self):
+        application = self.serving_application()
+        paths = {getattr(route, "path", "") for route in application.routes}
+
+        self.assertIn("/system", paths)
         self.assertIn("/devices/{device_id}/lldp-discovery", paths)
         self.assertIn("/devices/{device_id}/lldp-discovery/run", paths)
         self.assertIn("/devices/{device_id}/lldp-discovery/confirm", paths)
+
+    def test_health_request_does_not_mutate_route_table(self):
+        application = self.serving_application()
+        paths_before = tuple(
+            getattr(route, "path", "")
+            for route in application.routes
+        )
+
+        with TestClient(application) as client:
+            response = client.get("/health")
+
+        paths_after = tuple(
+            getattr(route, "path", "")
+            for route in application.routes
+        )
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(paths_before, paths_after)
 
 
 if __name__ == "__main__":

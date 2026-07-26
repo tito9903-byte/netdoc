@@ -16,8 +16,14 @@ from app.core.auth import (
 )
 from app.core.config import get_settings
 from app.core.database import session_scope
+from app.routers.device_create import (
+    signed_form_token,
+    verify_signed_form_token,
+)
 from app.services.access_service import record_audit
+from app.services.component_sequence_service import ComponentSequenceService
 from app.services.device_image_service import DeviceImageService
+from app.services.device_interface_sync_service import DeviceInterfaceSyncService
 from app.services.device_model_builder_service import DeviceModelBuilderService
 from app.services.device_type_service import DeviceTypeService, DeviceTypeServiceError
 
@@ -344,7 +350,7 @@ async def create_model_components_action(
         )
 
     form = await request.form()
-    service = DeviceModelBuilderService()
+    service = ComponentSequenceService()
     try:
         definition = service.definition(kind)
         created = await service.create_components(
@@ -381,4 +387,121 @@ async def create_model_components_action(
             f"{definition.label.lower()} correctamente."
         ),
         fragment="components",
+    )
+
+
+@router.get(
+    "/devices/{device_id}/interfaces/sync",
+    response_class=HTMLResponse,
+)
+async def device_interface_sync_page(
+    request: Request,
+    device_id: int,
+    error: str = "",
+):
+    redirect = access_redirect(request, "devices.create")
+    if redirect:
+        return redirect
+
+    try:
+        preview = await DeviceInterfaceSyncService().preview(device_id)
+    except DeviceTypeServiceError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="error.html",
+            status_code=404 if exc.status_code == 404 else 503,
+            context=context(
+                request,
+                current_page="devices",
+                page_title="Sincronización no disponible",
+                page_subtitle="No fue posible comparar el dispositivo con su modelo",
+                error_title="No se pudieron preparar las interfaces",
+                error_message=exc.message,
+                netbox_connected=exc.status_code != 503,
+            ),
+        )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="device_interface_sync.html",
+        context=context(
+            request,
+            current_page="devices",
+            page_title="Sincronizar interfaces",
+            page_subtitle="Crear interfaces faltantes desde el modelo de NetBox",
+            preview=preview,
+            csrf_token=signed_form_token(
+                request,
+                f"device-interface-sync:{device_id}",
+            ),
+            error=error,
+        ),
+    )
+
+
+@router.post(
+    "/devices/{device_id}/interfaces/sync",
+    response_class=HTMLResponse,
+)
+async def device_interface_sync_action(
+    request: Request,
+    device_id: int,
+    csrf_token: str = Form(""),
+):
+    redirect = access_redirect(request, "devices.create")
+    if redirect:
+        return redirect
+
+    namespace = f"device-interface-sync:{device_id}"
+    target = f"/devices/{device_id}/interfaces/sync"
+    if not verify_signed_form_token(request, csrf_token, namespace):
+        return RedirectResponse(
+            f"{target}?{urlencode({'error': 'La sesión de seguridad venció. Abre nuevamente la sincronización.'})}",
+            status_code=303,
+        )
+    if not settings.netbox_write_enabled:
+        return RedirectResponse(
+            f"{target}?{urlencode({'error': 'La escritura en NetBox está deshabilitada.'})}",
+            status_code=303,
+        )
+
+    try:
+        result = await DeviceInterfaceSyncService().synchronize(device_id)
+    except DeviceTypeServiceError as exc:
+        audit_event(
+            request,
+            action="DEVICE_INTERFACE_SYNC",
+            resource="device_interface",
+            resource_id=str(device_id),
+            detail=exc.message,
+            success=False,
+        )
+        return RedirectResponse(
+            f"{target}?{urlencode({'error': exc.message})}",
+            status_code=303,
+        )
+
+    created_count = int(result.get("created_count") or 0)
+    matching_count = int(result.get("matching_count") or 0)
+    conflict_count = int(result.get("conflict_count") or 0)
+    audit_event(
+        request,
+        action="DEVICE_INTERFACE_SYNC",
+        resource="device_interface",
+        resource_id=str(device_id),
+        detail=(
+            f"Sincronización desde el modelo: {created_count} creadas, "
+            f"{matching_count} ya coincidentes y {conflict_count} para revisión."
+        ),
+        success=True,
+    )
+
+    params = urlencode({
+        "interfaces_synced": created_count,
+        "interfaces_existing": matching_count,
+        "interfaces_conflicts": conflict_count,
+    })
+    return RedirectResponse(
+        f"/devices/{device_id}?{params}#interfaces",
+        status_code=303,
     )

@@ -3,6 +3,7 @@ fastapi
 httpx
 itsdangerous
 jinja2
+netmiko==4.7.0
 Pillow
 pydantic-settings
 python-multipart

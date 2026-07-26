@@ -1,0 +1,145 @@
+.component-sequence-builder {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.component-sequence-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.component-sequence-toolbar-copy {
+    display: grid;
+    gap: 3px;
+}
+
+.component-sequence-toolbar-copy strong {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.component-sequence-toolbar-copy span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.component-sequence-total {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border: 1px solid rgba(32, 200, 210, 0.28);
+    border-radius: 999px;
+    color: var(--accent);
+    background: rgba(32, 200, 210, 0.08);
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.component-sequence-total[data-invalid="true"] {
+    border-color: rgba(255, 110, 126, 0.38);
+    color: #ff94a2;
+    background: rgba(255, 86, 108, 0.08);
+}
+
+.component-sequence-list {
+    display: grid;
+    gap: 12px;
+}
+
+.component-sequence-row {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(110px, 0.28fr) minmax(110px, 0.28fr) auto;
+    gap: 12px;
+    align-items: end;
+    padding: 14px;
+    border: 1px solid rgba(130, 163, 180, 0.16);
+    border-radius: 13px;
+    background: rgba(5, 17, 25, 0.28);
+}
+
+.component-sequence-row-title {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: -2px;
+}
+
+.component-sequence-row-title strong {
+    color: #c7f7fa;
+    font-size: 10px;
+    letter-spacing: 0.55px;
+    text-transform: uppercase;
+}
+
+.sequence-remove-button {
+    display: inline-grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 1px solid rgba(255, 110, 126, 0.24);
+    border-radius: 9px;
+    color: #ff9ca7;
+    background: rgba(255, 86, 108, 0.06);
+    cursor: pointer;
+}
+
+.sequence-remove-button:hover,
+.sequence-remove-button:focus-visible {
+    border-color: rgba(255, 110, 126, 0.5);
+    background: rgba(255, 86, 108, 0.12);
+    outline: none;
+}
+
+.sequence-remove-button[hidden] {
+    display: none;
+}
+
+.add-sequence-button {
+    justify-self: start;
+}
+
+.add-sequence-button span {
+    font-size: 16px;
+    line-height: 1;
+}
+
+@media (max-width: 760px) {
+    .component-sequence-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .component-sequence-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .component-sequence-row .sequence-pattern-field,
+    .component-sequence-row-title {
+        grid-column: 1 / -1;
+    }
+
+    .add-sequence-button {
+        width: 100%;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .component-sequence-row {
+        grid-template-columns: 1fr;
+    }
+
+    .component-sequence-row .field,
+    .component-sequence-row-title {
+        grid-column: 1;
+    }
+}

@@ -127,7 +127,8 @@ class PrimaryIpAndRackInventoryTests(unittest.TestCase):
             ROOT / "app/templates/rack_detail.html"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("Inventario del rack", template)
+        self.assertIn("Inventario operativo", template)
+        self.assertIn("Equipos instalados", template)
         self.assertIn("Número de serie", template)
         self.assertIn("IP principal", template)
         self.assertIn('device.get("primary_ip4")', template)

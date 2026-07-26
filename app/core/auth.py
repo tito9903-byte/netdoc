@@ -1,3 +1,4 @@
+import re
 import secrets
 from urllib.parse import quote
 
@@ -262,6 +263,19 @@ class PermissionMiddleware(BaseHTTPMiddleware):
             ),
         }.get((request.method.upper(), request.url.path))
 
+        if (
+            mutation is None
+            and request.method.upper() == "POST"
+            and re.fullmatch(
+                r"/devices/\d+/primary-ip/new",
+                request.url.path,
+            )
+        ):
+            mutation = (
+                "DEVICE_PRIMARY_IP_UPDATE",
+                "device",
+            )
+
         if mutation is None:
             return
 
@@ -341,6 +355,12 @@ class PermissionMiddleware(BaseHTTPMiddleware):
             return "audit.view"
 
         if path.startswith("/devices/actions/new"):
+            return "devices.create"
+
+        if (
+            method.upper() == "POST"
+            and re.fullmatch(r"/devices/\d+/primary-ip/new", path)
+        ):
             return "devices.create"
 
         if path.startswith("/devices"):

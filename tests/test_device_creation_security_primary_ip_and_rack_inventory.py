@@ -120,7 +120,7 @@ class PrimaryIpAndRackInventoryTests(unittest.TestCase):
 
         self.assertIn("IP principal", javascript)
         self.assertIn("primary-ip/new", javascript)
-        self.assertIn("data.createModal", javascript)
+        self.assertIn("dataset.createModal", javascript)
 
     def test_rack_inventory_lists_serial_and_primary_ip(self):
         template = (

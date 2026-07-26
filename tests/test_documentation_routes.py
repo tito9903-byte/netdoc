@@ -192,7 +192,10 @@ class DocumentationRouteTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn("Interfaces de red", response.text)
         self.assertIn("Esquema NetBox", response.text)
-        self.assertIn('name="name_pattern"', response.text)
+        self.assertIn('name="sequence_pattern"', response.text)
+        self.assertIn('name="sequence_start"', response.text)
+        self.assertIn('name="sequence_count"', response.text)
+        self.assertIn("Agregar otra secuencia", response.text)
         self.assertIn('name="type"', response.text)
         self.assertIn(
             "/device-types/10/components/actions/create",

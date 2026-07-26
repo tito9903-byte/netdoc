@@ -29,6 +29,23 @@
     outline: none;
 }
 
+.interface-sync-result-banner {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 16px;
+    padding: 12px 15px;
+    border: 1px solid rgba(72, 229, 154, 0.32);
+    border-radius: 12px;
+    color: #c8ffe2;
+    background: rgba(72, 229, 154, 0.075);
+}
+
+.interface-sync-result-banner span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
 .interface-sync-page {
     display: grid;
     gap: 16px;
@@ -188,6 +205,11 @@
 
     .interface-sync-link {
         min-height: 44px;
+    }
+
+    .interface-sync-result-banner {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .interface-sync-metrics {

@@ -14,6 +14,7 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
+from app.routers.model_builder import router as model_builder_router
 from app.services.navigation_read_service import (
     NavigationReadError,
     NavigationReadService,
@@ -29,6 +30,11 @@ from app.services.rack_service import RackService, RackServiceError
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+
+
+# El constructor de modelos forma parte de Documentación. Se registra aquí porque
+# este router ya está montado por la aplicación y evita duplicar rutas en main.py.
+router.include_router(model_builder_router)
 
 
 def is_authenticated(request: Request) -> bool:

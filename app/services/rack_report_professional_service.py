@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from io import BytesIO
-from math import ceil
 from typing import Any, Mapping
 
 from reportlab.lib.colors import HexColor
@@ -18,7 +17,6 @@ from app.services.rack_report_service import (
     PAGE_WIDTH,
     PANEL,
     PANEL_ALT,
-    TEXT,
     PreparedImage,
     RackReportError,
     ReportImage,
@@ -28,7 +26,7 @@ from app.services.rack_report_service import (
     _draw_background,
     _draw_footer,
     _draw_header,
-    _draw_image_contain,
+    _draw_rack,
     _draw_summary_card,
     _draw_text,
     _inventory_rows,
@@ -38,10 +36,9 @@ from app.services.rack_report_service import (
     _safe_filename,
 )
 
-CARDS_PER_PAGE = 8
-CARD_COLUMNS = 2
-BLACK_SOFT = HexColor("#081218")
-PHOTO_BG = HexColor("#0A171E")
+BLACK_SOFT = HexColor("#071118")
+TABLE_HEADER = HexColor("#123842")
+DANGER = HexColor("#EA4F59")
 
 
 def _format_u_number(value: float) -> str:
@@ -79,24 +76,7 @@ def _prepare_images(
     }
 
 
-def _draw_placeholder(
-    pdf: pdfcanvas.Canvas,
-    *,
-    x: float,
-    y: float,
-    width: float,
-    height: float,
-) -> None:
-    pdf.setFillColor(PHOTO_BG)
-    pdf.setStrokeColor(FRAME)
-    pdf.roundRect(x, y, width, height, 5, fill=1, stroke=1)
-    label = "Sin fotografía registrada"
-    pdf.setFillColor(MUTED)
-    pdf.setFont("Helvetica", 6.7)
-    pdf.drawCentredString(x + width / 2, y + height / 2 - 2, label)
-
-
-def _draw_rack_information(
+def _draw_info_grid(
     pdf: pdfcanvas.Canvas,
     *,
     rack: Mapping[str, Any],
@@ -114,9 +94,9 @@ def _draw_rack_information(
     _draw_text(
         pdf,
         x + 14,
-        y + height - 25,
+        y + height - 24,
         "Información del rack",
-        size=11,
+        size=10.5,
         color=CYAN,
         bold=True,
     )
@@ -135,128 +115,184 @@ def _draw_rack_information(
         ("Cara", "Frontal" if face == "front" else "Trasera"),
     ]
 
-    row_height = 35
-    cursor = y + height - 49
+    columns = 2
+    row_count = 4
+    gap = 8
+    cell_width = (width - 28 - gap) / columns
+    cell_height = (height - 46 - gap * (row_count - 1)) / row_count
+
     for index, (label, value) in enumerate(rows):
-        row_y = cursor - row_height
-        pdf.setFillColor(PANEL_ALT if index % 2 else BLACK_SOFT)
+        column = index // row_count
+        row = index % row_count
+        cell_x = x + 14 + column * (cell_width + gap)
+        cell_y = y + height - 42 - (row + 1) * cell_height - row * gap
+
+        pdf.setFillColor(PANEL_ALT if (index % 2) else BLACK_SOFT)
         pdf.setStrokeColor(FRAME)
-        pdf.rect(x + 10, row_y, width - 20, row_height - 4, fill=1, stroke=1)
+        pdf.roundRect(
+            cell_x,
+            cell_y,
+            cell_width,
+            cell_height,
+            5,
+            fill=1,
+            stroke=1,
+        )
         _draw_text(
             pdf,
-            x + 20,
-            row_y + 11,
+            cell_x + 9,
+            cell_y + cell_height - 14,
             label,
-            size=6.8,
+            size=6.2,
             color=MUTED,
         )
         _draw_text(
             pdf,
-            x + 88,
-            row_y + 11,
+            cell_x + 9,
+            cell_y + 9,
             value,
-            size=7.3,
+            size=7.0,
             bold=True,
-            max_width=width - 110,
+            max_width=cell_width - 18,
         )
-        cursor -= row_height
-
-    _draw_text(
-        pdf,
-        x + 14,
-        y + 16,
-        "Las fotografías provienen del modelo documentado.",
-        size=6.6,
-        color=MUTED,
-        max_width=width - 28,
-    )
 
 
-def _draw_device_card(
+def _device_value(device: Mapping[str, Any], key: str) -> str:
+    if key == "name":
+        return _clean_text(device.get("name") or device.get("display"), "Equipo")
+    if key == "model":
+        return _clean_text(device.get("_model"), "Sin modelo")
+    if key == "position":
+        return _report_position(device)
+    if key == "height":
+        return _clean_text(device.get("_u_height_label"), "0U")
+    if key == "face":
+        return _label(device.get("_face"), "-")
+    if key == "status":
+        return _clean_text(device.get("_status"), "Sin estado")
+    if key == "serial":
+        return _clean_text(device.get("serial"), "-")
+    if key == "asset":
+        return _clean_text(device.get("asset_tag"), "-")
+    return "-"
+
+
+def _draw_inventory_table(
     pdf: pdfcanvas.Canvas,
     *,
-    device: Mapping[str, Any],
-    prepared_images: Mapping[int, PreparedImage],
+    devices: list[dict[str, Any]],
     x: float,
     y: float,
     width: float,
     height: float,
 ) -> None:
     pdf.setFillColor(PANEL)
-    pdf.setStrokeColor(CYAN if not device.get("_has_conflict") else HexColor("#EA4F59"))
-    pdf.setLineWidth(0.8)
-    pdf.roundRect(x, y, width, height, 7, fill=1, stroke=1)
+    pdf.setStrokeColor(FRAME)
+    pdf.roundRect(x, y, width, height, 9, fill=1, stroke=1)
 
-    photo_height = max(31.0, min(56.0, height * 0.50))
-    photo_x = x + 8
-    photo_y = y + height - photo_height - 8
-    photo_width = width - 16
+    title_height = 24
+    header_height = 21
+    table_x = x + 10
+    table_width = width - 20
+    table_top = y + height - title_height
+    body_bottom = y + 9
 
-    image = prepared_images.get(_device_type_id(device) or -1)
-    if image is not None:
-        pdf.setFillColor(PHOTO_BG)
+    _draw_text(
+        pdf,
+        x + 14,
+        y + height - 17,
+        f"Inventario de equipos · {len(devices)} registrados",
+        size=9.5,
+        color=CYAN,
+        bold=True,
+    )
+
+    columns = [
+        ("Equipo", "name", 0.16),
+        ("Modelo", "model", 0.22),
+        ("Posición", "position", 0.10),
+        ("Altura", "height", 0.07),
+        ("Cara", "face", 0.08),
+        ("Estado", "status", 0.10),
+        ("Serial", "serial", 0.14),
+        ("Activo", "asset", 0.13),
+    ]
+
+    pdf.setFillColor(TABLE_HEADER)
+    pdf.setStrokeColor(CYAN)
+    pdf.rect(
+        table_x,
+        table_top - header_height,
+        table_width,
+        header_height,
+        fill=1,
+        stroke=1,
+    )
+
+    cursor_x = table_x
+    for label, _key, ratio in columns:
+        column_width = table_width * ratio
+        _draw_text(
+            pdf,
+            cursor_x + 5,
+            table_top - 14,
+            label,
+            size=6.5,
+            bold=True,
+            max_width=column_width - 10,
+        )
+        cursor_x += column_width
+
+    if not devices:
+        _draw_text(
+            pdf,
+            table_x + 10,
+            table_top - 48,
+            "No hay equipos asociados a este rack.",
+            size=9,
+            color=MUTED,
+        )
+        return
+
+    body_height = table_top - header_height - body_bottom
+    row_height = body_height / len(devices)
+    text_size = max(4.2, min(6.2, row_height * 0.38))
+
+    cursor_y = table_top - header_height
+    for index, device in enumerate(devices):
+        cursor_y -= row_height
+        pdf.setFillColor(PANEL_ALT if index % 2 else BLACK_SOFT)
         pdf.setStrokeColor(FRAME)
-        pdf.roundRect(
-            photo_x,
-            photo_y,
-            photo_width,
-            photo_height,
-            5,
+        pdf.rect(
+            table_x,
+            cursor_y,
+            table_width,
+            row_height,
             fill=1,
             stroke=1,
         )
-        _draw_image_contain(
-            pdf,
-            image,
-            x=photo_x + 4,
-            y=photo_y + 3,
-            width=photo_width - 8,
-            height=photo_height - 6,
-        )
-    else:
-        _draw_placeholder(
-            pdf,
-            x=photo_x,
-            y=photo_y,
-            width=photo_width,
-            height=photo_height,
-        )
 
-    name = device.get("name") or device.get("display") or "Equipo"
-    model = device.get("_model") or "Sin modelo"
-    status = device.get("_status") or "Sin estado"
-    text_y = photo_y - 14
-
-    _draw_text(
-        pdf,
-        x + 10,
-        text_y,
-        name,
-        size=8.0,
-        bold=True,
-        max_width=width - 20,
-    )
-    _draw_text(
-        pdf,
-        x + 10,
-        text_y - 12,
-        model,
-        size=6.3,
-        color=MUTED,
-        max_width=width - 20,
-    )
-    _draw_text(
-        pdf,
-        x + 10,
-        y + 9,
-        f"{_report_position(device)} · {device.get('_u_height_label') or '0U'} · {status}",
-        size=6.3,
-        color=GREEN if str(status).lower() == "active" else MUTED,
-        max_width=width - 20,
-    )
+        cursor_x = table_x
+        for _label_text, key, ratio in columns:
+            column_width = table_width * ratio
+            value = _device_value(device, key)
+            color = GREEN if key == "status" and value.lower() == "active" else MUTED
+            if device.get("_has_conflict") and key == "position":
+                color = DANGER
+            _draw_text(
+                pdf,
+                cursor_x + 5,
+                cursor_y + max(3.0, (row_height - text_size) / 2),
+                value,
+                size=text_size,
+                color=color,
+                bold=key in {"name", "position"},
+                max_width=column_width - 10,
+            )
+            cursor_x += column_width
 
 
-def _draw_report_page(
+def _draw_one_page_report(
     pdf: pdfcanvas.Canvas,
     *,
     rack: Mapping[str, Any],
@@ -264,9 +300,7 @@ def _draw_report_page(
     face: str,
     generated_at: str,
     prepared_images: Mapping[int, PreparedImage],
-    devices: list[dict[str, Any]],
-    page_number: int,
-    first_page: bool,
+    inventory: list[dict[str, Any]],
 ) -> None:
     _draw_background(pdf)
     rack_name = _clean_text(rack.get("name") or rack.get("display") or "Rack")
@@ -276,80 +310,80 @@ def _draw_report_page(
     _draw_header(
         pdf,
         title=f"Rack {rack_name}",
-        subtitle=(
-            f"Resumen físico y equipos documentados · {site} · {location}"
-            if first_page
-            else "Continuación del inventario fotográfico"
-        ),
-        page_number=page_number,
+        subtitle=f"Elevación datacenter e inventario físico · {site} · {location}",
+        page_number=1,
     )
 
-    content_top = PAGE_HEIGHT - 92
-    content_bottom = 42
+    cards = [
+        ("Altura", f"{elevation.get('rack_height', 0)}U"),
+        ("Ocupadas", f"{elevation.get('used_units_label', '0')}U"),
+        ("Libres", f"{elevation.get('free_units_label', '0')}U"),
+        ("Utilización", f"{elevation.get('utilization', 0)}%"),
+        ("Equipos", str(len(inventory))),
+    ]
+    card_y = PAGE_HEIGHT - 128
+    for index, (label, value) in enumerate(cards):
+        _draw_summary_card(pdf, MARGIN + index * 155, card_y, label, value)
 
-    if first_page:
-        cards = [
-            ("Altura", f"{elevation.get('rack_height', 0)}U"),
-            ("Ocupadas", f"{elevation.get('used_units_label', '0')}U"),
-            ("Libres", f"{elevation.get('free_units_label', '0')}U"),
-            ("Utilización", f"{elevation.get('utilization', 0)}%"),
-            ("Equipos", str(len(_inventory_rows(elevation)))),
-        ]
-        card_y = PAGE_HEIGHT - 128
-        for index, (label, value) in enumerate(cards):
-            _draw_summary_card(pdf, MARGIN + index * 155, card_y, label, value)
-        content_top = PAGE_HEIGHT - 150
+    top_y = 255
+    top_height = 202
 
-        info_x = MARGIN
-        info_width = 224
-        info_height = content_top - content_bottom
-        _draw_rack_information(
-            pdf,
-            rack=rack,
-            elevation=elevation,
-            face=face,
-            x=info_x,
-            y=content_bottom,
-            width=info_width,
-            height=info_height,
-        )
-        grid_x = info_x + info_width + 14
-        grid_width = PAGE_WIDTH - MARGIN - grid_x
-    else:
-        grid_x = MARGIN
-        grid_width = PAGE_WIDTH - MARGIN * 2
+    rack_panel_x = MARGIN
+    rack_panel_width = 245
+    pdf.setFillColor(PANEL)
+    pdf.setStrokeColor(FRAME)
+    pdf.roundRect(
+        rack_panel_x,
+        top_y,
+        rack_panel_width,
+        top_height,
+        9,
+        fill=1,
+        stroke=1,
+    )
+    _draw_text(
+        pdf,
+        rack_panel_x + 14,
+        top_y + top_height - 22,
+        "Vista 3D del rack",
+        size=10,
+        color=CYAN,
+        bold=True,
+    )
 
-    rows = max(1, ceil(len(devices) / CARD_COLUMNS))
-    gap_x = 12
-    gap_y = 10
-    card_width = (grid_width - gap_x) / CARD_COLUMNS
-    available_height = content_top - content_bottom
-    card_height = (available_height - gap_y * (rows - 1)) / rows
+    _draw_rack(
+        pdf,
+        x=rack_panel_x + 62,
+        y=top_y + 15,
+        width=112,
+        height=158,
+        rack_height=int(elevation.get("rack_height") or 42),
+        devices=elevation.get("visible_devices", []),
+        face="frontal" if face == "front" else "trasera",
+        prepared_images=prepared_images,
+    )
 
-    for index, device in enumerate(devices):
-        column = index % CARD_COLUMNS
-        row = index // CARD_COLUMNS
-        x = grid_x + column * (card_width + gap_x)
-        y = content_top - (row + 1) * card_height - row * gap_y
-        _draw_device_card(
-            pdf,
-            device=device,
-            prepared_images=prepared_images,
-            x=x,
-            y=y,
-            width=card_width,
-            height=card_height,
-        )
+    info_x = rack_panel_x + rack_panel_width + 12
+    info_width = PAGE_WIDTH - MARGIN - info_x
+    _draw_info_grid(
+        pdf,
+        rack=rack,
+        elevation=elevation,
+        face=face,
+        x=info_x,
+        y=top_y,
+        width=info_width,
+        height=top_height,
+    )
 
-    if not devices:
-        _draw_text(
-            pdf,
-            grid_x + 20,
-            content_top - 45,
-            "No hay equipos asociados a este rack.",
-            size=11,
-            color=MUTED,
-        )
+    _draw_inventory_table(
+        pdf,
+        devices=inventory,
+        x=MARGIN,
+        y=42,
+        width=PAGE_WIDTH - MARGIN * 2,
+        height=202,
+    )
 
     _draw_footer(pdf, generated_at)
     pdf.showPage()
@@ -379,29 +413,20 @@ def build_rack_report(
     pdf.setAuthor("NetDoc")
     pdf.setCreator("NetDoc")
 
-    chunks = [
-        inventory[index : index + CARDS_PER_PAGE]
-        for index in range(0, len(inventory), CARDS_PER_PAGE)
-    ] or [[]]
-
-    for page_index, devices in enumerate(chunks, start=1):
-        _draw_report_page(
-            pdf,
-            rack=rack,
-            elevation=elevation,
-            face=selected_face,
-            generated_at=generated_at,
-            prepared_images=prepared_images,
-            devices=devices,
-            page_number=page_index,
-            first_page=page_index == 1,
-        )
+    _draw_one_page_report(
+        pdf,
+        rack=rack,
+        elevation=elevation,
+        face=selected_face,
+        generated_at=generated_at,
+        prepared_images=prepared_images,
+        inventory=inventory,
+    )
 
     pdf.save()
     value = output.getvalue()
     if not value.startswith(b"%PDF-"):
         raise RackReportError("No se pudo preparar el reporte del rack.")
-    return value, f"rack-{_safe_filename(rack_name)}-inventario.pdf"
 
-
-__all__ = ["RackReportError", "ReportImage", "build_rack_report"]
+    filename = f"rack-{_safe_filename(rack_name)}-inventario.pdf"
+    return value, filename

@@ -103,7 +103,11 @@
                 type="submit"
                 {% if not write_enabled or preview.missing_count == 0 %}disabled{% endif %}
             >
-                Crear {{ preview.missing_count }} interfaz{% if preview.missing_count != 1 %}es{% endif %} faltante{% if preview.missing_count != 1 %}s{% endif %}
+                {% if preview.missing_count == 1 %}
+                    Crear 1 interfaz faltante
+                {% else %}
+                    Crear {{ preview.missing_count }} interfaces faltantes
+                {% endif %}
             </button>
         </form>
     </section>

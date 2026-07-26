@@ -5,7 +5,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/racks.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/rack_detail.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}?v=20260726-inventory-1">
 <link rel="stylesheet" href="{{ url_for('static', path='css/topology.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/rack_view_modes.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/rack_datacenter.css') }}">
@@ -269,6 +269,82 @@
         </div>
         {% endif %}
     </aside>
+</section>
+
+<section class="rack-inventory-panel" id="rackInventory">
+    <div class="rack-inventory-header">
+        <div>
+            <span>Inventario del rack</span>
+            <h3>Equipos instalados</h3>
+            <p>
+                La IP mostrada corresponde a la IPv4 principal del dispositivo;
+                cuando no existe, se utiliza la IPv6 principal.
+            </p>
+        </div>
+        <strong>{{ devices | length }} equipos</strong>
+    </div>
+
+    {% if devices %}
+    <div class="rack-inventory-table-wrapper">
+        <table class="rack-inventory-table">
+            <thead>
+                <tr>
+                    <th>Dispositivo</th>
+                    <th>Modelo</th>
+                    <th>Posición</th>
+                    <th>Número de serie</th>
+                    <th>IP principal</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                {% set device_type = device.get("device_type") or {} %}
+                {% set device_status = device.get("status") or {} %}
+                {% set primary_ip = device.get("primary_ip4") or device.get("primary_ip6") or device.get("primary_ip") or {} %}
+                {% set face = device.get("face") or {} %}
+                <tr>
+                    <td>
+                        <a class="rack-inventory-device" href="/devices/{{ device.get('id') }}">
+                            {{ device.get("name") or device.get("display") or "Sin nombre" }}
+                        </a>
+                    </td>
+                    <td>
+                        {{ device_type.get("display") or device_type.get("model") or "Sin asignar" }}
+                    </td>
+                    <td>
+                        {% if device.get("position") is not none %}
+                            U{{ device.get("position") }}
+                            · {{ face.get("label") or face.get("value") or "Sin cara" }}
+                        {% else %}
+                            Sin asignar
+                        {% endif %}
+                    </td>
+                    <td class="rack-inventory-mono">
+                        {{ device.get("serial") or "Sin asignar" }}
+                    </td>
+                    <td class="rack-inventory-mono">
+                        {{ primary_ip.get("display") or primary_ip.get("address") or "Sin asignar" }}
+                    </td>
+                    <td>
+                        <span class="rack-inventory-status status-{{ device_status.get('value', '') }}">
+                            {{ device_status.get("label") or device_status.get("value") or "Sin estado" }}
+                        </span>
+                    </td>
+                    <td>
+                        <a class="rack-inventory-open" href="/devices/{{ device.get('id') }}">Abrir</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="rack-inventory-empty">
+        Este rack todavía no tiene dispositivos asociados.
+    </div>
+    {% endif %}
 </section>
 {% endblock %}
 

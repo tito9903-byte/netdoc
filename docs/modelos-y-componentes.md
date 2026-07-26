@@ -54,6 +54,8 @@ En la ficha del modelo, la sección **Puertos, interfaces y componentes** permit
 
 Los campos, tipos y opciones de cada formulario se consultan desde el endpoint `OPTIONS` correspondiente de NetBox. Esto evita mantener en NetDoc una lista incompleta de tipos de interfaz y permite adaptarse a nuevas versiones.
 
+La navegación superior de la ficha muestra un contador junto a **Puertos y componentes**. El contador incluye interfaces, consola, energía y canales de paneles de parcheo. Cuando un panel tiene puertos frontales y traseros relacionados uno a uno, NetDoc utiliza la mayor cantidad de ambas caras para no contar dos veces el mismo canal físico. Las bahías y los elementos de inventario permanecen disponibles en la sección, pero no se suman como puertos.
+
 ## Creación individual y por lotes
 
 El campo **Nombre o patrón** acepta:

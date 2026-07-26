@@ -7,12 +7,13 @@ NetDoc puede consultar un dispositivo por SSH, ejecutar el comando LLDP apropiad
 El módulo no crea cables automáticamente durante la consulta. El flujo es:
 
 1. conectarse por SSH usando una cuenta de solo lectura;
-2. ejecutar LLDP;
-3. normalizar la salida;
-4. identificar el dispositivo y la interfaz remota en NetBox;
-5. verificar que ambos extremos estén libres;
-6. presentar una propuesta;
-7. crear el cable únicamente después de la confirmación del usuario.
+2. entrar a modo privilegiado cuando el perfil tenga `use_enable=true`;
+3. ejecutar LLDP;
+4. normalizar la salida;
+5. identificar el dispositivo y la interfaz remota en NetBox;
+6. verificar que ambos extremos estén libres;
+7. presentar una propuesta;
+8. crear el cable únicamente después de la confirmación del usuario.
 
 Un solo cable de NetBox documenta los dos extremos. NetDoc no crea una conexión duplicada en el dispositivo remoto.
 
@@ -40,13 +41,13 @@ NETDOC_SSH_MAX_NEIGHBORS=256
 Los perfiles se guardan como JSON dentro del `.env`:
 
 ```env
-NETDOC_SSH_PROFILES_JSON='{"default":{"username":"netdoc-read","password":"CAMBIAR","port":22},"arista_eos":{},"cisco_ios":{},"cisco_nxos":{},"juniper_junos":{},"mikrotik_routeros":{}}'
+NETDOC_SSH_PROFILES_JSON='{"default":{"username":"netdoc-read","password":"CAMBIAR","port":22,"use_enable":false},"arista_eos":{"use_enable":true,"secret":"CAMBIAR_ENABLE"},"cisco_ios":{},"cisco_nxos":{},"juniper_junos":{},"mikrotik_routeros":{}}'
 ```
 
 El perfil `default` se hereda. Cada plataforma puede reemplazar cualquier valor:
 
 ```env
-NETDOC_SSH_PROFILES_JSON='{"default":{"username":"netdoc-read","password":"CLAVE_GENERAL","port":22},"arista_eos":{"username":"netdoc-arista","password":"CLAVE_ARISTA"},"juniper_junos":{"private_key_file":"/etc/netdoc/ssh/juniper_read"}}'
+NETDOC_SSH_PROFILES_JSON='{"default":{"username":"netdoc-read","password":"CLAVE_GENERAL","port":22,"use_enable":false},"arista_eos":{"username":"netdoc-arista","password":"CLAVE_ARISTA","use_enable":true,"secret":"CLAVE_ENABLE_ARISTA"},"juniper_junos":{"private_key_file":"/etc/netdoc/ssh/juniper_read"}}'
 ```
 
 Campos admitidos dentro de cada perfil:
@@ -54,10 +55,33 @@ Campos admitidos dentro de cada perfil:
 - `username`;
 - `password`;
 - `private_key_file` o `key_file`;
-- `secret`, cuando la plataforma lo requiera;
+- `use_enable` o `enter_enable`;
+- `secret`, contraseña utilizada al ejecutar `enable`;
 - `port`;
 - `device_type`, para sobrescribir el controlador de Netmiko;
 - `command`, para usar una variante específica del comando LLDP.
+
+### Modo enable
+
+NetDoc no ejecuta `enable` en todas las plataformas. Solo lo hace cuando el perfil efectivo contiene:
+
+```json
+{"use_enable": true, "secret": "CLAVE_ENABLE"}
+```
+
+La secuencia es:
+
+```text
+SSH
+→ comprobar modo privilegiado
+→ ejecutar enable si todavía no está privilegiado
+→ comprobar nuevamente el prompt
+→ ejecutar show lldp neighbors detail
+```
+
+Si `use_enable=true` y falta `secret`, NetDoc detiene la operación antes de conectarse y muestra un error de configuración. Si el usuario ya entra directamente en modo privilegiado, Netmiko lo detecta y no envía `enable` innecesariamente.
+
+En Junos y RouterOS normalmente debe mantenerse `use_enable=false`, porque esas plataformas no utilizan el flujo clásico de `enable` de Cisco/EOS.
 
 Las credenciales nunca se guardan en NetBox ni en la auditoría.
 
@@ -158,7 +182,7 @@ Los nombres propios de Junos y RouterOS se conservan con cambios mínimos.
 - Cada propuesta se firma y vence después de 15 minutos.
 - Antes de crear el cable se vuelven a consultar ambos extremos en NetBox.
 - Los resultados y errores se registran en la auditoría de NetDoc.
-- Las contraseñas, llaves y salida completa del equipo no se guardan en la auditoría.
+- Las contraseñas, el `secret`, las llaves y la salida completa del equipo no se guardan en la auditoría.
 
 ## Limitaciones de la primera fase
 

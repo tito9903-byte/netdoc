@@ -5,11 +5,13 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/device_components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/component_sequences.css') }}?v=20260726-sequences-1">
 {% endblock %}
 
 {% block content %}
 {% set manufacturer = device_type.get("manufacturer") or {} %}
 {% set model_name = device_type.get("model") or device_type.get("display") or "Modelo" %}
+{% set default_pattern = "GigabitEthernet0/{n}" if selected_kind == "interface" else "F{n}" if selected_kind == "front_port" else "R{n}" if selected_kind == "rear_port" else component_definition.singular | replace(" ", "-") ~ "-{n}" %}
 
 <div class="component-create-page">
     <a class="back-link" href="/device-types/{{ device_type_id }}#components">← Volver al modelo</a>
@@ -79,35 +81,99 @@
             class="component-create-form"
             method="post"
             action="/device-types/{{ device_type_id }}/components/actions/create"
+            data-component-sequence-form
         >
             <input type="hidden" name="csrf" value="{{ csrf_token }}">
             <input type="hidden" name="kind" value="{{ selected_kind }}">
 
-            <div class="component-name-builder">
-                <div class="field">
-                    <label for="component-name-pattern">Nombre o patrón</label>
-                    <input
-                        id="component-name-pattern"
-                        name="name_pattern"
-                        type="text"
-                        value="{% if selected_kind == 'interface' %}GigabitEthernet0/{n}{% elif selected_kind == 'front_port' %}F{n}{% elif selected_kind == 'rear_port' %}R{n}{% else %}{{ component_definition.singular | replace(' ', '-') }}-{n}{% endif %}"
-                        required
-                    >
-                    <small>
-                        Para lotes usa <code>{n}</code> o <code>{n:02}</code>. Para uno solo puedes escribir el nombre completo.
-                    </small>
+            <div class="component-sequence-builder">
+                <div class="component-sequence-toolbar">
+                    <div class="component-sequence-toolbar-copy">
+                        <strong>Secuencias de nombres</strong>
+                        <span>
+                            Agrega varias líneas para crear, por ejemplo,
+                            <code>gpon-olt_1/2/{n}</code> y <code>gpon-olt_1/3/{n}</code> juntas.
+                        </span>
+                    </div>
+                    <span class="component-sequence-total" data-sequence-total>1 registro</span>
                 </div>
 
-                <div class="field">
-                    <label for="component-start">Inicio</label>
-                    <input id="component-start" name="start" type="number" min="0" value="1" required>
+                <div class="component-sequence-list" data-sequence-list>
+                    <div class="component-sequence-row" data-sequence-row>
+                        <div class="component-sequence-row-title">
+                            <strong data-sequence-heading>Secuencia 1</strong>
+                            <button
+                                class="sequence-remove-button"
+                                type="button"
+                                data-remove-sequence
+                                aria-label="Eliminar secuencia"
+                                hidden
+                            >×</button>
+                        </div>
+
+                        <div class="field sequence-pattern-field">
+                            <label>Nombre o patrón</label>
+                            <input
+                                name="sequence_pattern"
+                                type="text"
+                                value="{{ default_pattern }}"
+                                required
+                            >
+                            <small>Usa <code>{n}</code> o <code>{n:02}</code>.</small>
+                        </div>
+
+                        <div class="field">
+                            <label>Inicio</label>
+                            <input name="sequence_start" type="number" min="0" value="1" required>
+                        </div>
+
+                        <div class="field">
+                            <label>Cantidad</label>
+                            <input name="sequence_count" type="number" min="1" max="256" value="1" required>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="field">
-                    <label for="component-count">Cantidad</label>
-                    <input id="component-count" name="count" type="number" min="1" max="256" value="1" required>
-                </div>
+                <button class="button secondary add-sequence-button" type="button" data-add-sequence>
+                    <span aria-hidden="true">＋</span>
+                    Agregar otra secuencia
+                </button>
             </div>
+
+            <template id="component-sequence-template">
+                <div class="component-sequence-row" data-sequence-row>
+                    <div class="component-sequence-row-title">
+                        <strong data-sequence-heading>Nueva secuencia</strong>
+                        <button
+                            class="sequence-remove-button"
+                            type="button"
+                            data-remove-sequence
+                            aria-label="Eliminar secuencia"
+                        >×</button>
+                    </div>
+
+                    <div class="field sequence-pattern-field">
+                        <label>Nombre o patrón</label>
+                        <input
+                            name="sequence_pattern"
+                            type="text"
+                            value="{{ default_pattern }}"
+                            required
+                        >
+                        <small>Usa <code>{n}</code> o <code>{n:02}</code>.</small>
+                    </div>
+
+                    <div class="field">
+                        <label>Inicio</label>
+                        <input name="sequence_start" type="number" min="0" value="1" required>
+                    </div>
+
+                    <div class="field">
+                        <label>Cantidad</label>
+                        <input name="sequence_count" type="number" min="1" max="256" value="1" required>
+                    </div>
+                </div>
+            </template>
 
             <div class="component-dynamic-fields">
                 {% for field in component_fields %}
@@ -175,17 +241,21 @@
 
             <div class="component-create-summary">
                 <div>
-                    <strong>NetBox validará el lote completo antes de guardarlo.</strong>
+                    <strong>NetBox validará todas las secuencias como un solo lote.</strong>
                     <span>
-                        El modelo seguirá siendo la fuente única de documentación para los
-                        puertos, interfaces y componentes que heredarán los equipos nuevos.
+                        Los campos de tipo, etiqueta, descripción y demás opciones se aplicarán
+                        a cada registro generado por las líneas anteriores.
                     </span>
                 </div>
                 <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
-                    Crear {{ component_definition.label | lower }}
+                    Crear todas las secuencias
                 </button>
             </div>
         </form>
     </section>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/component_sequences.js') }}?v=20260726-sequences-1"></script>
 {% endblock %}

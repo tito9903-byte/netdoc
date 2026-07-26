@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock
 
-from app.routers.system import router as system_router
+from app.main import app
 from app.services.lldp_discovery_service import (
     LldpDiscoveryService,
     LldpObservation,
@@ -156,8 +156,8 @@ class LldpMatchingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class LldpRouteRegistrationTests(unittest.TestCase):
-    def test_lldp_routes_are_registered_on_system_router(self):
-        paths = {getattr(route, "path", "") for route in system_router.routes}
+    def test_lldp_routes_are_registered_on_final_application(self):
+        paths = {getattr(route, "path", "") for route in app.routes}
 
         self.assertIn("/devices/{device_id}/lldp-discovery", paths)
         self.assertIn("/devices/{device_id}/lldp-discovery/run", paths)

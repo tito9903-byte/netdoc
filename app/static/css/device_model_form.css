@@ -1,0 +1,119 @@
+.model-capability-panel {
+    grid-column: 1 / -1;
+    padding: 16px;
+    border: 1px solid var(--border-soft);
+    border-radius: 13px;
+    background: rgba(4, 13, 20, 0.28);
+}
+
+.model-capability-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.model-capability-heading h3,
+.model-capability-heading p {
+    margin: 0;
+}
+
+.model-capability-heading h3 {
+    font-size: 14px;
+}
+
+.model-capability-heading p {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.model-capability-status {
+    display: inline-flex;
+    min-height: 27px;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.018);
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+.model-capability-status[data-state="success"] {
+    border-color: rgba(80, 216, 144, 0.2);
+    color: #88e9b1;
+    background: rgba(80, 216, 144, 0.06);
+}
+
+.model-capability-status[data-state="error"] {
+    border-color: rgba(255, 125, 134, 0.22);
+    color: #ffadb3;
+    background: rgba(255, 125, 134, 0.06);
+}
+
+.netbox-model-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.netbox-dynamic-field {
+    min-width: 0;
+}
+
+.netbox-dynamic-field label > span {
+    color: var(--danger);
+}
+
+.netbox-dynamic-checkbox {
+    min-height: 100%;
+    margin: 0;
+}
+
+.netbox-schema-error {
+    grid-column: 1 / -1;
+    padding: 12px;
+    border: 1px solid rgba(255, 125, 134, 0.18);
+    border-radius: 10px;
+    color: #ffc0c5;
+    background: rgba(255, 125, 134, 0.055);
+    font-size: 10px;
+}
+
+.model-create-next-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(32, 200, 210, 0.14);
+    border-radius: 11px;
+    color: #9eb5c1;
+    background: rgba(32, 200, 210, 0.04);
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+.model-create-next-step strong {
+    color: #d8f5f6;
+}
+
+@media (max-width: 920px) {
+    .netbox-model-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .model-capability-heading {
+        flex-direction: column;
+    }
+
+    .netbox-model-fields {
+        grid-template-columns: 1fr;
+    }
+}

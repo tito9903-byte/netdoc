@@ -1,4 +1,4 @@
-from app.services.rack_report_professional_service import (
+from app.services.rack_report_single_page_service import (
     RackReportError,
     ReportImage,
     build_rack_report,

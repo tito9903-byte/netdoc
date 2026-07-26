@@ -56,15 +56,20 @@ Los campos, tipos y opciones de cada formulario se consultan desde el endpoint `
 
 La navegación superior de la ficha muestra un contador junto a **Puertos y componentes**. El contador incluye interfaces, consola, energía y canales de paneles de parcheo. Cuando un panel tiene puertos frontales y traseros relacionados uno a uno, NetDoc utiliza la mayor cantidad de ambas caras para no contar dos veces el mismo canal físico. Las bahías y los elementos de inventario permanecen disponibles en la sección, pero no se suman como puertos.
 
-## Creación individual y por lotes
+## Creación individual, por lotes y por varias secuencias
 
-El campo **Nombre o patrón** acepta:
+Cada línea de secuencia contiene **Nombre o patrón**, **Inicio** y **Cantidad**. El patrón acepta:
 
 - un nombre literal cuando se crea un solo registro, por ejemplo `MGMT`;
 - `{n}` para numeración sencilla, por ejemplo `GigabitEthernet0/{n}`;
 - formatos de Python como `{n:02}`, por ejemplo `Gi1/0/{n:02}`.
 
-El lote admite hasta 256 registros. NetBox valida todo el contenido antes de guardarlo.
+El botón **Agregar otra secuencia** permite preparar varias familias en el mismo formulario. Por ejemplo:
+
+- `gpon-olt_1/2/{n}`, inicio 1, cantidad 16;
+- `gpon-olt_1/3/{n}`, inicio 1, cantidad 16.
+
+Los campos comunes, como tipo, etiqueta, descripción, PoE o color, se aplican a todas las líneas. NetDoc verifica nombres duplicados entre secuencias y envía todos los registros como un solo lote a NetBox. El total combinado admite hasta 256 registros y NetBox valida el lote completo antes de guardarlo.
 
 ## Relaciones entre componentes
 
@@ -81,6 +86,22 @@ NetDoc consulta los componentes existentes del mismo modelo y los presenta como 
 El botón **Crear dispositivo** abre un formulario guiado en una ventana. El alta exige nombre, sitio, modelo y rol; opcionalmente permite documentar rack, posición, cara y número de serie.
 
 La protección del formulario utiliza un token HMAC firmado con el secreto del servidor y la identidad autenticada. El token no se agrega dinámicamente a la cookie de sesión, evitando que las cargas paralelas de la página y la ventana modal lo sobrescriban. Si la validación falla, NetDoc vuelve a presentar el formulario con un mensaje comprensible y conserva los datos introducidos; nunca debe mostrar el JSON crudo de una excepción de seguridad.
+
+## Sincronizar interfaces de un dispositivo existente
+
+NetBox aplica las plantillas del modelo cuando crea el dispositivo, pero no agrega automáticamente a los dispositivos anteriores las interfaces que se incorporen después al modelo.
+
+En la ficha del dispositivo, la sección **Interfaces** incluye la acción **Sincronizar desde modelo**. El flujo:
+
+1. consulta las plantillas de interfaz del modelo asociado;
+2. consulta las interfaces existentes del dispositivo;
+3. compara ambas listas por nombre;
+4. presenta una vista previa de las interfaces faltantes;
+5. crea las faltantes como un solo lote en NetBox después de la confirmación.
+
+La operación es deliberadamente no destructiva: no elimina, renombra ni sobrescribe interfaces existentes. Cuando el mismo nombre existe con un tipo diferente al modelo, NetDoc lo marca para revisión manual y no lo duplica. Se copian los atributos compatibles, como nombre, etiqueta, tipo, estado, administración, descripción, PoE, RF y campos personalizados. Las relaciones basadas en IDs reales —por ejemplo LAG, bridge o parent— no se fuerzan automáticamente.
+
+El resultado queda registrado en auditoría y la ficha informa cuántas interfaces fueron creadas, cuántas ya coincidían y cuántas necesitan revisión.
 
 ## IP e interfaz principal del dispositivo
 
@@ -135,9 +156,11 @@ La tabla permite buscar por nombre, modelo, dirección IP, número de serie, pos
 - Las escrituras requieren el permiso `devices.create`.
 - Los formularios utilizan protección CSRF firmada.
 - La escritura puede bloquearse globalmente con el modo de solo lectura.
-- Las altas, cambios de IP principal y errores se registran en la auditoría de NetDoc.
-- NetBox conserva su propio historial de cambios mediante `changelog_message`.
+- Las altas, sincronizaciones de interfaces, cambios de IP principal y errores se registran en la auditoría de NetDoc.
+- NetBox conserva su propio historial de cambios mediante `changelog_message` cuando el endpoint lo admite.
 
 ## Uso móvil
 
-Los formularios de creación ocupan la pantalla completa en teléfonos y mantienen controles táctiles adecuados. En el detalle de un rack, la vista 3D, la información física y el inventario se apilan verticalmente. La tabla del inventario se transforma en tarjetas por dispositivo para evitar depender de desplazamiento horizontal y conservar visibles el nombre, modelo, posición, serial, IP principal, estado y acceso a la ficha. En la ficha del dispositivo, las direcciones IP se presentan como etiquetas compactas dentro de la tabla de interfaces y conservan desplazamiento horizontal cuando el ancho disponible no permite mostrar todas las columnas.
+Los formularios de creación ocupan la pantalla completa en teléfonos y mantienen controles táctiles adecuados. Las secuencias de componentes se apilan verticalmente y el botón de agregar permanece accesible. La vista previa de sincronización de interfaces también se adapta a una sola columna.
+
+En el detalle de un rack, la vista 3D, la información física y el inventario se apilan verticalmente. La tabla del inventario se transforma en tarjetas por dispositivo para evitar depender de desplazamiento horizontal y conservar visibles el nombre, modelo, posición, serial, IP principal, estado y acceso a la ficha. En la ficha del dispositivo, las direcciones IP se presentan como etiquetas compactas dentro de la tabla de interfaces y conservan desplazamiento horizontal cuando el ancho disponible no permite mostrar todas las columnas.

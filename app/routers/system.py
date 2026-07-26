@@ -10,20 +10,12 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
-from app.routers.lldp_discovery import router as lldp_router
-from app.services.lldp_privilege_support import install_lldp_privilege_support
 from app.services.system_service import collect_system_health
 
 
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
-
-# LLDP debe formar parte del árbol de rutas durante la construcción de la
-# aplicación. El registro bajo demanda desde middleware puede ejecutarse sobre
-# una capa ASGI distinta y dejar las rutas fuera de la instancia FastAPI real.
-install_lldp_privilege_support()
-router.include_router(lldp_router)
 
 
 def context(request: Request, **extra: object) -> dict[str, object]:

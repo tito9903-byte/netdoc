@@ -11,6 +11,8 @@
 {% set platform_data = (discovery or {}).get("platform") or device_context.platform %}
 {% set host = (discovery or {}).get("host") or device_context.host %}
 {% set profile_key = (discovery or {}).get("profile_key") or device_context.profile_key %}
+{% set profile_configured = (discovery or {}).get("profile_configured") if discovery else device_context.profile_configured %}
+{% set profile_error = (discovery or {}).get("profile_error") if discovery else device_context.profile_error %}
 {% set command = (discovery or {}).get("command") or device_context.command %}
 
 <div class="lldp-page">
@@ -75,7 +77,7 @@
             <button
                 class="button primary"
                 type="submit"
-                {% if not ssh_discovery_enabled or not host or not profile_key %}disabled{% endif %}
+                {% if not ssh_discovery_enabled or not host or not profile_configured %}disabled{% endif %}
             >
                 <span aria-hidden="true">⌁</span>
                 Ejecutar LLDP por SSH
@@ -83,12 +85,18 @@
         </form>
     </section>
 
-    {% if not ssh_discovery_enabled %}
+    {% if not ssh_discovery_enabled or not profile_configured %}
     <div class="lldp-configuration-note">
-        <strong>Descubrimiento deshabilitado</strong>
+        <strong>
+            {% if not ssh_discovery_enabled %}Descubrimiento deshabilitado{% else %}Perfil SSH incompleto{% endif %}
+        </strong>
         <span>
-            Activa <code>NETDOC_SSH_DISCOVERY_ENABLED=true</code> y configura
-            <code>NETDOC_SSH_PROFILES_JSON</code> en el entorno del servicio.
+            {% if not ssh_discovery_enabled %}
+                Activa <code>NETDOC_SSH_DISCOVERY_ENABLED=true</code> y configura
+                <code>NETDOC_SSH_PROFILES_JSON</code> en el entorno del servicio.
+            {% else %}
+                {{ profile_error or "Configura el usuario y la contraseña o llave del perfil indicado." }}
+            {% endif %}
         </span>
     </div>
     {% endif %}

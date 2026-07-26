@@ -18,6 +18,31 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/create_modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/topbar_professional.css') }}">
 
+    <style>
+        /* Respaldo visible para el contador de puertos aunque el navegador tenga
+           una versión anterior del CSS específico de componentes en caché. */
+        .hardware-section-nav a[href="#components"] {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .hardware-section-nav-count {
+            display: inline-grid;
+            min-width: 22px;
+            height: 20px;
+            place-items: center;
+            padding: 0 7px;
+            border: 1px solid rgba(32, 200, 210, 0.32);
+            border-radius: 999px;
+            background: rgba(32, 200, 210, 0.1);
+            color: #20c8d2;
+            font-size: 9px;
+            font-weight: 800;
+            line-height: 1;
+        }
+    </style>
+
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -253,7 +278,7 @@
     {% if not modal_mode %}
     <script src="{{ url_for('static', path='js/create_modal.js') }}"></script>
     {% endif %}
-    <script src="{{ url_for('static', path='js/app.js') }}"></script>
+    <script src="{{ url_for('static', path='js/app.js') }}?v=20260726-port-counter-2"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

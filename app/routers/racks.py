@@ -240,14 +240,17 @@ async def rack_detail_page(
     request: Request,
     rack_id: int,
     face: str = "front",
-    view: str = "2d",
+    view: str = "3d",
 ):
     redirect = access_redirect(request, "racks.view")
     if redirect:
         return redirect
 
+    # La elevación 2D fue retirada. Conservamos el parámetro ``view`` para que
+    # enlaces antiguos no fallen, pero cualquier valor abre siempre la vista 3D.
+    _ = view
     selected_face = face if face in {"front", "rear"} else "front"
-    selected_view = view if view in {"2d", "3d"} else "2d"
+    selected_view = "3d"
     service = RackService()
 
     try:
@@ -283,7 +286,7 @@ async def rack_detail_page(
                 or "Rack"
             ),
             page_subtitle=(
-                "Vista 2D o 3D basada en posición, cara, imagen y altura del modelo"
+                "Vista 3D basada en posición, cara, imagen y altura del modelo"
             ),
             rack=rack,
             devices=devices,

@@ -1,0 +1,213 @@
+.create-modal[hidden] {
+    display: none;
+}
+
+.create-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.create-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(1, 8, 13, 0.78);
+    backdrop-filter: blur(7px);
+    cursor: default;
+}
+
+.create-modal-dialog {
+    position: relative;
+    display: grid;
+    width: min(1180px, calc(100vw - 48px));
+    height: min(880px, calc(100vh - 48px));
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+    border: 1px solid rgba(32, 200, 210, 0.28);
+    border-radius: 18px;
+    background: #07131b;
+    box-shadow:
+        0 30px 90px rgba(0, 0, 0, 0.58),
+        0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+}
+
+.create-modal-header {
+    display: flex;
+    min-height: 70px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 14px 18px 14px 22px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0d202b, #0a1821);
+}
+
+.create-modal-header span,
+.create-modal-header h2 {
+    margin: 0;
+}
+
+.create-modal-header span {
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+}
+
+.create-modal-header h2 {
+    margin-top: 3px;
+    color: var(--text);
+    font-size: 17px;
+}
+
+.create-modal-close {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    background: var(--surface-soft);
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.create-modal-close:hover,
+.create-modal-close:focus-visible {
+    border-color: rgba(32, 200, 210, 0.48);
+    color: var(--accent);
+    outline: none;
+}
+
+.create-modal-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #061018;
+}
+
+.create-modal-loading {
+    position: absolute;
+    inset: 71px 0 0;
+    z-index: 2;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 12px;
+    color: var(--muted);
+    background: #061018;
+    font-size: 12px;
+}
+
+.create-modal-loading[hidden] {
+    display: none;
+}
+
+.create-modal-loading span {
+    width: 34px;
+    height: 34px;
+    border: 3px solid rgba(32, 200, 210, 0.18);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: create-modal-spin 700ms linear infinite;
+}
+
+body.create-modal-open {
+    overflow: hidden;
+}
+
+body.modal-page {
+    min-width: 0;
+    overflow-x: hidden;
+    background: var(--background, #061018);
+}
+
+body.modal-page .app-shell {
+    display: block;
+    min-height: 100vh;
+}
+
+body.modal-page .sidebar,
+body.modal-page .topbar {
+    display: none !important;
+}
+
+body.modal-page .main-area {
+    width: 100%;
+    min-width: 0;
+    margin: 0 !important;
+}
+
+body.modal-page .content {
+    width: 100%;
+    max-width: none;
+    padding: 20px 22px 28px;
+}
+
+body.modal-page .detail-navigation,
+body.modal-page .create-device-navigation {
+    display: none;
+}
+
+body.modal-page .workflow-intro {
+    margin-top: 0;
+}
+
+@keyframes create-modal-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 700px) {
+    .create-modal {
+        padding: 0;
+    }
+
+    .create-modal-dialog {
+        width: 100vw;
+        height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .create-modal-header {
+        min-height: 64px;
+        padding: 10px 12px 10px 16px;
+    }
+
+    .create-modal-header h2 {
+        max-width: calc(100vw - 86px);
+        overflow: hidden;
+        font-size: 15px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .create-modal-close {
+        width: 44px;
+        height: 44px;
+    }
+
+    .create-modal-loading {
+        inset: 65px 0 0;
+    }
+
+    body.modal-page .content {
+        padding: 14px 12px 22px;
+    }
+
+    body.modal-page .workflow-intro {
+        padding: 16px;
+    }
+}

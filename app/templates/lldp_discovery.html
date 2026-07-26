@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/lldp_discovery.css') }}?v=20260726-lldp-1">
+{% endblock %}
+
+{% block content %}
+{% set device = (discovery or {}).get("device") or device_context.device or {} %}
+{% set platform_data = (discovery or {}).get("platform") or device_context.platform %}
+{% set host = (discovery or {}).get("host") or device_context.host %}
+{% set profile_key = (discovery or {}).get("profile_key") or device_context.profile_key %}
+{% set command = (discovery or {}).get("command") or device_context.command %}
+
+<div class="lldp-page">
+    <a class="back-link" href="/devices/{{ device_id }}#interfaces">← Volver al dispositivo</a>
+
+    {% if error %}
+    <div class="notice error-notice lldp-error">
+        <strong>No fue posible completar el descubrimiento.</strong>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <section class="workflow-intro lldp-intro">
+        <div class="lldp-device-identity">
+            <span class="lldp-device-icon">⇆</span>
+            <div>
+                <span class="eyebrow">Descubrimiento y reconciliación</span>
+                <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+                <p>
+                    NetDoc consulta LLDP por SSH, compara los vecinos con NetBox y
+                    solo crea una conexión después de tu confirmación.
+                </p>
+            </div>
+        </div>
+
+        <div class="lldp-context-grid">
+            <article>
+                <span>IP de gestión</span>
+                <strong>{{ host or "Sin IP principal" }}</strong>
+            </article>
+            <article>
+                <span>Plataforma</span>
+                <strong>
+                    {% if platform_data %}
+                        {{ platform_data.label if platform_data.label is defined else platform_data.get("label", "Sin definir") }}
+                    {% else %}
+                        Sin definir
+                    {% endif %}
+                </strong>
+            </article>
+            <article>
+                <span>Perfil SSH</span>
+                <strong>{{ profile_key or "Sin configurar" }}</strong>
+            </article>
+            <article>
+                <span>Comando</span>
+                <strong class="mono-value">{{ command or "Sin definir" }}</strong>
+            </article>
+        </div>
+    </section>
+
+    <section class="lldp-safety-panel">
+        <div>
+            <strong>Operación de lectura</strong>
+            <span>
+                Ejecutar el descubrimiento no modifica el equipo ni NetBox. Las
+                conexiones se documentan individualmente con el botón Confirmar.
+            </span>
+        </div>
+        <form method="post" action="/devices/{{ device_id }}/lldp-discovery/run">
+            <input type="hidden" name="csrf_token" value="{{ run_token }}">
+            <button
+                class="button primary"
+                type="submit"
+                {% if not ssh_discovery_enabled or not host or not profile_key %}disabled{% endif %}
+            >
+                <span aria-hidden="true">⌁</span>
+                Ejecutar LLDP por SSH
+            </button>
+        </form>
+    </section>
+
+    {% if not ssh_discovery_enabled %}
+    <div class="lldp-configuration-note">
+        <strong>Descubrimiento deshabilitado</strong>
+        <span>
+            Activa <code>NETDOC_SSH_DISCOVERY_ENABLED=true</code> y configura
+            <code>NETDOC_SSH_PROFILES_JSON</code> en el entorno del servicio.
+        </span>
+    </div>
+    {% endif %}
+
+    {% if discovery %}
+    <section class="lldp-metrics" aria-label="Resumen de descubrimiento">
+        <article>
+            <span>Vecinos encontrados</span>
+            <strong>{{ discovery.neighbor_count }}</strong>
+            <small>Observaciones LLDP interpretadas</small>
+        </article>
+        <article>
+            <span>Listos</span>
+            <strong>{{ discovery.ready_count }}</strong>
+            <small>Ambos extremos libres y coincidentes</small>
+        </article>
+        <article>
+            <span>Conflictos</span>
+            <strong>{{ discovery.conflict_count }}</strong>
+            <small>Algún extremo ya está ocupado</small>
+        </article>
+        <article>
+            <span>Por revisar</span>
+            <strong>{{ discovery.unresolved_count }}</strong>
+            <small>No se identificó equipo o interfaz</small>
+        </article>
+    </section>
+
+    <section class="lldp-results-panel">
+        <div class="lldp-results-header">
+            <div>
+                <span class="eyebrow">Resultado actual</span>
+                <h2>Propuestas de conexión</h2>
+                <p>
+                    La confianza combina nombre del equipo, IP anunciada y
+                    coincidencia de interfaces. Revisa cada extremo antes de guardar.
+                </p>
+            </div>
+            <span class="panel-badge">{{ discovery.neighbor_count }} vecinos</span>
+        </div>
+
+        {% if discovery.observations %}
+        <div class="lldp-results-list">
+            {% for row in discovery.observations %}
+            <article class="lldp-result-card lldp-state-{{ row.state }}">
+                <header>
+                    <div>
+                        <span class="lldp-state-badge">{{ row.state_label }}</span>
+                        <strong>{{ row.local_interface }} ↔ {{ row.remote_system_name or "Vecino sin nombre" }}</strong>
+                    </div>
+                    <span class="lldp-confidence">{{ row.confidence }} % confianza</span>
+                </header>
+
+                <div class="lldp-endpoints">
+                    <section>
+                        <span>Extremo local</span>
+                        <strong>{{ row.local_device_name }}</strong>
+                        <dl>
+                            <div>
+                                <dt>LLDP</dt>
+                                <dd>{{ row.local_interface or "—" }}</dd>
+                            </div>
+                            <div>
+                                <dt>NetBox</dt>
+                                <dd>{{ row.local_interface_netbox or "Sin coincidencia" }}</dd>
+                            </div>
+                            <div>
+                                <dt>Estado</dt>
+                                <dd>{{ "Ocupada" if row.local_connected else "Libre" }}</dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <span class="lldp-link-arrow" aria-hidden="true">⇄</span>
+
+                    <section>
+                        <span>Extremo remoto</span>
+                        <strong>{{ row.remote_device_name or row.remote_system_name or "Sin identificar" }}</strong>
+                        <dl>
+                            <div>
+                                <dt>Puerto anunciado</dt>
+                                <dd>{{ row.remote_port_id or "—" }}</dd>
+                            </div>
+                            <div>
+                                <dt>NetBox</dt>
+                                <dd>{{ row.remote_interface_netbox or "Sin coincidencia" }}</dd>
+                            </div>
+                            <div>
+                                <dt>IP anunciada</dt>
+                                <dd>{{ row.management_ip or "—" }}</dd>
+                            </div>
+                        </dl>
+                    </section>
+                </div>
+
+                {% if row.remote_port_description or row.chassis_id %}
+                <div class="lldp-evidence">
+                    {% if row.remote_port_description %}
+                    <span><strong>Descripción remota:</strong> {{ row.remote_port_description }}</span>
+                    {% endif %}
+                    {% if row.chassis_id %}
+                    <span><strong>Chassis ID:</strong> {{ row.chassis_id }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <footer>
+                    {% if row.ready %}
+                    <form method="post" action="/devices/{{ device_id }}/lldp-discovery/confirm" class="lldp-confirm-form">
+                        <input type="hidden" name="csrf_token" value="{{ confirm_token }}">
+                        <input type="hidden" name="candidate" value="{{ row.candidate_token }}">
+                        <label>
+                            <span>Tipo físico del cable</span>
+                            <select name="cable_type" required {% if not write_enabled %}disabled{% endif %}>
+                                <option value="">Seleccionar</option>
+                                {% for item in cable_types %}
+                                <option value="{{ item.value }}">{{ item.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                            Confirmar y documentar
+                        </button>
+                    </form>
+                    {% elif row.state == "conflict" %}
+                    <p class="lldp-result-message">
+                        NetDoc no sobrescribirá la conexión existente. Revisa ambos
+                        extremos en NetBox antes de intentar documentarla.
+                    </p>
+                    {% else %}
+                    <p class="lldp-result-message">
+                        Todavía no es seguro crear el cable. Verifica el nombre del
+                        dispositivo remoto y que el puerto exista en su ficha.
+                    </p>
+                    {% endif %}
+                </footer>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="interfaces-empty-state">
+            <strong>No se encontraron vecinos utilizables.</strong>
+            <span>Revisa que LLDP esté habilitado y tenga vecinos activos.</span>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="lldp-supported-panel">
+        <strong>Plataformas preparadas en esta primera fase</strong>
+        <div>
+            {% for item in supported_platforms %}
+            <span>{{ item.label }}</span>
+            {% endfor %}
+        </div>
+        <p>
+            Los formatos que Netmiko/NTC no interprete se procesan con un parser de
+            respaldo. Si un fabricante devuelve otra variante, NetDoc mostrará un
+            error controlado para agregar su parser sin crear conexiones incorrectas.
+        </p>
+    </section>
+</div>
+{% endblock %}

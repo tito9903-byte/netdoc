@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}IP principal | {{ device.get("name") or "Dispositivo" }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_primary_ip.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set device_name = device.get("name") or device.get("display") or "Dispositivo" %}
+
+<section class="primary-ip-workflow">
+    <header class="primary-ip-intro">
+        <div>
+            <span>Identidad de red</span>
+            <h2>{{ device_name }}</h2>
+            <p>
+                Selecciona las direcciones principales entre las IP que ya están
+                asignadas a las interfaces de este equipo en NetBox.
+            </p>
+        </div>
+        <a href="/devices/{{ device.get('id') }}">Abrir ficha completa</a>
+    </header>
+
+    {% if errors %}
+    <div class="primary-ip-alert" role="alert">
+        <strong>No se pudo guardar la selección.</strong>
+        <ul>
+            {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form
+        class="primary-ip-form"
+        action="/devices/{{ device.get('id') }}/primary-ip/new{% if request.query_params.get('modal') == '1' %}?modal=1{% endif %}"
+        method="post"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <section class="primary-ip-card">
+            <div class="primary-ip-card-heading">
+                <div>
+                    <span>IPv4 principal</span>
+                    <h3>Dirección preferida para operación y acceso</h3>
+                </div>
+                <span class="primary-ip-count">{{ ipv4_addresses | length }} disponibles</span>
+            </div>
+
+            <label for="primary_ip4_id">Dirección e interfaz</label>
+            <select id="primary_ip4_id" name="primary_ip4_id" {% if not ipv4_addresses %}disabled{% endif %}>
+                <option value="">Sin IPv4 principal</option>
+                {% for address in ipv4_addresses %}
+                <option
+                    value="{{ address.get('id') }}"
+                    {% if current_primary_ip4_id == address.get('id') %}selected{% endif %}
+                >
+                    {{ address.get("_option_label") }}
+                </option>
+                {% endfor %}
+            </select>
+
+            {% if not ipv4_addresses %}
+            <p class="primary-ip-empty">
+                Este dispositivo todavía no tiene una IPv4 asignada a sus interfaces.
+            </p>
+            {% endif %}
+        </section>
+
+        <section class="primary-ip-card">
+            <div class="primary-ip-card-heading">
+                <div>
+                    <span>IPv6 principal</span>
+                    <h3>Dirección principal para conectividad IPv6</h3>
+                </div>
+                <span class="primary-ip-count">{{ ipv6_addresses | length }} disponibles</span>
+            </div>
+
+            <label for="primary_ip6_id">Dirección e interfaz</label>
+            <select id="primary_ip6_id" name="primary_ip6_id" {% if not ipv6_addresses %}disabled{% endif %}>
+                <option value="">Sin IPv6 principal</option>
+                {% for address in ipv6_addresses %}
+                <option
+                    value="{{ address.get('id') }}"
+                    {% if current_primary_ip6_id == address.get('id') %}selected{% endif %}
+                >
+                    {{ address.get("_option_label") }}
+                </option>
+                {% endfor %}
+            </select>
+
+            {% if not ipv6_addresses %}
+            <p class="primary-ip-empty">
+                Este dispositivo todavía no tiene una IPv6 asignada a sus interfaces.
+            </p>
+            {% endif %}
+        </section>
+
+        <aside class="primary-ip-rule">
+            <strong>Dirección mostrada en los racks</strong>
+            <p>
+                NetDoc mostrará primero la IPv4 principal. Cuando no exista,
+                utilizará la IPv6 principal. La interfaz se identifica junto a cada
+                dirección para evitar seleccionar una IP del puerto equivocado.
+            </p>
+        </aside>
+
+        <footer class="primary-ip-actions">
+            <a href="/devices/{{ device.get('id') }}">Cancelar</a>
+            <button type="submit" {% if not write_enabled %}disabled{% endif %}>
+                Guardar IP principal
+            </button>
+        </footer>
+    </form>
+</section>
+{% endblock %}

@@ -106,6 +106,24 @@ COMPONENT_DEFINITIONS: dict[str, ComponentDefinition] = {
 }
 
 
+# Compatibilidad con enlaces antiguos, nombres de colecciones y parámetros
+# enviados en plural. La clave canónica siempre permanece en singular.
+COMPONENT_KIND_ALIASES: dict[str, str] = {
+    "interfaces": "interface",
+    "interface_template": "interface",
+    "interface_templates": "interface",
+    "console_ports": "console_port",
+    "console_server_ports": "console_server_port",
+    "power_ports": "power_port",
+    "power_outlets": "power_outlet",
+    "front_ports": "front_port",
+    "rear_ports": "rear_port",
+    "module_bays": "module_bay",
+    "device_bays": "device_bay",
+    "inventory_items": "inventory_item",
+}
+
+
 FIELD_LABELS = {
     "manufacturer": "Fabricante",
     "model": "Modelo",
@@ -123,7 +141,6 @@ FIELD_LABELS = {
     "label": "Etiqueta",
     "type": "Tipo",
     "mgmt_only": "Solo administración",
-    "description": "Descripción",
     "rear_port": "Puerto trasero asociado",
     "rear_port_position": "Posición del puerto trasero",
     "power_port": "Entrada de energía asociada",
@@ -190,8 +207,14 @@ class DeviceModelBuilderService:
         ]
 
     @staticmethod
-    def definition(kind: str) -> ComponentDefinition:
-        definition = COMPONENT_DEFINITIONS.get(kind)
+    def normalize_kind(kind: str) -> str:
+        normalized = str(kind or "").strip().lower().replace("-", "_")
+        return COMPONENT_KIND_ALIASES.get(normalized, normalized)
+
+    @classmethod
+    def definition(cls, kind: str) -> ComponentDefinition:
+        normalized = cls.normalize_kind(kind)
+        definition = COMPONENT_DEFINITIONS.get(normalized)
         if definition is None:
             raise DeviceTypeServiceError(
                 "El tipo de componente solicitado no está permitido.",
@@ -474,6 +497,7 @@ class DeviceModelBuilderService:
         form: Mapping[str, Any],
     ) -> list[dict[str, Any]]:
         definition = self.definition(kind)
+        canonical_kind = definition.key
         pattern = str(form.get("name_pattern") or "").strip()
         if not pattern:
             raise DeviceTypeServiceError("Escribe el nombre o patrón.", 400)
@@ -492,7 +516,7 @@ class DeviceModelBuilderService:
             names = build_interface_names(pattern, start=start, count=count)
 
         fields = await self.component_fields(
-            kind,
+            canonical_kind,
             device_type_id=device_type_id,
         )
         common: dict[str, Any] = {}

@@ -1,6 +1,5 @@
 import re
 import secrets
-from threading import Lock
 from urllib.parse import parse_qsl, quote, urlencode
 
 from fastapi import Request
@@ -162,20 +161,12 @@ def request_client_data(
 
 
 class PermissionMiddleware(BaseHTTPMiddleware):
-    _route_bootstrap_lock = Lock()
-    _lldp_paths = {
-        "/devices/{device_id}/lldp-discovery",
-        "/devices/{device_id}/lldp-discovery/run",
-        "/devices/{device_id}/lldp-discovery/confirm",
-    }
-
     async def dispatch(
         self,
         request: StarletteRequest,
         call_next,
     ) -> Response:
         self._normalize_optional_device_filters(request)
-        self._ensure_lldp_routes()
 
         permission = self._required_permission(
             request.url.path,
@@ -217,41 +208,6 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         self._audit_mutation(request, response)
         return response
-
-    @classmethod
-    def _ensure_lldp_routes(cls) -> None:
-        """Monta LLDP una sola vez sobre la instancia FastAPI exportada por main."""
-
-        # Dentro de BaseHTTPMiddleware, request.app puede apuntar a una capa ASGI
-        # intermedia y no necesariamente a la instancia FastAPI que expone routes.
-        # Importar aquí evita el ciclo durante el arranque y modifica la aplicación
-        # real que utiliza uvicorn y que importan las pruebas.
-        from app.main import app as application
-
-        existing = {
-            getattr(route, "path", "")
-            for route in application.routes
-        }
-        if cls._lldp_paths.issubset(existing):
-            return
-
-        with cls._route_bootstrap_lock:
-            existing = {
-                getattr(route, "path", "")
-                for route in application.routes
-            }
-            if cls._lldp_paths.issubset(existing):
-                return
-
-            from app.services.lldp_privilege_support import (
-                install_lldp_privilege_support,
-            )
-
-            install_lldp_privilege_support()
-
-            from app.routers.lldp_discovery import router as lldp_router
-
-            application.include_router(lldp_router)
 
     @staticmethod
     def _normalize_optional_device_filters(

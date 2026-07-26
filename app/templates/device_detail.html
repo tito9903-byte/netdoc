@@ -5,6 +5,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/devices.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_ips.css') }}?v=20260726-interface-ips-1">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_sync.css') }}?v=20260726-sync-1">
 <style>
     .device-reference-link {
         display: inline-flex;
@@ -94,6 +95,17 @@
 <div class="detail-navigation">
     <a href="/devices">← Volver a dispositivos</a>
 </div>
+
+{% if request.query_params.get("interfaces_synced") is not none %}
+<div class="interface-sync-result-banner">
+    <strong>Interfaces sincronizadas desde el modelo.</strong>
+    <span>
+        {{ request.query_params.get("interfaces_synced", "0") }} creadas ·
+        {{ request.query_params.get("interfaces_existing", "0") }} ya coincidían ·
+        {{ request.query_params.get("interfaces_conflicts", "0") }} para revisión manual.
+    </span>
+</div>
+{% endif %}
 
 <section class="device-detail-header">
     <div class="device-detail-identity">
@@ -232,7 +244,7 @@
     </article>
 </section>
 
-<section class="device-panel interfaces-panel">
+<section class="device-panel interfaces-panel" id="interfaces">
     <div class="device-panel-header">
         <div>
             <h2>Interfaces</h2>
@@ -242,10 +254,23 @@
             </p>
         </div>
 
-        <span class="result-badge interface-count-summary">
-            {{ interface_count }} interfaces
-            <small>· {{ interface_summary.ip_count }} IPs</small>
-        </span>
+        <div class="interface-panel-actions">
+            {% if device_type_id and write_enabled %}
+            <a
+                class="interface-sync-link"
+                href="/devices/{{ device.get('id') }}/interfaces/sync"
+                data-create-modal
+                data-modal-title="Sincronizar interfaces desde el modelo"
+            >
+                <span aria-hidden="true">⇆</span>
+                Sincronizar desde modelo
+            </a>
+            {% endif %}
+            <span class="result-badge interface-count-summary">
+                {{ interface_count }} interfaces
+                <small>· {{ interface_summary.ip_count }} IPs</small>
+            </span>
+        </div>
     </div>
 
     {% if interfaces %}
@@ -323,7 +348,7 @@
     <div class="devices-empty-state">
         <div>⇆</div>
         <h3>Este equipo no tiene interfaces</h3>
-        <p>No existen puertos documentados en NetBox.</p>
+        <p>Usa <strong>Sincronizar desde modelo</strong> para crear las interfaces documentadas en el modelo.</p>
     </div>
     {% endif %}
 </section>

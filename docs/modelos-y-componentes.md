@@ -97,6 +97,14 @@ La interfaz principal no se selecciona de forma independiente: queda determinada
 
 En los listados y racks, NetDoc muestra primero la IPv4 principal. Si el dispositivo no tiene una IPv4 principal, utiliza la IPv6 principal. Cuando ninguna está definida, muestra **Sin asignar**.
 
+## Direcciones IP por interfaz
+
+La tabla **Interfaces** de la ficha del dispositivo muestra todas las direcciones IPv4 e IPv6 asignadas a cada interfaz en NetBox. Cada dirección conserva su prefijo y la IP principal del equipo se identifica visualmente con la etiqueta **Principal**.
+
+Para evitar consultas N+1, NetDoc realiza únicamente dos lecturas paralelas: una para las interfaces del dispositivo y otra para todas sus direcciones IP. Después agrupa las direcciones localmente mediante el identificador de la interfaz asignada. La cabecera de la tabla resume cuántas interfaces tienen direccionamiento y el total de direcciones encontradas.
+
+Una interfaz sin direcciones muestra **Sin asignar**. Esto no implica que la interfaz esté libre de cableado; el estado de conexión física continúa mostrándose en su propia columna.
+
 ## Espacio de trabajo del rack
 
 En pantallas de escritorio, el detalle del rack se organiza como un espacio de trabajo de dos columnas:
@@ -132,4 +140,4 @@ La tabla permite buscar por nombre, modelo, dirección IP, número de serie, pos
 
 ## Uso móvil
 
-Los formularios de creación ocupan la pantalla completa en teléfonos y mantienen controles táctiles adecuados. En el detalle de un rack, la vista 3D, la información física y el inventario se apilan verticalmente. La tabla del inventario se transforma en tarjetas por dispositivo para evitar depender de desplazamiento horizontal y conservar visibles el nombre, modelo, posición, serial, IP principal, estado y acceso a la ficha.
+Los formularios de creación ocupan la pantalla completa en teléfonos y mantienen controles táctiles adecuados. En el detalle de un rack, la vista 3D, la información física y el inventario se apilan verticalmente. La tabla del inventario se transforma en tarjetas por dispositivo para evitar depender de desplazamiento horizontal y conservar visibles el nombre, modelo, posición, serial, IP principal, estado y acceso a la ficha. En la ficha del dispositivo, las direcciones IP se presentan como etiquetas compactas dentro de la tabla de interfaces y conservan desplazamiento horizontal cuando el ancho disponible no permite mostrar todas las columnas.

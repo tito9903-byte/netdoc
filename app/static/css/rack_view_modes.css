@@ -133,6 +133,82 @@
     max-width: 580px;
 }
 
+/*
+ * Fotografías: cuando existe imagen, la cara del equipo ocupa todo el bloque.
+ * El nombre permanece disponible en el tooltip y en el inspector lateral, pero
+ * ya no tapa los puertos ni el frontal del dispositivo.
+ */
+.rack-device-block.has-image {
+    padding: 0 !important;
+    background: #020608 !important;
+}
+
+.rack-device-block.has-image .rack-device-image {
+    inset: 0 !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    background: transparent !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+.rack-device-block.has-image .rack-device-name,
+.rack-device-block.has-image .rack-device-position {
+    display: none !important;
+}
+
+.rack-single-topology .topology-device:has(img:not([hidden])) {
+    background: #020608 !important;
+}
+
+.rack-single-topology .topology-device img {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    backface-visibility: hidden;
+}
+
+.rack-single-topology .topology-device:has(img:not([hidden])) .topology-device-label {
+    display: none !important;
+}
+
+/*
+ * La vista isométrica conserva profundidad mediante el costado del gabinete,
+ * pero no rota ni rasteriza el frontal completo. Esto evita que fotografías y
+ * líneas del rack se vean borrosas al cambiar de perspectiva.
+ */
+.rack-single-topology[data-view="isometric"] .topology-rack-perspective {
+    transform: translateX(-7px) !important;
+    filter: none !important;
+}
+
+.rack-single-topology[data-view="front"] .topology-rack-perspective {
+    transform: none !important;
+}
+
+.rack-single-topology .topology-rack-frame,
+.rack-single-topology .topology-device,
+.rack-single-topology .topology-device img {
+    image-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+}
+
+.rack-single-topology .topology-device:hover,
+.rack-single-topology .topology-device:focus-visible {
+    filter: brightness(1.08) !important;
+    transform: translateX(3px) !important;
+}
+
 @media (max-width: 700px) {
     .rack-single-topology-scene,
     .rack-single-topology .topology-rack-card,
@@ -140,6 +216,25 @@
         width: 100% !important;
         min-width: 0;
         max-width: 100%;
+    }
+
+    .rack-view-controls,
+    .rack-view-controls-3d {
+        display: flex;
+        width: 100%;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .topology-toggle-group {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .topology-toggle {
+        min-height: 44px;
+        white-space: nowrap;
     }
 
     .rack-single-topology[data-scale="fit"] .topology-rack-frame {
@@ -154,5 +249,9 @@
         min-width: 320px !important;
         max-width: 320px !important;
         flex-basis: 320px !important;
+    }
+
+    .rack-single-topology[data-view="isometric"] .topology-rack-perspective {
+        transform: translateX(-4px) !important;
     }
 }

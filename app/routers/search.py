@@ -10,7 +10,14 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
+from app.services.lldp_privilege_support import install_lldp_privilege_support
 from app.services.search_service import global_search
+
+
+# El router de búsqueda ya se monta directamente en app.main junto al resto de
+# documentación. Instalar aquí el soporte de privilegios y montar LLDP en este
+# router garantiza que las rutas queden presentes en la aplicación final.
+install_lldp_privilege_support()
 
 
 router = APIRouter()
@@ -85,10 +92,13 @@ from app.routers.change_plans import router as change_plans_router
 from app.routers.device_images import router as device_images_router
 from app.routers.documentation import router as documentation_router
 from app.routers.hardware import router as hardware_router
+from app.routers.lldp_discovery import router as lldp_discovery_router
 from app.routers.rack_create import router as rack_create_router
+
 
 router.include_router(documentation_router)
 router.include_router(device_images_router)
 router.include_router(rack_create_router)
 router.include_router(change_plans_router)
 router.include_router(hardware_router)
+router.include_router(lldp_discovery_router)

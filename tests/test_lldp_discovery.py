@@ -4,6 +4,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock
 
+from fastapi.testclient import TestClient
+
 from app.main import app
 from app.services.lldp_discovery_service import (
     LldpDiscoveryService,
@@ -156,9 +158,12 @@ class LldpMatchingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class LldpRouteRegistrationTests(unittest.TestCase):
-    def test_lldp_routes_are_registered_on_final_application(self):
-        paths = {getattr(route, "path", "") for route in app.routes}
+    def test_first_request_bootstraps_lldp_routes_on_serving_application(self):
+        with TestClient(app) as client:
+            response = client.get("/health")
 
+        self.assertEqual(200, response.status_code)
+        paths = {getattr(route, "path", "") for route in app.routes}
         self.assertIn("/devices/{device_id}/lldp-discovery", paths)
         self.assertIn("/devices/{device_id}/lldp-discovery/run", paths)
         self.assertIn("/devices/{device_id}/lldp-discovery/confirm", paths)

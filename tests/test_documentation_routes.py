@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.device_model_builder_service import ComponentDefinition
 
 
 MANUFACTURERS = [
@@ -20,9 +21,11 @@ DEVICE_TYPES = [
         "manufacturer": {"id": 1, "name": "ZTE", "display": "ZTE"},
         "part_number": "C600",
         "slug": "zte-c600",
-        "u_height": 2,
+        "u_height": 10,
         "is_full_depth": True,
         "description": "OLT de acceso.",
+        "front_image": "/media/front.png",
+        "rear_image": None,
         "_manufacturer_label": "ZTE",
         "_model_label": "C600",
         "_interface_count": 4,
@@ -75,7 +78,7 @@ class DocumentationRouteTests(unittest.TestCase):
         new_callable=AsyncMock,
         return_value=MANUFACTURERS,
     )
-    def test_model_catalog_renders_without_loading_interface_choices(
+    def test_model_catalog_uses_documentation_table_and_contextual_creation(
         self,
         _manufacturers,
         _device_types,
@@ -83,16 +86,19 @@ class DocumentationRouteTests(unittest.TestCase):
         response = self.client.get("/device-types")
 
         self.assertEqual(200, response.status_code)
-        self.assertIn("Modelos de equipos", response.text)
+        self.assertIn("Listado de modelos documentados", response.text)
         self.assertIn("C600", response.text)
-        self.assertIn("Plantillas de puertos", response.text)
+        self.assertIn("Crear modelo", response.text)
+        self.assertIn("Puertos y componentes", response.text)
+        self.assertIn("data-create-modal", response.text)
+        self.assertNotIn(">Plantillas de puertos<", response.text)
 
     @patch(
         "app.routers.documentation.DeviceTypeService.list_manufacturers",
         new_callable=AsyncMock,
         return_value=MANUFACTURERS,
     )
-    def test_new_model_form_includes_front_and_rear_images(
+    def test_new_model_form_uses_complete_netbox_workflow(
         self,
         _manufacturers,
     ):
@@ -103,25 +109,95 @@ class DocumentationRouteTests(unittest.TestCase):
         self.assertIn('name="front_image"', response.text)
         self.assertIn('name="rear_image"', response.text)
         self.assertIn(
-            '/device-types/actions/create-with-images',
+            '/device-types/actions/create-complete',
             response.text,
         )
+        self.assertIn("data-netbox-model-fields", response.text)
+        self.assertIn("Campos avanzados disponibles en NetBox", response.text)
         self.assertIn("Altura U", response.text)
 
-    def test_combined_model_image_route_requires_valid_csrf(self):
-        response = self.client.post(
-            "/device-types/actions/create-with-images",
-            data={
-                "manufacturer_id": "1",
-                "model": "C600",
-                "u_height": "2",
-            },
-            follow_redirects=False,
+    @patch(
+        "app.routers.model_builder.DeviceModelBuilderService.model_advanced_fields",
+        new_callable=AsyncMock,
+        return_value=[
+            {
+                "name": "airflow",
+                "label": "Flujo de aire",
+                "required": False,
+                "type": "choice",
+                "input_type": "select",
+                "choices": [
+                    {"value": "front-to-rear", "label": "Frente a atrás"},
+                ],
+                "help_text": "Dirección de ventilación.",
+                "default": None,
+                "allow_null": True,
+                "multiple": False,
+            }
+        ],
+    )
+    def test_model_schema_api_exposes_netbox_capabilities(self, _fields):
+        response = self.client.get("/api/device-types/model-fields")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual("airflow", payload["fields"][0]["name"])
+        self.assertEqual("Frente a atrás", payload["fields"][0]["choices"][0]["label"])
+
+    @patch(
+        "app.routers.model_builder.DeviceModelBuilderService.component_fields",
+        new_callable=AsyncMock,
+        return_value=[
+            {
+                "name": "type",
+                "label": "Tipo",
+                "required": True,
+                "type": "choice",
+                "input_type": "select",
+                "choices": INTERFACE_TYPES,
+                "help_text": "",
+                "default": None,
+                "allow_null": False,
+                "multiple": False,
+            }
+        ],
+    )
+    @patch(
+        "app.routers.model_builder.DeviceModelBuilderService.definition",
+        return_value=ComponentDefinition(
+            key="interface",
+            label="Interfaces de red",
+            singular="interfaz",
+            endpoint="/api/dcim/interface-templates/",
+            icon="⇆",
+            description="Interfaces publicadas por NetBox.",
+        ),
+    )
+    @patch(
+        "app.routers.model_builder.DeviceTypeService.get_device_type",
+        new_callable=AsyncMock,
+        return_value=DEVICE_TYPES[0],
+    )
+    def test_component_creator_is_integrated_with_model_detail(
+        self,
+        _device_type,
+        _definition,
+        _fields,
+    ):
+        response = self.client.get(
+            "/device-types/10/components/new?kind=interface"
         )
 
-        self.assertEqual(303, response.status_code)
-        self.assertIn("/device-types/new?", response.headers["location"])
-        self.assertIn("error=", response.headers["location"])
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Interfaces de red", response.text)
+        self.assertIn("Esquema NetBox", response.text)
+        self.assertIn('name="name_pattern"', response.text)
+        self.assertIn('name="type"', response.text)
+        self.assertIn(
+            "/device-types/10/components/actions/create",
+            response.text,
+        )
 
     @patch(
         "app.routers.documentation.DeviceTypeService.list_interface_templates",
@@ -143,7 +219,7 @@ class DocumentationRouteTests(unittest.TestCase):
         new_callable=AsyncMock,
         return_value=MANUFACTURERS,
     )
-    def test_interface_template_workspace_renders(
+    def test_legacy_interface_workspace_remains_compatible(
         self,
         _manufacturers,
         _device_types,

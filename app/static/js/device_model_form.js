@@ -23,6 +23,16 @@
         return help;
     }
 
+    function defaultValues(field) {
+        if (Array.isArray(field.default)) {
+            return new Set(field.default.map((value) => String(value)));
+        }
+        if (field.default === null || field.default === undefined) {
+            return new Set();
+        }
+        return new Set([String(field.default)]);
+    }
+
     function createField(field) {
         const wrapper = document.createElement("div");
         wrapper.className = "field netbox-dynamic-field";
@@ -65,17 +75,21 @@
         let input;
         if (field.input_type === "select") {
             input = document.createElement("select");
-            const empty = document.createElement("option");
-            empty.value = "";
-            empty.textContent = field.required ? "Seleccionar" : "Sin definir";
-            input.appendChild(empty);
+            input.multiple = Boolean(field.multiple);
+            const selectedDefaults = defaultValues(field);
+
+            if (!input.multiple) {
+                const empty = document.createElement("option");
+                empty.value = "";
+                empty.textContent = field.required ? "Seleccionar" : "Sin definir";
+                input.appendChild(empty);
+            }
+
             for (const choice of field.choices || []) {
                 const option = document.createElement("option");
                 option.value = choice.value;
                 option.textContent = choice.label;
-                if (String(field.default ?? "") === String(choice.value)) {
-                    option.selected = true;
-                }
+                option.selected = selectedDefaults.has(String(choice.value));
                 input.appendChild(option);
             }
         } else if (field.input_type === "textarea") {

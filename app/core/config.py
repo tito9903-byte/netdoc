@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "NetDoc"
-    app_version: str = "0.10.1"
+    app_version: str = "0.11.0"
 
     netbox_url: str
     netbox_token: str
@@ -13,6 +13,15 @@ class Settings(BaseSettings):
     netbox_verify_ssl: bool = False
     netbox_timeout: float = 15.0
     netbox_write_enabled: bool = False
+
+    # Descubrimiento LLDP por SSH. Los perfiles se reciben como JSON desde .env.
+    # Ejemplo: {"default":{"username":"netdoc-read","password":"..."},
+    # "arista_eos":{"username":"netdoc-arista","password":"..."}}
+    netdoc_ssh_discovery_enabled: bool = False
+    netdoc_ssh_profiles_json: str = "{}"
+    netdoc_ssh_connect_timeout: int = 10
+    netdoc_ssh_command_timeout: int = 30
+    netdoc_ssh_max_neighbors: int = 256
 
     session_secret: str
     session_cookie_name: str = "netdoc_session"

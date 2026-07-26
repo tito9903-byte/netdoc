@@ -10,12 +10,17 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
+from app.routers.lldp_discovery import router as lldp_discovery_router
 from app.services.system_service import collect_system_health
 
 
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+
+# El módulo de sistema ya está registrado directamente en app.main y actúa como
+# punto estable para montar el descubrimiento LLDP sin acoplarlo a racks/modelos.
+router.include_router(lldp_discovery_router)
 
 
 def context(request: Request, **extra: object) -> dict[str, object]:

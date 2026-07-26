@@ -10,26 +10,12 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
-from app.services.lldp_privilege_support import install_lldp_privilege_support
 from app.services.system_service import collect_system_health
-
-
-# Debe instalarse antes de importar el router LLDP, porque ese router utiliza la
-# clase de servicio compartida durante las solicitudes de descubrimiento.
-install_lldp_privilege_support()
-
-from app.routers.lldp_discovery import router as lldp_discovery_router  # noqa: E402
 
 
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
-
-# FastAPI copia las rutas cuando se incluye un APIRouter dentro de otro. En este
-# proyecto el router de sistema se importa durante el arranque principal; anexar
-# explícitamente las rutas evita que el descubrimiento quede fuera si el módulo
-# ya estaba parcialmente cargado por otra prueba o importación.
-router.routes.extend(lldp_discovery_router.routes)
 
 
 def context(request: Request, **extra: object) -> dict[str, object]:

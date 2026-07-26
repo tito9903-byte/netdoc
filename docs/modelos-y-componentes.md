@@ -76,14 +76,49 @@ Algunos componentes dependen de otros:
 
 NetDoc consulta los componentes existentes del mismo modelo y los presenta como opciones, evitando introducir identificadores manualmente.
 
+## Crear dispositivos
+
+El botón **Crear dispositivo** abre un formulario guiado en una ventana. El alta exige nombre, sitio, modelo y rol; opcionalmente permite documentar rack, posición, cara y número de serie.
+
+La protección del formulario utiliza un token HMAC firmado con el secreto del servidor y la identidad autenticada. El token no se agrega dinámicamente a la cookie de sesión, evitando que las cargas paralelas de la página y la ventana modal lo sobrescriban. Si la validación falla, NetDoc vuelve a presentar el formulario con un mensaje comprensible y conserva los datos introducidos; nunca debe mostrar el JSON crudo de una excepción de seguridad.
+
+## IP e interfaz principal del dispositivo
+
+La ficha de cada dispositivo incluye la acción **Configurar** junto a **IP principal**. La ventana consulta únicamente las direcciones que NetBox tiene asignadas a las interfaces de ese equipo y muestra cada opción en el formato:
+
+`dirección/prefijo — interfaz`
+
+Se pueden definir por separado:
+
+- `primary_ip4`, para IPv4;
+- `primary_ip6`, para IPv6.
+
+La interfaz principal no se selecciona de forma independiente: queda determinada por la interfaz a la que está asociada la IP elegida. Esto evita documentar una dirección y un puerto que no correspondan entre sí.
+
+En los listados y racks, NetDoc muestra primero la IPv4 principal. Si el dispositivo no tiene una IPv4 principal, utiliza la IPv6 principal. Cuando ninguna está definida, muestra **Sin asignar**.
+
+## Inventario dentro del rack
+
+Debajo de la vista 3D, cada rack presenta un listado de los dispositivos asociados con:
+
+- nombre del dispositivo;
+- modelo;
+- posición U y cara;
+- número de serie;
+- IP principal;
+- estado;
+- acceso directo a la ficha del dispositivo.
+
+Los equipos sin posición válida o de 0U continúan apareciendo en sus bloques especiales y también forman parte del inventario completo. La tabla utiliza la misma selección de IP principal configurada en el dispositivo.
+
 ## Seguridad y trazabilidad
 
 - Las escrituras requieren el permiso `devices.create`.
-- Los formularios utilizan protección CSRF.
+- Los formularios utilizan protección CSRF firmada.
 - La escritura puede bloquearse globalmente con el modo de solo lectura.
-- Las altas y errores se registran en la auditoría de NetDoc.
-- NetBox conserva su propio historial de cambios.
+- Las altas, cambios de IP principal y errores se registran en la auditoría de NetDoc.
+- NetBox conserva su propio historial de cambios mediante `changelog_message`.
 
 ## Uso móvil
 
-Los listados conservan desplazamiento horizontal cuando una tabla no cabe. Los formularios de creación se abren como ventana en escritorio y ocupan la pantalla completa en teléfonos. Los controles principales mantienen un área táctil adecuada.
+Los listados conservan desplazamiento horizontal cuando una tabla no cabe. Los formularios de creación se abren como ventana en escritorio y ocupan la pantalla completa en teléfonos. Los controles principales mantienen un área táctil adecuada. La tabla de equipos de un rack conserva todas sus columnas mediante desplazamiento horizontal y los formularios de IP principal se reorganizan en una sola columna.

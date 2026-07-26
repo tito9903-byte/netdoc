@@ -242,6 +242,18 @@ class LldpDiscoveryService:
                 profiles[str(key).strip().casefold()] = dict(value)
         return profiles
 
+    @staticmethod
+    def _requested_profile_key(
+        device: dict[str, Any],
+        spec: PlatformSpec,
+    ) -> str:
+        custom_fields = device.get("custom_fields") or {}
+        requested = ""
+        if isinstance(custom_fields, dict):
+            requested = str(custom_fields.get("netdoc_ssh_profile") or "")
+        normalized = LldpDiscoveryService._normalize_name(requested)
+        return normalized or spec.key
+
     def _resolve_platform(self, device: dict[str, Any]) -> PlatformSpec:
         custom_fields = device.get("custom_fields") or {}
         profile_hint = ""
@@ -281,11 +293,7 @@ class LldpDiscoveryService:
         spec: PlatformSpec,
     ) -> dict[str, Any]:
         profiles = self._profiles()
-        custom_fields = device.get("custom_fields") or {}
-        requested = ""
-        if isinstance(custom_fields, dict):
-            requested = str(custom_fields.get("netdoc_ssh_profile") or "")
-        profile_key = self._normalize_name(requested) or spec.key
+        profile_key = self._requested_profile_key(device, spec)
 
         merged: dict[str, Any] = {}
         merged.update(profiles.get("default", {}))
@@ -444,7 +452,6 @@ class LldpDiscoveryService:
         if not text.strip():
             return []
 
-        # RouterOS presenta cada vecino como una línea/bloque con pares clave=valor.
         if "interface=" in text and ("identity=" in text or "interface-name=" in text):
             observations: list[LldpObservation] = []
             blocks = re.split(r"(?m)^\s*\d+\s+", text)
@@ -724,13 +731,24 @@ class LldpDiscoveryService:
             )
         host = self._device_host(device)
         spec = self._resolve_platform(device)
-        profile = self._resolve_profile(device, spec)
+        profile_key = self._requested_profile_key(device, spec)
+        profile_error = ""
+        try:
+            profile = self._resolve_profile(device, spec)
+            command = profile["command"]
+            profile_configured = True
+        except LldpDiscoveryError as exc:
+            command = spec.command
+            profile_configured = False
+            profile_error = exc.message
         return {
             "device": device,
             "host": host,
             "platform": spec,
-            "profile_key": profile["profile_key"],
-            "command": profile["command"],
+            "profile_key": profile_key,
+            "profile_configured": profile_configured,
+            "profile_error": profile_error,
+            "command": command,
         }
 
     async def discover(self, device_id: int) -> dict[str, Any]:
@@ -779,6 +797,8 @@ class LldpDiscoveryService:
             "host": host,
             "platform": asdict(spec),
             "profile_key": profile["profile_key"],
+            "profile_configured": True,
+            "profile_error": "",
             "command": profile["command"],
             "observations": matches,
             "neighbor_count": len(matches),

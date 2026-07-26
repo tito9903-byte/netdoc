@@ -1,6 +1,7 @@
 import re
 import secrets
-from urllib.parse import quote
+from threading import Lock
+from urllib.parse import parse_qsl, quote, urlencode
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -161,11 +162,21 @@ def request_client_data(
 
 
 class PermissionMiddleware(BaseHTTPMiddleware):
+    _route_bootstrap_lock = Lock()
+    _lldp_paths = {
+        "/devices/{device_id}/lldp-discovery",
+        "/devices/{device_id}/lldp-discovery/run",
+        "/devices/{device_id}/lldp-discovery/confirm",
+    }
+
     async def dispatch(
         self,
         request: StarletteRequest,
         call_next,
     ) -> Response:
+        self._normalize_optional_device_filters(request)
+        self._ensure_lldp_routes(request)
+
         permission = self._required_permission(
             request.url.path,
             request.method,
@@ -206,6 +217,94 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         self._audit_mutation(request, response)
         return response
+
+    @classmethod
+    def _ensure_lldp_routes(cls, request: StarletteRequest) -> None:
+        """Monta LLDP una sola vez sobre la aplicación que atiende la solicitud.
+
+        El proyecto todavía agrupa varios routers para conservar compatibilidad con
+        su bootstrap histórico. Durante importaciones parciales o pruebas aisladas,
+        esa agrupación puede quedar disponible después de crear la instancia de
+        FastAPI. Esta verificación hace que el primer request —incluido /health— deje
+        las rutas LLDP registradas sin duplicarlas.
+        """
+
+        application = request.app
+        include_router = getattr(application, "include_router", None)
+        routes = getattr(application, "routes", None)
+        if not callable(include_router) or routes is None:
+            return
+
+        existing = {getattr(route, "path", "") for route in routes}
+        if cls._lldp_paths.issubset(existing):
+            return
+
+        with cls._route_bootstrap_lock:
+            existing = {
+                getattr(route, "path", "")
+                for route in getattr(application, "routes", [])
+            }
+            if cls._lldp_paths.issubset(existing):
+                return
+
+            from app.services.lldp_privilege_support import (
+                install_lldp_privilege_support,
+            )
+
+            install_lldp_privilege_support()
+
+            from app.routers.lldp_discovery import router as lldp_router
+
+            include_router(lldp_router)
+
+    @staticmethod
+    def _normalize_optional_device_filters(
+        request: StarletteRequest,
+    ) -> None:
+        """Elimina filtros numéricos vacíos antes de validar la ruta /devices.
+
+        Los navegadores envían `site_id=` y `role_id=` cuando se selecciona la
+        opción «Todos». FastAPI no convierte una cadena vacía en `int | None`, por
+        lo que sin esta normalización respondería con JSON 422 antes de renderizar
+        la página.
+        """
+
+        if request.method.upper() != "GET" or request.scope.get("path") != "/devices":
+            return
+
+        raw_query = request.scope.get("query_string", b"")
+        if not raw_query:
+            return
+
+        try:
+            pairs = parse_qsl(
+                raw_query.decode("utf-8"),
+                keep_blank_values=True,
+            )
+        except UnicodeDecodeError:
+            return
+
+        normalized = [
+            (key, value)
+            for key, value in pairs
+            if not (
+                key in {"site_id", "role_id"}
+                and not value.strip()
+            )
+        ]
+
+        if normalized == pairs:
+            return
+
+        request.scope["query_string"] = urlencode(
+            normalized,
+            doseq=True,
+        ).encode("utf-8")
+
+        # Starlette puede haber calculado estas propiedades en middleware externo.
+        # Eliminarlas obliga a reconstruirlas desde el query_string normalizado.
+        request.__dict__.pop("_url", None)
+        request.__dict__.pop("_query_params", None)
 
     @staticmethod
     def _authentication_required(
@@ -362,6 +461,18 @@ class PermissionMiddleware(BaseHTTPMiddleware):
             and re.fullmatch(r"/devices/\d+/primary-ip/new", path)
         ):
             return "devices.create"
+
+        if re.fullmatch(
+            r"/devices/\d+/lldp-discovery/confirm",
+            path,
+        ):
+            return "devices.create"
+
+        if re.fullmatch(
+            r"/devices/\d+/lldp-discovery(?:/run)?",
+            path,
+        ):
+            return "connections.view"
 
         if path.startswith("/devices"):
             return "devices.view"

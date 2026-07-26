@@ -71,9 +71,10 @@ class RackThreeDimensionalOnlyTests(unittest.TestCase):
         response = self.render("/racks/1")
 
         self.assertEqual(200, response.status_code)
-        self.assertIn("Vista 3D estilo datacenter", response.text)
+        self.assertIn("Vista 3D del rack", response.text)
         self.assertIn("data-topology-root", response.text)
         self.assertIn("Vista 3D basada en posición", response.text)
+        self.assertIn("rack-workspace-grid", response.text)
         self.assertNotIn("Vista 2D", response.text)
         self.assertNotIn("Elevación 2D del rack", response.text)
 
@@ -81,8 +82,9 @@ class RackThreeDimensionalOnlyTests(unittest.TestCase):
         response = self.render("/racks/1?view=2d&face=rear")
 
         self.assertEqual(200, response.status_code)
-        self.assertIn("Vista 3D estilo datacenter", response.text)
+        self.assertIn("Vista 3D del rack", response.text)
         self.assertIn('data-face="rear"', response.text)
+        self.assertIn("data-topology-root", response.text)
         self.assertNotIn("Vista 2D", response.text)
         self.assertNotIn("Elevación 2D del rack", response.text)
 

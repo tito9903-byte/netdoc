@@ -97,9 +97,20 @@ La interfaz principal no se selecciona de forma independiente: queda determinada
 
 En los listados y racks, NetDoc muestra primero la IPv4 principal. Si el dispositivo no tiene una IPv4 principal, utiliza la IPv6 principal. Cuando ninguna está definida, muestra **Sin asignar**.
 
+## Espacio de trabajo del rack
+
+En pantallas de escritorio, el detalle del rack se organiza como un espacio de trabajo de dos columnas:
+
+- a la izquierda permanece la vista 3D con proporciones fijas del gabinete;
+- a la derecha se presentan el resumen físico, el inspector del equipo seleccionado y el inventario operativo;
+- la vista 3D permanece visible mientras se revisa el inventario cuando hay espacio suficiente;
+- las métricas superiores incluyen altura, unidades ocupadas, unidades libres, cantidad de equipos y utilización.
+
+La información física se presenta de forma compacta para evitar una columna excesivamente larga. Los equipos de 0U y los equipos sin posición válida se mantienen disponibles en secciones desplegables.
+
 ## Inventario dentro del rack
 
-Debajo de la vista 3D, cada rack presenta un listado de los dispositivos asociados con:
+El inventario presenta los dispositivos asociados con:
 
 - nombre del dispositivo;
 - modelo;
@@ -109,7 +120,7 @@ Debajo de la vista 3D, cada rack presenta un listado de los dispositivos asociad
 - estado;
 - acceso directo a la ficha del dispositivo.
 
-Los equipos sin posición válida o de 0U continúan apareciendo en sus bloques especiales y también forman parte del inventario completo. La tabla utiliza la misma selección de IP principal configurada en el dispositivo.
+La tabla permite buscar por nombre, modelo, dirección IP, número de serie, posición o estado. Su encabezado permanece visible durante el desplazamiento interno. Los equipos sin posición válida o de 0U también forman parte del inventario completo y la IP utiliza la selección principal configurada en el dispositivo.
 
 ## Seguridad y trazabilidad
 
@@ -121,4 +132,4 @@ Los equipos sin posición válida o de 0U continúan apareciendo en sus bloques 
 
 ## Uso móvil
 
-Los listados conservan desplazamiento horizontal cuando una tabla no cabe. Los formularios de creación se abren como ventana en escritorio y ocupan la pantalla completa en teléfonos. Los controles principales mantienen un área táctil adecuada. La tabla de equipos de un rack conserva todas sus columnas mediante desplazamiento horizontal y los formularios de IP principal se reorganizan en una sola columna.
+Los formularios de creación ocupan la pantalla completa en teléfonos y mantienen controles táctiles adecuados. En el detalle de un rack, la vista 3D, la información física y el inventario se apilan verticalmente. La tabla del inventario se transforma en tarjetas por dispositivo para evitar depender de desplazamiento horizontal y conservar visibles el nombre, modelo, posición, serial, IP principal, estado y acceso a la ficha.

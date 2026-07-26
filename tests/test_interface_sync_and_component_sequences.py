@@ -193,7 +193,13 @@ class InterfaceSyncRouteTests(unittest.TestCase):
             "created_count": 2,
         }
 
-        with TestClient(app) as client:
+        # La suite aislada usa escritura deshabilitada por seguridad. Esta prueba
+        # activa explícitamente el interruptor solo dentro de su propio contexto,
+        # porque valida el flujo POST exitoso sin realizar llamadas reales a NetBox.
+        with patch(
+            "app.routers.model_builder.settings.netbox_write_enabled",
+            True,
+        ), TestClient(app) as client:
             self.login(client)
             response = client.get("/devices/214/interfaces/sync?modal=1")
             self.assertEqual(200, response.status_code)

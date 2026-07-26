@@ -11,7 +11,15 @@
 {% block content %}
 {% set manufacturer = device_type.get("manufacturer") or {} %}
 {% set model_name = device_type.get("model") or device_type.get("display") or "Modelo" %}
-{% set default_pattern = "GigabitEthernet0/{n}" if selected_kind == "interface" else "F{n}" if selected_kind == "front_port" else "R{n}" if selected_kind == "rear_port" else component_definition.singular | replace(" ", "-") ~ "-{n}" %}
+{% if selected_kind == "interface" %}
+    {% set default_pattern = "GigabitEthernet0/{n}" %}
+{% elif selected_kind == "front_port" %}
+    {% set default_pattern = "F{n}" %}
+{% elif selected_kind == "rear_port" %}
+    {% set default_pattern = "R{n}" %}
+{% else %}
+    {% set default_pattern = (component_definition.singular | replace(" ", "-")) ~ "-{n}" %}
+{% endif %}
 
 <div class="component-create-page">
     <a class="back-link" href="/device-types/{{ device_type_id }}#components">← Volver al modelo</a>

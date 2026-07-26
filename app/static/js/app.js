@@ -277,3 +277,62 @@ document.addEventListener("click", (event) => {
 document.addEventListener("submit", () => {
     startNavigationFeedback();
 });
+
+// Muestra en la navegación de la ficha del modelo la cantidad de puertos
+// documentados. En paneles de parcheo, frente y parte trasera representan las
+// dos caras del mismo canal físico, por eso se cuenta la mayor de ambas y no
+// se duplican los puertos cuando existe una relación uno a uno.
+function showDocumentedPortCount() {
+    const componentsLink = document.querySelector(
+        '.hardware-section-nav a[href="#components"]',
+    );
+    const componentCards = document.querySelectorAll(
+        ".component-type-card[href*='kind=']",
+    );
+
+    if (!(componentsLink instanceof HTMLAnchorElement) || !componentCards.length) {
+        return;
+    }
+
+    const counts = new Map();
+    componentCards.forEach((card) => {
+        if (!(card instanceof HTMLAnchorElement)) {
+            return;
+        }
+
+        let url;
+        try {
+            url = new URL(card.href, window.location.href);
+        } catch (_error) {
+            return;
+        }
+
+        const kind = url.searchParams.get("kind");
+        const countElement = card.querySelector(".component-card-count");
+        const count = Number.parseInt(countElement?.textContent || "0", 10);
+        if (kind) {
+            counts.set(kind, Number.isFinite(count) ? count : 0);
+        }
+    });
+
+    const patchPanelPorts = Math.max(
+        counts.get("front_port") || 0,
+        counts.get("rear_port") || 0,
+    );
+    const portTotal =
+        (counts.get("interface") || 0) +
+        (counts.get("console_port") || 0) +
+        (counts.get("console_server_port") || 0) +
+        (counts.get("power_port") || 0) +
+        (counts.get("power_outlet") || 0) +
+        patchPanelPorts;
+
+    const badge = document.createElement("span");
+    badge.className = "hardware-section-nav-count";
+    badge.textContent = String(portTotal);
+    badge.title = `${portTotal} puertos documentados`;
+    badge.setAttribute("aria-label", `${portTotal} puertos documentados`);
+    componentsLink.appendChild(badge);
+}
+
+showDocumentedPortCount();

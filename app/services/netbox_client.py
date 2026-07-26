@@ -128,6 +128,14 @@ class NetBoxClient:
             for name, metric in summary.items()
         }
 
+    @staticmethod
+    def _nested_id(value: Any) -> int | None:
+        if isinstance(value, int):
+            return value
+        if isinstance(value, dict) and isinstance(value.get("id"), int):
+            return int(value["id"])
+        return None
+
     async def get(
         self,
         endpoint: str,
@@ -338,8 +346,49 @@ class NetBoxClient:
         self,
         device_id: int,
     ) -> list[dict[str, Any]]:
-        return await self.get_all(
-            "/api/dcim/interfaces/",
-            params={"device_id": device_id, "ordering": "name"},
-            page_limit=200,
+        """Carga interfaces e IP asignadas en dos consultas paralelas.
+
+        NetBox no incluye las direcciones completas dentro del serializador de
+        interfaces. Consultarlas una por una causaría N+1 peticiones, por lo que
+        se obtiene todo el inventario de IP del dispositivo en una sola llamada
+        y se agrupa localmente por el ID de la interfaz asignada.
+        """
+
+        interfaces, addresses = await asyncio.gather(
+            self.get_all(
+                "/api/dcim/interfaces/",
+                params={"device_id": device_id, "ordering": "name"},
+                page_limit=200,
+            ),
+            self.get_all(
+                "/api/ipam/ip-addresses/",
+                params={"device_id": device_id, "ordering": "address"},
+                page_limit=200,
+            ),
         )
+
+        addresses_by_interface: dict[int, list[dict[str, Any]]] = {}
+        for address in addresses:
+            assigned_object = address.get("assigned_object") or {}
+            interface_id = self._nested_id(assigned_object)
+            if interface_id is None:
+                interface_id = self._nested_id(address.get("assigned_object_id"))
+            if interface_id is None:
+                continue
+            addresses_by_interface.setdefault(interface_id, []).append(address)
+
+        decorated: list[dict[str, Any]] = []
+        for interface in interfaces:
+            interface_id = self._nested_id(interface.get("id"))
+            interface_addresses = (
+                addresses_by_interface.get(interface_id, [])
+                if interface_id is not None
+                else []
+            )
+            decorated.append({
+                **interface,
+                "_ip_addresses": [dict(item) for item in interface_addresses],
+                "_ip_address_count": len(interface_addresses),
+            })
+
+        return decorated

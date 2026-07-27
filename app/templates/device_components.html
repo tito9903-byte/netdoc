@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-2">
+{% endblock %}
+
+{% block content %}
+<div class="detail-navigation">
+    <a href="/devices/{{ device_id }}#interfaces">← Volver al dispositivo</a>
+</div>
+
+{% set notice = request.query_params.get("notice") %}
+{% set error = request.query_params.get("error") %}
+{% if notice or error %}
+<div class="notice {% if error %}error-notice{% else %}success-notice{% endif %}">
+    <strong>{% if error %}No fue posible completar la operación.{% else %}Operación completada.{% endif %}</strong>
+    <span>{{ error or notice }}</span>
+</div>
+{% endif %}
+
+<section class="management-hero">
+    <div>
+        <span class="eyebrow">Inventario del dispositivo</span>
+        <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+        <p>Interfaces, energía, consola, paneles, bahías y piezas internas documentadas en NetBox.</p>
+    </div>
+    <div class="interface-row-actions">
+        <span class="panel-badge">{{ component_count }} componentes</span>
+        {% if write_enabled %}
+        <a class="button primary" href="/devices/{{ device_id }}/components/new">Crear componente</a>
+        {% endif %}
+    </div>
+</section>
+
+<section class="component-groups">
+    {% for group in groups %}
+    <article class="component-group-panel" id="{{ group.kind.key }}">
+        <header class="component-group-header">
+            <div>
+                <h3>{{ group.kind.plural }}</h3>
+                <p>{{ group.kind.description }}</p>
+            </div>
+            <div class="interface-row-actions">
+                <span class="result-badge">{{ group.count }}</span>
+                {% if write_enabled %}
+                {% set create_path = group.kind.special_create_path.format(device_id=device_id) if group.kind.special_create_path else '/devices/' ~ device_id ~ '/components/' ~ group.kind.key ~ '/new' %}
+                <a class="button secondary" href="{{ create_path }}">Agregar</a>
+                {% endif %}
+            </div>
+        </header>
+
+        {% if group.error %}
+        <div class="notice error-notice">
+            <strong>No fue posible consultar este tipo.</strong>
+            <span>{{ group.error }}</span>
+        </div>
+        {% elif group.rows %}
+        <div class="component-list">
+            {% for item in group.rows %}
+            <div class="component-list-row">
+                <strong>{{ item._name }}</strong>
+                <span>{{ item._detail or item._type or "Sin descripción" }}</span>
+                <span>{% if item.get("mark_connected") %}Marcado como conectado{% elif item.get("cable") or item.get("connected_endpoints") %}Conectado{% else %}Disponible{% endif %}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="devices-empty-state">
+            <div>{{ group.kind.icon }}</div>
+            <h3>Sin {{ group.kind.plural | lower }}</h3>
+            <p>Este dispositivo todavía no tiene componentes de este tipo.</p>
+        </div>
+        {% endif %}
+    </article>
+    {% endfor %}
+</section>
+{% endblock %}

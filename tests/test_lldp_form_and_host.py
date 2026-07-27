@@ -51,6 +51,19 @@ class LldpExecutionFormTests(unittest.TestCase):
         self.assertNotIn("set_terminal_width(", source)
         self.assertIn("disable_paging()", source)
 
+    def test_accidental_get_is_visible_and_device_navigation_stays_active(self):
+        redirect_source = Path("app/routers/lldp_run_redirect.py").read_text(
+            encoding="utf-8"
+        )
+        discovery_source = Path("app/routers/lldp_discovery.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('{"run_method": "get"}', redirect_source)
+        self.assertIn('run_method: str = ""', discovery_source)
+        self.assertIn("La ejecución LLDP no se inició", discovery_source)
+        self.assertIn('"current_page": "devices"', discovery_source)
+
 
 class LldpBareHostTests(unittest.TestCase):
     def test_primary_ipv4_mask_is_removed_before_ssh(self):

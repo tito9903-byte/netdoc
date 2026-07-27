@@ -118,7 +118,7 @@
         <article>
             <span>Listos</span>
             <strong>{{ discovery.ready_count }}</strong>
-            <small>Ambos extremos libres y coincidentes</small>
+            <small>Nombre/IP validados y ambos extremos libres</small>
         </article>
         <article>
             <span>Conflictos</span>
@@ -128,7 +128,7 @@
         <article>
             <span>Por revisar</span>
             <strong>{{ discovery.unresolved_count }}</strong>
-            <small>No se identificó equipo o interfaz</small>
+            <small>Falta validar equipo, IP o interfaz</small>
         </article>
     </section>
 
@@ -138,9 +138,9 @@
                 <span class="eyebrow">Resultado actual</span>
                 <h2>Propuestas de conexión</h2>
                 <p>
-                    NetDoc prioriza el nombre anunciado. La IP se presenta como
-                    evidencia adicional o como método alternativo cuando el nombre
-                    no permite identificar un único equipo.
+                    La IP anunciada debe estar asignada a alguna interfaz del equipo
+                    remoto en NetBox; no tiene que ser su IP principal. El nombre ayuda
+                    a confirmar la identidad y la IP también puede identificarlo por sí sola.
                 </p>
             </div>
             <span class="panel-badge">{{ discovery.neighbor_count }} vecinos</span>
@@ -243,8 +243,9 @@
                     </p>
                     {% else %}
                     <p class="lldp-result-message">
-                        Todavía no es seguro crear el cable. Verifica el nombre del
-                        dispositivo remoto y que el puerto exista en su ficha.
+                        Todavía no es seguro crear el cable. Verifica que el nombre sea
+                        correcto, que la IP anunciada esté asignada a alguna interfaz del
+                        equipo remoto y que el puerto exista en su ficha.
                     </p>
                     {% endif %}
                 </footer>

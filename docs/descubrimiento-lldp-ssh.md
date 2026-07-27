@@ -11,9 +11,10 @@ El módulo no crea cables automáticamente durante la consulta. El flujo es:
 3. ejecutar LLDP;
 4. normalizar la salida;
 5. identificar el dispositivo y la interfaz remota en NetBox;
-6. verificar que ambos extremos estén libres;
-7. presentar una propuesta individual;
-8. crear únicamente ese cable después de la confirmación del usuario.
+6. verificar que la IP anunciada esté asignada a alguna interfaz del equipo remoto;
+7. verificar que ambos extremos estén libres;
+8. presentar una propuesta individual;
+9. crear únicamente ese cable después de la confirmación del usuario.
 
 Un solo cable de NetBox documenta los dos extremos. NetDoc no crea una conexión duplicada en el dispositivo remoto.
 
@@ -112,7 +113,8 @@ Cada dispositivo debe tener:
 
 1. una IP principal IPv4 o IPv6 accesible desde el servidor de NetDoc para establecer SSH;
 2. una plataforma reconocible, por ejemplo `arista_eos`, `cisco_ios`, `cisco_nxos`, `juniper_junos` o `mikrotik_routeros`;
-3. interfaces cuyos nombres puedan compararse con los anunciados por LLDP.
+3. interfaces cuyos nombres puedan compararse con los anunciados por LLDP;
+4. las direcciones anunciadas por LLDP correctamente asignadas a sus interfaces en IPAM.
 
 Opcionalmente puede utilizarse el campo personalizado:
 
@@ -141,24 +143,26 @@ Cada tarjeta es independiente. Confirmar una propuesta no crea ni modifica las d
 
 ## Identificación del dispositivo remoto
 
-NetDoc no utiliza la IP como referencia principal obligatoria. El orden de selección es:
+La IP anunciada por LLDP forma parte obligatoria de la validación. No tiene que ser la IP principal del equipo, pero sí debe estar registrada en NetBox y asignada a alguna de sus interfaces.
 
-1. coincidencia exacta del nombre LLDP;
-2. coincidencia del nombre corto sin dominio DNS;
-3. coincidencia única de la IP anunciada con cualquier dirección IP asignada al dispositivo en NetBox.
+La política es:
 
-La IP puede ser principal o secundaria. Si el nombre coincide pero la IP LLDP no está asignada al mismo dispositivo, la propuesta no se bloquea: la pantalla indica que el equipo fue identificado por nombre y conserva la IP como evidencia.
+1. NetDoc busca una coincidencia única por nombre exacto o nombre corto.
+2. Consulta IPAM para saber a qué dispositivo pertenece la IP anunciada.
+3. Si nombre e IP señalan el mismo dispositivo, la identidad queda validada.
+4. Si el nombre no coincide, una IP asignada a un único dispositivo puede identificarlo por sí sola.
+5. Si nombre e IP señalan dispositivos distintos, la propuesta queda en **Requiere revisión** y no puede confirmarse.
+6. Si el nombre coincide pero la IP no está asignada a ninguna interfaz de ese equipo, la propuesta también queda pendiente.
 
-Cuando el nombre no coincide pero la IP anunciada identifica un único dispositivo y ambos puertos existen y están libres, la propuesta puede confirmarse. La pantalla lo marca explícitamente como **IP principal** o **IP asignada** para que el usuario sepa cómo se reconoció el vecino.
-
-Una IP nunca reemplaza una coincidencia única de nombre. Esto evita que una dirección de administración anunciada por LLDP dirija la propuesta hacia otro equipo cuando el nombre identifica correctamente al vecino.
+La pantalla indica si la dirección utilizada fue **IP principal** o **IP asignada**. Una IP secundaria o de otra interfaz es válida siempre que pertenezca al mismo dispositivo.
 
 ## Estados de una propuesta
 
 ### Lista para confirmar
 
 - existe la interfaz local en NetBox;
-- el vecino coincide con un dispositivo por nombre o por una IP única;
+- el vecino coincide con un dispositivo;
+- la IP anunciada está asignada a alguna interfaz de ese dispositivo;
 - existe la interfaz remota;
 - ambos extremos están libres.
 
@@ -168,7 +172,7 @@ Alguno de los extremos ya tiene un cable o un extremo conectado. NetDoc no sobre
 
 ### Requiere revisión
 
-No se pudo identificar de forma segura el dispositivo remoto o su interfaz. No se permite forzar una conexión sin coincidencia de ambos extremos.
+No se pudo validar de forma segura el dispositivo remoto, la IP anunciada o su interfaz. No se permite forzar una conexión sin coincidencia de ambos extremos.
 
 ## Confianza
 
@@ -176,7 +180,7 @@ La puntuación combina:
 
 - coincidencia exacta del nombre;
 - coincidencia del nombre sin dominio DNS;
-- coincidencia de la IP anunciada con una IP principal o secundaria asignada;
+- coincidencia de la IP anunciada con cualquier IP asignada al dispositivo;
 - coincidencia de la interfaz local;
 - coincidencia de la interfaz remota.
 

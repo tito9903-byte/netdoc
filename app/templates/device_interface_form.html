@@ -17,6 +17,7 @@
 {% set current_type_label = raw_type.get("label") if raw_type is mapping else raw_type %}
 {% set raw_lag = interface.get("lag") if interface else none %}
 {% set current_lag_id = raw_lag.get("id") if raw_lag is mapping else raw_lag %}
+{% set current_lag_label = (raw_lag.get("display") or raw_lag.get("name") or "Sin LAG") if raw_lag is mapping else (raw_lag or "Sin LAG") %}
 {% set raw_mac = (interface.get("primary_mac_address") or interface.get("mac_address") or "") if interface else "" %}
 {% set current_mac = (raw_mac.get("mac_address") or raw_mac.get("address") or raw_mac.get("display") or "") if raw_mac is mapping else raw_mac %}
 {% set raw_cable = interface.get("cable") if interface else none %}
@@ -42,7 +43,7 @@
 
     {% if error %}
     <div class="notice error-notice interface-editor-notice">
-        <strong>No fue posible guardar la interfaz.</strong>
+        <strong>No fue posible completar la operación.</strong>
         <span>{{ error }}</span>
     </div>
     {% endif %}
@@ -172,13 +173,13 @@
                             </span>
                         </label>
 
-                        <label class="interface-toggle-card">
+                        <label class="interface-toggle-card {% if cable_id %}is-disabled{% endif %}">
                             <span class="interface-toggle-copy">
                                 <strong>Marcar como conectada</strong>
-                                <small>Úsalo solo cuando no exista un cable documentado.</small>
+                                <small>{% if cable_id %}No aplica mientras exista un cable documentado.{% else %}Úsalo solo cuando no exista un cable documentado.{% endif %}</small>
                             </span>
                             <span class="interface-switch">
-                                <input type="checkbox" name="mark_connected" value="true" {% if interface and interface.get('mark_connected') %}checked{% endif %}>
+                                <input type="checkbox" name="mark_connected" value="true" {% if interface and interface.get('mark_connected') %}checked{% endif %} {% if cable_id %}disabled{% endif %}>
                                 <span class="interface-switch-track" aria-hidden="true"></span>
                             </span>
                         </label>
@@ -254,7 +255,7 @@
                     <div><dt>Dispositivo</dt><dd>{{ device_name }}</dd></div>
                     <div><dt>Interfaz</dt><dd>{{ interface_name }}</dd></div>
                     <div><dt>Tipo</dt><dd>{{ current_type_label or "Sin definir" }}</dd></div>
-                    <div><dt>LAG</dt><dd>{{ raw_lag.get("display") or raw_lag.get("name") if raw_lag is mapping else "Sin LAG" }}</dd></div>
+                    <div><dt>LAG</dt><dd>{{ current_lag_label }}</dd></div>
                     <div><dt>MAC</dt><dd>{{ current_mac or "Sin asignar" }}</dd></div>
                 </dl>
             </section>
@@ -276,8 +277,8 @@
     <section class="panel interface-danger-panel">
         <div>
             <span class="eyebrow">Zona delicada</span>
-            <strong>Eliminar interfaz</strong>
-            <p>NetDoc bloqueará la eliminación cuando existan cables o direcciones IP asignadas.</p>
+            <strong>Eliminar interfaz completa</strong>
+            <p>Esta acción es distinta de eliminar la conexión. NetDoc la bloqueará si existen cables o direcciones IP asignadas.</p>
         </div>
         <a class="button danger ghost-danger" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/delete">Eliminar interfaz</a>
     </section>

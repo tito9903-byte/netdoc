@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import sys
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -99,19 +98,6 @@ class LldpEnableExecutionTests(unittest.TestCase):
             def disconnect(self):
                 events.append("disconnect")
 
-        fake_netmiko = ModuleType("netmiko")
-        fake_netmiko.ConnectHandler = lambda **_kwargs: FakeConnection()
-        fake_netmiko.NetmikoAuthenticationException = type(
-            "NetmikoAuthenticationException",
-            (Exception,),
-            {},
-        )
-        fake_netmiko.NetmikoTimeoutException = type(
-            "NetmikoTimeoutException",
-            (Exception,),
-            {},
-        )
-
         service = object.__new__(LldpDiscoveryService)
         service.settings = SimpleNamespace(
             netdoc_ssh_connect_timeout=10,
@@ -128,12 +114,25 @@ class LldpEnableExecutionTests(unittest.TestCase):
             "key_file": "",
         }
 
-        with patch.dict(sys.modules, {"netmiko": fake_netmiko}):
+        connection = FakeConnection()
+        with patch(
+            "app.services.lldp_privilege_support._open_connection",
+            return_value=connection,
+        ) as open_connection:
             result = _collect_sync_with_privilege(
                 service,
                 host="192.0.2.10",
                 profile=profile,
             )
+
+        open_connection.assert_called_once()
+        call_kwargs = open_connection.call_args.kwargs
+        self.assertEqual("arista_eos", call_kwargs["device_type"])
+        self.assertEqual("192.0.2.10", call_kwargs["connection_args"]["host"])
+        self.assertEqual(
+            "enable-password",
+            call_kwargs["connection_args"]["secret"],
+        )
 
         return events, result
 

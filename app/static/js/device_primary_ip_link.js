@@ -7,7 +7,7 @@
         }
         const stylesheet = document.createElement("link");
         stylesheet.rel = "stylesheet";
-        stylesheet.href = "/static/css/device_management.css?v=20260727-1";
+        stylesheet.href = "/static/css/device_management.css?v=20260727-2";
         stylesheet.dataset.deviceManagementStyles = "";
         document.head.appendChild(stylesheet);
     }
@@ -42,6 +42,58 @@
         }
         const payload = await response.json();
         return payload && payload.ok ? payload : null;
+    }
+
+    function decorateConnectionCell(row, metadata) {
+        const connection = metadata?.connection;
+        if (!connection) {
+            return;
+        }
+
+        const cell = row.cells[7];
+        if (!(cell instanceof HTMLTableCellElement)) {
+            return;
+        }
+
+        const deviceName = String(connection.device_name || "Equipo remoto").trim();
+        const interfaceName = String(connection.interface_name || "Interfaz remota").trim();
+
+        if (!connection.navigable || !connection.device_id) {
+            cell.textContent = "";
+            const fallback = document.createElement("span");
+            fallback.className = "connection-connected connection-remote-fallback";
+            fallback.textContent = deviceName
+                ? `${deviceName} · ${interfaceName}`
+                : interfaceName;
+            cell.appendChild(fallback);
+            return;
+        }
+
+        const link = document.createElement("a");
+        link.href = `/devices/${connection.device_id}#interfaces`;
+        link.className = "connection-device-link";
+        link.dataset.remoteDeviceLink = "";
+        link.title = `Abrir ${deviceName} en la interfaz ${interfaceName}`;
+        link.setAttribute(
+            "aria-label",
+            `Abrir equipo ${deviceName}, interfaz ${interfaceName}`,
+        );
+
+        const device = document.createElement("strong");
+        device.className = "connection-device-name";
+        device.textContent = deviceName;
+
+        const endpoint = document.createElement("span");
+        endpoint.className = "connection-interface-name";
+        endpoint.textContent = interfaceName;
+
+        const arrow = document.createElement("span");
+        arrow.className = "connection-device-arrow";
+        arrow.setAttribute("aria-hidden", "true");
+        arrow.textContent = "↗";
+
+        link.append(device, endpoint, arrow);
+        cell.replaceChildren(link);
     }
 
     async function configureDevicePage(deviceId) {
@@ -81,7 +133,26 @@
         }
 
         const payload = await loadJson(`/api/netdoc/devices/${deviceId}/interfaces`);
-        if (!payload || !payload.can_manage) {
+        if (!payload) {
+            return;
+        }
+
+        const table = document.querySelector(".interfaces-table");
+        if (table instanceof HTMLTableElement) {
+            const byName = new Map(
+                payload.interfaces.map((item) => [String(item.name || "").trim(), item]),
+            );
+
+            table.querySelectorAll("tbody tr").forEach((row) => {
+                const name = row.querySelector("td:first-child strong")?.textContent.trim() || "";
+                const metadata = byName.get(name);
+                if (metadata) {
+                    decorateConnectionCell(row, metadata);
+                }
+            });
+        }
+
+        if (!payload.can_manage) {
             return;
         }
 
@@ -111,10 +182,10 @@
             interfaceActions.prepend(create);
         }
 
-        const table = document.querySelector(".interfaces-table");
         if (!(table instanceof HTMLTableElement)) {
             return;
         }
+
         const headRow = table.querySelector("thead tr");
         if (headRow && !headRow.querySelector("[data-interface-actions-column]")) {
             const heading = document.createElement("th");
@@ -124,14 +195,15 @@
         }
 
         const byName = new Map(
-            payload.interfaces.map((item) => [String(item.name || "").trim(), item.id]),
+            payload.interfaces.map((item) => [String(item.name || "").trim(), item]),
         );
         table.querySelectorAll("tbody tr").forEach((row) => {
             if (row.querySelector("[data-interface-row-actions]")) {
                 return;
             }
             const name = row.querySelector("td:first-child strong")?.textContent.trim() || "";
-            const interfaceId = byName.get(name);
+            const metadata = byName.get(name);
+            const interfaceId = metadata?.id;
             const cell = document.createElement("td");
             cell.dataset.interfaceRowActions = "";
             if (interfaceId) {

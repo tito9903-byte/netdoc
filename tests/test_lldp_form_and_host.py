@@ -11,7 +11,7 @@ from app.services.lldp_discovery_service import LldpDiscoveryService
 
 
 class LldpExecutionFormTests(unittest.TestCase):
-    def test_run_route_accepts_post_only(self):
+    def test_run_route_posts_discovery_and_redirects_accidental_gets(self):
         app = import_module("app.main").app
         matches = [
             context
@@ -19,8 +19,9 @@ class LldpExecutionFormTests(unittest.TestCase):
             if context.path == "/devices/{device_id}/lldp-discovery/run"
         ]
 
-        self.assertEqual(1, len(matches))
-        self.assertEqual({"POST"}, set(matches[0].methods or set()))
+        methods = set().union(*(set(item.methods or set()) for item in matches))
+        self.assertEqual({"GET", "POST"}, methods)
+        self.assertEqual(2, len(matches))
 
     def test_run_button_explicitly_forces_post_and_action(self):
         template = Path("app/templates/lldp_discovery.html").read_text(
@@ -41,6 +42,14 @@ class LldpExecutionFormTests(unittest.TestCase):
             'formaction="/devices/{{ device_id }}/lldp-discovery/run"',
             template,
         )
+
+    def test_arista_collection_does_not_call_terminal_width(self):
+        source = Path("app/services/lldp_privilege_support.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("set_terminal_width(", source)
+        self.assertIn("disable_paging()", source)
 
 
 class LldpBareHostTests(unittest.TestCase):

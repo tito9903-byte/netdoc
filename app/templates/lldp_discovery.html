@@ -3,7 +3,7 @@
 {% block title %}{{ page_title }} | NetDoc{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/lldp_discovery.css') }}?v=20260726-lldp-1">
+<link rel="stylesheet" href="{{ url_for('static', path='css/lldp_discovery.css') }}?v=20260727-lldp-2">
 <script defer src="{{ url_for('static', path='js/lldp_discovery.js') }}?v=20260727-post-1"></script>
 {% endblock %}
 
@@ -138,8 +138,9 @@
                 <span class="eyebrow">Resultado actual</span>
                 <h2>Propuestas de conexión</h2>
                 <p>
-                    La confianza combina nombre del equipo, IP anunciada y
-                    coincidencia de interfaces. Revisa cada extremo antes de guardar.
+                    NetDoc prioriza el nombre anunciado. La IP se presenta como
+                    evidencia adicional o como método alternativo cuando el nombre
+                    no permite identificar un único equipo.
                 </p>
             </div>
             <span class="panel-badge">{{ discovery.neighbor_count }} vecinos</span>
@@ -195,17 +196,24 @@
                                 <dt>IP anunciada</dt>
                                 <dd>{{ row.management_ip or "—" }}</dd>
                             </div>
+                            <div>
+                                <dt>Identificado por</dt>
+                                <dd>{{ row.match_source_label or "Sin coincidencia" }}</dd>
+                            </div>
                         </dl>
                     </section>
                 </div>
 
-                {% if row.remote_port_description or row.chassis_id %}
+                {% if row.remote_port_description or row.chassis_id or row.match_warning %}
                 <div class="lldp-evidence">
                     {% if row.remote_port_description %}
                     <span><strong>Descripción remota:</strong> {{ row.remote_port_description }}</span>
                     {% endif %}
                     {% if row.chassis_id %}
                     <span><strong>Chassis ID:</strong> {{ row.chassis_id }}</span>
+                    {% endif %}
+                    {% if row.match_warning %}
+                    <span class="lldp-match-warning"><strong>Referencia:</strong> {{ row.match_warning }}</span>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -253,16 +261,16 @@
     {% endif %}
 
     <section class="lldp-supported-panel">
-        <strong>Plataformas preparadas en esta primera fase</strong>
+        <strong>Plataformas preparadas en esta fase</strong>
         <div>
             {% for item in supported_platforms %}
             <span>{{ item.label }}</span>
             {% endfor %}
         </div>
         <p>
-            Los formatos que Netmiko/NTC no interprete se procesan con un parser de
-            respaldo. Si un fabricante devuelve otra variante, NetDoc mostrará un
-            error controlado para agregar su parser sin crear conexiones incorrectas.
+            Arista usa preparación SSH específica. Cisco IOS/IOS XE, Cisco NX-OS,
+            Juniper Junos y MikroTik RouterOS cuentan con parsers estructurados y
+            parsers de respaldo para variantes de salida no interpretadas por TextFSM.
         </p>
     </section>
 </div>

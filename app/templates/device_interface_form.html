@@ -4,7 +4,11 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/devices.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-1">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-2">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_ip_management.css') }}?v=20260727-1">
+{% if interface %}
+<script defer src="{{ url_for('static', path='js/device_interface_ip_management.js') }}?v=20260727-1"></script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -30,7 +34,7 @@
     <div>
         <span class="eyebrow">Interfaz del dispositivo</span>
         <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
-        <p>{% if interface %}Edita el puerto existente sin afectar otras interfaces.{% else %}Crea una interfaz individual directamente en este dispositivo.{% endif %}</p>
+        <p>{% if interface %}Edita el puerto, sus propiedades y las direcciones IP asignadas.{% else %}Crea una interfaz individual directamente en este dispositivo.{% endif %}</p>
     </div>
     {% if interface %}<span class="panel-badge">ID {{ interface_id }}</span>{% endif %}
 </section>
@@ -123,8 +127,20 @@
             <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>{% if interface %}Guardar interfaz{% else %}Crear interfaz{% endif %}</button>
         </div>
     </form>
+</section>
 
-    {% if interface %}
+{% if interface %}
+<div
+    data-interface-ip-management
+    data-device-id="{{ device_id }}"
+    data-interface-id="{{ interface_id }}"
+>
+    <section class="panel interface-ip-management">
+        <span class="interface-ip-loading">Cargando direcciones IP de la interfaz…</span>
+    </section>
+</div>
+
+<section class="panel management-form-panel">
     <div class="danger-zone">
         <div>
             <strong>Eliminar interfaz</strong>
@@ -132,6 +148,6 @@
         </div>
         <a class="button danger" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/delete">Eliminar</a>
     </div>
-    {% endif %}
 </section>
+{% endif %}
 {% endblock %}

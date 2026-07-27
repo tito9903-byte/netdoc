@@ -8,8 +8,9 @@
 {% endblock %}
 
 {% block content %}
-{% set current_type = interface.get("type") if interface else {} %}
-{% set current_lag = interface.get("lag") if interface else {} %}
+{% set current_type = (interface.get("type") if interface else {}) or {} %}
+{% set current_lag = (interface.get("lag") if interface else {}) or {} %}
+{% set current_mac = (interface.get("primary_mac_address") or interface.get("mac_address") or "") if interface else "" %}
 
 <div class="detail-navigation">
     <a href="/devices/{{ device_id }}#interfaces">← Volver a interfaces</a>
@@ -84,7 +85,7 @@
 
             <div class="field">
                 <label for="interface-mac">Dirección MAC</label>
-                <input id="interface-mac" name="mac_address" value="{{ interface.get('primary_mac_address') or interface.get('mac_address') if interface else '' }}" placeholder="AA:BB:CC:DD:EE:FF">
+                <input id="interface-mac" name="mac_address" value="{{ current_mac }}" placeholder="AA:BB:CC:DD:EE:FF">
             </div>
 
             <div class="field checkbox-field hardware-checkbox">

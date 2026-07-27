@@ -126,7 +126,7 @@ class LldpMatchingPolicyTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(row["management_ip_matches_primary"])
         self.assertTrue(row["identity_verified"])
         self.assertTrue(row["ready"])
-        self.assertIn("alguna interfaz", row["match_warning"])
+        self.assertIn("asignada a una interfaz", row["match_warning"])
 
     async def test_unique_primary_ip_is_valid_fallback_and_can_be_confirmed(self):
         rows = await self.service._match_observations(

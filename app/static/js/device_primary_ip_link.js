@@ -120,6 +120,18 @@
         const interfaceActions = document.querySelector(".interface-panel-actions");
         if (
             interfaceActions instanceof HTMLElement &&
+            !interfaceActions.querySelector("[data-components-inventory-action]")
+        ) {
+            const components = document.createElement("a");
+            components.href = `/devices/${deviceId}/components`;
+            components.className = "interface-sync-link";
+            components.dataset.componentsInventoryAction = "";
+            components.innerHTML = '<span aria-hidden="true">▦</span> Componentes';
+            interfaceActions.prepend(components);
+        }
+
+        if (
+            interfaceActions instanceof HTMLElement &&
             !interfaceActions.querySelector("[data-lldp-discovery-action]")
         ) {
             const lldpAction = document.createElement("a");
@@ -173,12 +185,12 @@
             header.appendChild(actionGroup);
         }
 
-        if (interfaceActions && !interfaceActions.querySelector("[data-interface-create-action]")) {
+        if (interfaceActions && !interfaceActions.querySelector("[data-component-create-action]")) {
             const create = document.createElement("a");
-            create.href = `/devices/${deviceId}/interfaces/new`;
+            create.href = `/devices/${deviceId}/components/new`;
             create.className = "interface-sync-link";
-            create.dataset.interfaceCreateAction = "";
-            create.innerHTML = '<span aria-hidden="true">＋</span> Crear interfaz';
+            create.dataset.componentCreateAction = "";
+            create.innerHTML = '<span aria-hidden="true">＋</span> Crear componente';
             interfaceActions.prepend(create);
         }
 

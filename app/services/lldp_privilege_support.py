@@ -9,7 +9,8 @@ from app.services.lldp_discovery_service import (
 
 
 _ORIGINAL_RESOLVE_PROFILE = LldpDiscoveryService._resolve_profile
-_PATCH_MARKER = "_netdoc_privilege_support_installed"
+_PATCH_MARKER = "_netdoc_privilege_support_revision"
+LLDP_COLLECTOR_REVISION = "20260727-arista-session-no-width-v1"
 
 
 def _as_bool(value: Any) -> bool:
@@ -50,6 +51,49 @@ def _resolve_profile_with_privilege(
     return profile
 
 
+def _open_connection(
+    *,
+    connection_args: dict[str, Any],
+    device_type: str,
+):
+    """Abre SSH evitando la preparación incompatible de Arista EOS antiguo.
+
+    Netmiko ejecuta la preparación de sesión dentro del constructor. Su driver
+    estándar de Arista intenta cambiar el ancho del terminal y espera una frase
+    específica antes de devolver el objeto conectado. Algunas versiones de EOS
+    aceptan el comando, pero no imprimen esa frase; la conexión termina entonces
+    con ReadTimeout antes de que NetDoc pueda enviar el comando LLDP.
+
+    Para Arista usamos una subclase local que conserva la detección del prompt y
+    desactiva el paginador, pero omite por completo el cambio de ancho. Los demás
+    fabricantes continúan usando ConnectHandler sin modificaciones.
+    """
+
+    try:
+        from netmiko import ConnectHandler
+        from netmiko.arista.arista import AristaSSH
+    except ImportError as exc:
+        raise LldpDiscoveryError(
+            "Netmiko no está instalado en el entorno de NetDoc.",
+            500,
+        ) from exc
+
+    if device_type != "arista_eos":
+        return ConnectHandler(**connection_args)
+
+    class NetDocAristaSSH(AristaSSH):
+        def session_preparation(self) -> None:
+            self.ansi_escape_codes = True
+            self._test_channel_read(pattern=self.prompt_pattern)
+            self.set_base_prompt()
+            self.disable_paging(
+                command="terminal length 0",
+                cmd_verify=False,
+            )
+
+    return NetDocAristaSSH(**connection_args)
+
+
 def _collect_sync_with_privilege(
     self: LldpDiscoveryService,
     *,
@@ -58,7 +102,6 @@ def _collect_sync_with_privilege(
 ) -> Any:
     try:
         from netmiko import (
-            ConnectHandler,
             NetmikoAuthenticationException,
             NetmikoTimeoutException,
         )
@@ -68,8 +111,9 @@ def _collect_sync_with_privilege(
             500,
         ) from exc
 
+    device_type = str(profile.get("device_type") or "")
     connection_args: dict[str, Any] = {
-        "device_type": profile["device_type"],
+        "device_type": device_type,
         "host": host,
         "username": profile["username"],
         "password": profile.get("password") or "",
@@ -89,7 +133,10 @@ def _collect_sync_with_privilege(
 
     connection = None
     try:
-        connection = ConnectHandler(**connection_args)
+        connection = _open_connection(
+            connection_args=connection_args,
+            device_type=device_type,
+        )
 
         if _as_bool(profile.get("use_enable")):
             if not connection.check_enable_mode():
@@ -99,14 +146,6 @@ def _collect_sync_with_privilege(
                     "NetDoc inició SSH, pero el equipo no permitió entrar al modo enable.",
                     502,
                 )
-
-        # Netmiko conoce el comando correcto para desactivar el paginador de cada
-        # plataforma. No se cambia el ancho del terminal: algunas versiones de
-        # Arista EOS no devuelven el patrón que set_terminal_width espera y eso
-        # provoca un ReadTimeout antes de ejecutar el comando LLDP.
-        disable_paging = getattr(connection, "disable_paging", None)
-        if callable(disable_paging):
-            disable_paging()
 
         return connection.send_command(
             profile["command"],
@@ -139,11 +178,15 @@ def _collect_sync_with_privilege(
 
 
 def install_lldp_privilege_support() -> None:
-    """Instala soporte opcional de enable antes de registrar las rutas LLDP."""
+    """Instala siempre la revisión vigente del colector SSH LLDP."""
 
-    if getattr(LldpDiscoveryService, _PATCH_MARKER, False):
-        return
-
+    # No se corta por un marcador booleano. En desarrollo puede existir un proceso
+    # recargado que conserve una revisión anterior de la función en la clase; la
+    # asignación incondicional garantiza que el colector actual la reemplace.
     LldpDiscoveryService._resolve_profile = _resolve_profile_with_privilege
     LldpDiscoveryService._collect_sync = _collect_sync_with_privilege
-    setattr(LldpDiscoveryService, _PATCH_MARKER, True)
+    setattr(
+        LldpDiscoveryService,
+        _PATCH_MARKER,
+        LLDP_COLLECTOR_REVISION,
+    )

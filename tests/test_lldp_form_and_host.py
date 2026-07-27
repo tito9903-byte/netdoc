@@ -54,7 +54,8 @@ class LldpExecutionFormTests(unittest.TestCase):
         )
 
         self.assertNotIn("set_terminal_width(", source)
-        self.assertIn("disable_paging()", source)
+        self.assertIn("self.disable_paging(", source)
+        self.assertIn('command="terminal length 0"', source)
 
     def test_accidental_get_is_visible_and_device_navigation_stays_active(self):
         redirect_source = Path("app/routers/lldp_run_redirect.py").read_text(

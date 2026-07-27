@@ -48,16 +48,15 @@ class DeviceManagementRouteTests(unittest.TestCase):
         self.assertIn("csrf_token", delete_form)
         self.assertIn("delete_token", model_form)
 
-    def test_interface_form_handles_interfaces_without_lag_or_mac(self):
+    def test_interface_form_handles_nullable_type_lag_and_mac(self):
         device_form = Path("app/templates/device_interface_form.html").read_text(
             encoding="utf-8"
         )
 
-        self.assertIn(
-            '{% set current_lag = (interface.get("lag") if interface else {}) or {} %}',
-            device_form,
-        )
-        self.assertIn("{% set current_mac =", device_form)
+        self.assertIn('{% set raw_lag = interface.get("lag")', device_form)
+        self.assertIn("raw_lag is mapping", device_form)
+        self.assertIn("raw_type is mapping", device_form)
+        self.assertIn("raw_mac is mapping", device_form)
         self.assertIn('value="{{ current_mac }}"', device_form)
 
     def test_detail_pages_receive_management_actions_from_authenticated_api(self):

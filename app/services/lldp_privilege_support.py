@@ -100,17 +100,13 @@ def _collect_sync_with_privilege(
                     502,
                 )
 
+        # Netmiko conoce el comando correcto para desactivar el paginador de cada
+        # plataforma. No se cambia el ancho del terminal: algunas versiones de
+        # Arista EOS no devuelven el patrón que set_terminal_width espera y eso
+        # provoca un ReadTimeout antes de ejecutar el comando LLDP.
         disable_paging = getattr(connection, "disable_paging", None)
         if callable(disable_paging):
             disable_paging()
-
-        set_terminal_width = getattr(connection, "set_terminal_width", None)
-        if callable(set_terminal_width):
-            device_type = str(profile.get("device_type") or "").casefold()
-            if device_type == "arista_eos":
-                set_terminal_width(command="terminal width 511")
-            else:
-                set_terminal_width()
 
         return connection.send_command(
             profile["command"],

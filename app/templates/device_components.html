@@ -45,8 +45,10 @@
             <div class="interface-row-actions">
                 <span class="result-badge">{{ group.count }}</span>
                 {% if write_enabled %}
-                {% set create_path = group.kind.special_create_path.format(device_id=device_id) if group.kind.special_create_path else '/devices/' ~ device_id ~ '/components/' ~ group.kind.key ~ '/new' %}
-                <a class="button secondary" href="{{ create_path }}">Agregar</a>
+                <a
+                    class="button secondary"
+                    href="{% if group.kind.key == 'interface' %}/devices/{{ device_id }}/interfaces/new{% else %}/devices/{{ device_id }}/components/{{ group.kind.key }}/new{% endif %}"
+                >Agregar</a>
                 {% endif %}
             </div>
         </header>

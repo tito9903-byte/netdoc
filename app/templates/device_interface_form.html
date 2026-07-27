@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/devices.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-1">
+{% endblock %}
+
+{% block content %}
+{% set current_type = interface.get("type") if interface else {} %}
+{% set current_lag = interface.get("lag") if interface else {} %}
+
+<div class="detail-navigation">
+    <a href="/devices/{{ device_id }}#interfaces">← Volver a interfaces</a>
+</div>
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible guardar la interfaz.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="management-hero">
+    <div>
+        <span class="eyebrow">Interfaz del dispositivo</span>
+        <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+        <p>{% if interface %}Edita el puerto existente sin afectar otras interfaces.{% else %}Crea una interfaz individual directamente en este dispositivo.{% endif %}</p>
+    </div>
+    {% if interface %}<span class="panel-badge">ID {{ interface_id }}</span>{% endif %}
+</section>
+
+<section class="panel management-form-panel">
+    {% if not write_enabled %}
+    <div class="read-only-callout compact-callout">
+        <span>◌</span>
+        <div><strong>Solo lectura</strong><span>La escritura en NetBox está deshabilitada.</span></div>
+    </div>
+    {% endif %}
+
+    <form
+        method="post"
+        action="{% if interface %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/actions/update{% else %}/devices/{{ device_id }}/interfaces/actions/create{% endif %}"
+        class="management-form"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="management-grid">
+            <div class="field">
+                <label for="interface-name">Nombre</label>
+                <input id="interface-name" name="name" required value="{{ interface.get('name') if interface else '' }}" placeholder="Ethernet1">
+            </div>
+
+            <div class="field">
+                <label for="interface-type">Tipo</label>
+                <select id="interface-type" name="interface_type" required>
+                    <option value="">Seleccionar</option>
+                    {% for item in type_choices %}
+                    <option value="{{ item.value }}" {% if item.value == current_type.get('value') %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="interface-label">Etiqueta</label>
+                <input id="interface-label" name="label" value="{{ interface.get('label') if interface else '' }}">
+            </div>
+
+            <div class="field">
+                <label for="interface-mtu">MTU</label>
+                <input id="interface-mtu" name="mtu" type="number" min="0" step="1" value="{{ interface.get('mtu') if interface and interface.get('mtu') is not none else '' }}">
+            </div>
+
+            <div class="field">
+                <label for="interface-lag">LAG</label>
+                <select id="interface-lag" name="lag_id">
+                    <option value="">Sin LAG</option>
+                    {% for item in lags %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_lag.get('id') %}selected{% endif %}>{{ item.get("display") or item.get("name") }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="interface-mac">Dirección MAC</label>
+                <input id="interface-mac" name="mac_address" value="{{ interface.get('primary_mac_address') or interface.get('mac_address') if interface else '' }}" placeholder="AA:BB:CC:DD:EE:FF">
+            </div>
+
+            <div class="field checkbox-field hardware-checkbox">
+                <label>
+                    <input type="checkbox" name="enabled" value="true" {% if not interface or interface.get('enabled') %}checked{% endif %}>
+                    <span>Habilitada</span>
+                </label>
+            </div>
+
+            <div class="field checkbox-field hardware-checkbox">
+                <label>
+                    <input type="checkbox" name="mgmt_only" value="true" {% if interface and interface.get('mgmt_only') %}checked{% endif %}>
+                    <span>Solo administración</span>
+                </label>
+            </div>
+
+            <div class="field checkbox-field hardware-checkbox">
+                <label>
+                    <input type="checkbox" name="mark_connected" value="true" {% if interface and interface.get('mark_connected') %}checked{% endif %}>
+                    <span>Marcar como conectada</span>
+                </label>
+            </div>
+
+            <div class="field management-wide-field">
+                <label for="interface-description">Descripción</label>
+                <textarea id="interface-description" name="description" rows="4">{{ interface.get("description") if interface else "" }}</textarea>
+            </div>
+        </div>
+
+        <div class="management-actions">
+            <a class="button secondary" href="/devices/{{ device_id }}#interfaces">Cancelar</a>
+            <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>{% if interface %}Guardar interfaz{% else %}Crear interfaz{% endif %}</button>
+        </div>
+    </form>
+
+    {% if interface %}
+    <div class="danger-zone">
+        <div>
+            <strong>Eliminar interfaz</strong>
+            <span>NetDoc bloqueará la eliminación si tiene cable o direcciones IP asignadas.</span>
+        </div>
+        <a class="button danger" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/delete">Eliminar</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

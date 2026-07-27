@@ -8,9 +8,12 @@
 {% endblock %}
 
 {% block content %}
-{% set current_type = (interface.get("type") if interface else {}) or {} %}
-{% set current_lag = (interface.get("lag") if interface else {}) or {} %}
-{% set current_mac = (interface.get("primary_mac_address") or interface.get("mac_address") or "") if interface else "" %}
+{% set raw_type = interface.get("type") if interface else "" %}
+{% set current_type_value = raw_type.get("value") if raw_type is mapping else raw_type %}
+{% set raw_lag = interface.get("lag") if interface else none %}
+{% set current_lag_id = raw_lag.get("id") if raw_lag is mapping else raw_lag %}
+{% set raw_mac = (interface.get("primary_mac_address") or interface.get("mac_address") or "") if interface else "" %}
+{% set current_mac = (raw_mac.get("mac_address") or raw_mac.get("address") or raw_mac.get("display") or "") if raw_mac is mapping else raw_mac %}
 
 <div class="detail-navigation">
     <a href="/devices/{{ device_id }}#interfaces">← Volver a interfaces</a>
@@ -58,7 +61,7 @@
                 <select id="interface-type" name="interface_type" required>
                     <option value="">Seleccionar</option>
                     {% for item in type_choices %}
-                    <option value="{{ item.value }}" {% if item.value == current_type.get('value') %}selected{% endif %}>{{ item.label }}</option>
+                    <option value="{{ item.value }}" {% if item.value == current_type_value %}selected{% endif %}>{{ item.label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -78,7 +81,7 @@
                 <select id="interface-lag" name="lag_id">
                     <option value="">Sin LAG</option>
                     {% for item in lags %}
-                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_lag.get('id') %}selected{% endif %}>{{ item.get("display") or item.get("name") }}</option>
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_lag_id %}selected{% endif %}>{{ item.get("display") or item.get("name") }}</option>
                     {% endfor %}
                 </select>
             </div>

@@ -66,7 +66,7 @@ class DeviceManagementRouteTests(unittest.TestCase):
         self.assertIn("/api/netdoc/devices/", script)
         self.assertIn("/api/netdoc/device-types/", script)
         self.assertIn("Editar dispositivo", script)
-        self.assertIn("Crear interfaz", script)
+        self.assertIn("Crear componente", script)
         self.assertIn("Editar / Eliminar", script)
 
 

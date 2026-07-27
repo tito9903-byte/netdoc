@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-2">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_ip_management.css') }}?v=20260727-1">
+{% endblock %}
+
+{% block content %}
+{% set current_status = address.get("status") if address else {} %}
+{% set current_status_value = current_status.get("value") if current_status is mapping else current_status %}
+{% set current_role = address.get("role") if address else {} %}
+{% set current_role_value = current_role.get("value") if current_role is mapping else current_role %}
+{% set current_vrf = address.get("vrf") if address else {} %}
+{% set current_vrf_id = current_vrf.get("id") if current_vrf is mapping else current_vrf %}
+
+<div class="detail-navigation">
+    <a href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">← Volver a la interfaz</a>
+</div>
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible guardar la dirección IP.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="management-hero">
+    <div>
+        <span class="eyebrow">Dirección IP de la interfaz</span>
+        <h2>{{ device.get("name") or device.get("display") }} · {{ interface.get("name") or interface.get("display") }}</h2>
+        <p>{% if address %}Modifica la dirección asignada sin cambiar las demás IP de la interfaz.{% else %}Agrega una dirección IPv4 o IPv6 directamente a esta interfaz.{% endif %}</p>
+    </div>
+    {% if address %}<span class="panel-badge">IP ID {{ address_id }}</span>{% endif %}
+</section>
+
+<section class="panel management-form-panel">
+    {% if not write_enabled %}
+    <div class="read-only-callout compact-callout">
+        <span>◌</span>
+        <div><strong>Solo lectura</strong><span>La escritura en NetBox está deshabilitada.</span></div>
+    </div>
+    {% endif %}
+
+    <form
+        method="post"
+        action="{% if address %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/ip-addresses/{{ address_id }}/actions/update{% else %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/ip-addresses/actions/create{% endif %}"
+        class="management-form"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="management-grid">
+            <div class="field management-wide-field">
+                <label for="ip-address">Dirección y prefijo</label>
+                <input
+                    id="ip-address"
+                    name="address"
+                    required
+                    value="{{ address.get('address') or address.get('display') if address else '' }}"
+                    placeholder="192.168.10.10/24 o 2001:db8::10/64"
+                    autocomplete="off"
+                >
+                <small>Incluye siempre la máscara o longitud del prefijo.</small>
+            </div>
+
+            <div class="field">
+                <label for="ip-status">Estado</label>
+                <select id="ip-status" name="status" required>
+                    {% if not status_choices %}
+                    <option value="active" selected>Activo</option>
+                    {% else %}
+                        {% for item in status_choices %}
+                        <option value="{{ item.value }}" {% if item.value == current_status_value or (not address and item.value == 'active') %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="ip-role">Rol</label>
+                <select id="ip-role" name="role">
+                    <option value="">Sin rol especial</option>
+                    {% for item in role_choices %}
+                    <option value="{{ item.value }}" {% if item.value == current_role_value %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="ip-vrf">VRF</label>
+                <select id="ip-vrf" name="vrf_id">
+                    <option value="">Tabla global</option>
+                    {% for item in vrfs %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_vrf_id %}selected{% endif %}>
+                        {{ item.get("display") or item.get("name") or item.get("rd") }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="ip-dns-name">Nombre DNS</label>
+                <input id="ip-dns-name" name="dns_name" value="{{ address.get('dns_name') if address else '' }}" placeholder="router.ejemplo.local">
+            </div>
+
+            <div class="field management-wide-field">
+                <label for="ip-description">Descripción</label>
+                <textarea id="ip-description" name="description" rows="4">{{ address.get("description") if address else "" }}</textarea>
+            </div>
+
+            <div class="field checkbox-field hardware-checkbox management-wide-field">
+                <label>
+                    <input type="checkbox" name="make_primary" value="true" {% if is_primary %}checked{% endif %}>
+                    <span>Usar como IP principal de su familia en este dispositivo</span>
+                </label>
+                <small>IPv4 y IPv6 mantienen selecciones principales independientes.</small>
+            </div>
+        </div>
+
+        <div class="management-actions">
+            <a class="button secondary" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">Cancelar</a>
+            <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                {% if address %}Guardar dirección IP{% else %}Agregar dirección IP{% endif %}
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}

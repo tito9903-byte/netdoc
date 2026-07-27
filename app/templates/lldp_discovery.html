@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/lldp_discovery.css') }}?v=20260726-lldp-1">
+<script defer src="{{ url_for('static', path='js/lldp_discovery.js') }}?v=20260727-post-1"></script>
 {% endblock %}
 
 {% block content %}
@@ -81,10 +82,8 @@
             <input type="hidden" name="csrf_token" value="{{ run_token }}">
             <button
                 class="button primary"
-                type="submit"
-                form="lldp-run-form-{{ device_id }}"
-                formmethod="post"
-                formaction="/devices/{{ device_id }}/lldp-discovery/run"
+                type="button"
+                data-lldp-run-button
                 {% if not ssh_discovery_enabled or not host or not profile_configured %}disabled{% endif %}
             >
                 <span aria-hidden="true">⌁</span>

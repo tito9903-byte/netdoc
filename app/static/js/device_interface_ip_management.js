@@ -14,12 +14,29 @@
         return String(value || "").trim();
     }
 
+    function escapeHtml(value) {
+        return text(value).replace(/[&<>'"]/g, (character) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            "'": "&#39;",
+            '"': "&quot;",
+        })[character]);
+    }
+
+    function safePath(value, fallback) {
+        const candidate = text(value);
+        return candidate.startsWith("/") && !candidate.startsWith("//")
+            ? candidate
+            : fallback;
+    }
+
     function renderError(message) {
         host.innerHTML = [
             '<section class="panel interface-ip-management">',
             '<div class="notice error-notice">',
             '<strong>No fue posible cargar las direcciones IP.</strong>',
-            `<span>${text(message) || "La API de NetDoc no respondió correctamente."}</span>`,
+            `<span>${escapeHtml(message) || "La API de NetDoc no respondió correctamente."}</span>`,
             "</div>",
             "</section>",
         ].join("");
@@ -31,28 +48,32 @@
         const rows = addresses.map((item) => {
             const meta = [];
             if (text(item.dns_name)) {
-                meta.push(`<span>DNS: ${text(item.dns_name)}</span>`);
+                meta.push(`<span>DNS: ${escapeHtml(item.dns_name)}</span>`);
             }
             if (text(item.description)) {
-                meta.push(`<span>${text(item.description)}</span>`);
+                meta.push(`<span>${escapeHtml(item.description)}</span>`);
             }
             const role = text(item.role)
-                ? `<span class="interface-ip-role">${text(item.role)}</span>`
+                ? `<span class="interface-ip-role">${escapeHtml(item.role)}</span>`
                 : "";
             const primary = item.is_primary
                 ? '<span class="interface-ip-primary">Principal</span>'
                 : "";
+            const editUrl = safePath(
+                item.edit_url,
+                `/devices/${deviceId}/interfaces/${interfaceId}/edit`,
+            );
             const action = canManage
-                ? `<a class="button secondary" href="${item.edit_url}">Editar IP</a>`
+                ? `<a class="button secondary" href="${escapeHtml(editUrl)}">Editar IP</a>`
                 : "";
 
             return [
                 '<article class="interface-ip-row">',
                 '<div class="interface-ip-main">',
                 '<div class="interface-ip-address-line">',
-                `<strong class="interface-ip-address">${text(item.address)}</strong>`,
+                `<strong class="interface-ip-address">${escapeHtml(item.address)}</strong>`,
                 primary,
-                `<span class="interface-ip-status">${text(item.status)}</span>`,
+                `<span class="interface-ip-status">${escapeHtml(item.status)}</span>`,
                 role,
                 "</div>",
                 meta.length ? `<div class="interface-ip-meta">${meta.join("")}</div>` : "",
@@ -62,16 +83,20 @@
             ].join("");
         }).join("");
 
+        const createUrl = safePath(
+            payload.create_url,
+            `/devices/${deviceId}/interfaces/${interfaceId}/ip-addresses/new`,
+        );
         host.innerHTML = [
             '<section class="panel interface-ip-management">',
             '<div class="interface-ip-management-header">',
             "<div>",
             '<span class="eyebrow">Direccionamiento de la interfaz</span>',
             "<h3>Direcciones IP</h3>",
-            `<p>${addresses.length} dirección${addresses.length === 1 ? "" : "es"} asignada${addresses.length === 1 ? "" : "s"} a ${text(payload.interface_name)}.</p>`,
+            `<p>${addresses.length} dirección${addresses.length === 1 ? "" : "es"} asignada${addresses.length === 1 ? "" : "s"} a ${escapeHtml(payload.interface_name)}.</p>`,
             "</div>",
             canManage
-                ? `<a class="button primary" href="${payload.create_url}">＋ Agregar IP</a>`
+                ? `<a class="button primary" href="${escapeHtml(createUrl)}">＋ Agregar IP</a>`
                 : "",
             "</div>",
             addresses.length

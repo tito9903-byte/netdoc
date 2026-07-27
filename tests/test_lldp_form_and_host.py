@@ -23,8 +23,11 @@ class LldpExecutionFormTests(unittest.TestCase):
         self.assertEqual({"GET", "POST"}, methods)
         self.assertEqual(2, len(matches))
 
-    def test_run_button_explicitly_forces_post_and_action(self):
+    def test_run_button_uses_explicit_javascript_post(self):
         template = Path("app/templates/lldp_discovery.html").read_text(
+            encoding="utf-8"
+        )
+        script = Path("app/static/js/lldp_discovery.js").read_text(
             encoding="utf-8"
         )
 
@@ -37,11 +40,13 @@ class LldpExecutionFormTests(unittest.TestCase):
                 re.DOTALL,
             ),
         )
-        self.assertIn('formmethod="post"', template)
-        self.assertIn(
-            'formaction="/devices/{{ device_id }}/lldp-discovery/run"',
-            template,
-        )
+        self.assertIn('type="button"', template)
+        self.assertIn("data-lldp-run-button", template)
+        self.assertIn("js/lldp_discovery.js", template)
+        self.assertIn('method: "POST"', script)
+        self.assertIn("new FormData(form)", script)
+        self.assertIn('button.addEventListener("click", executeDiscovery)', script)
+        self.assertNotIn('window.location.assign(form.action)', script)
 
     def test_arista_collection_does_not_call_terminal_width(self):
         source = Path("app/services/lldp_privilege_support.py").read_text(

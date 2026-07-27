@@ -3,11 +3,17 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from app.core.auth import api_access_response
+from app.core.auth import api_access_response, has_permission
+from app.core.config import get_settings
 from app.services.device_type_service import DeviceTypeService, DeviceTypeServiceError
 
 
 router = APIRouter()
+settings = get_settings()
+
+
+def can_manage(request: Request) -> bool:
+    return settings.netbox_write_enabled and has_permission(request, "devices.create")
 
 
 @router.get("/api/netdoc/devices/{device_id}/interfaces")
@@ -27,6 +33,7 @@ async def device_interfaces_api(request: Request, device_id: int):
         )
     return {
         "ok": True,
+        "can_manage": can_manage(request),
         "interfaces": [
             {
                 "id": item.get("id"),
@@ -52,6 +59,7 @@ async def model_interfaces_api(request: Request, device_type_id: int):
         )
     return {
         "ok": True,
+        "can_manage": can_manage(request),
         "interfaces": [
             {
                 "id": item.get("id"),

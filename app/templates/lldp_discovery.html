@@ -72,11 +72,19 @@
                 conexiones se documentan individualmente con el botón Confirmar.
             </span>
         </div>
-        <form method="post" action="/devices/{{ device_id }}/lldp-discovery/run">
+        <form
+            id="lldp-run-form-{{ device_id }}"
+            method="post"
+            action="/devices/{{ device_id }}/lldp-discovery/run"
+            data-lldp-run-form
+        >
             <input type="hidden" name="csrf_token" value="{{ run_token }}">
             <button
                 class="button primary"
                 type="submit"
+                form="lldp-run-form-{{ device_id }}"
+                formmethod="post"
+                formaction="/devices/{{ device_id }}/lldp-discovery/run"
                 {% if not ssh_discovery_enabled or not host or not profile_configured %}disabled{% endif %}
             >
                 <span aria-hidden="true">⌁</span>

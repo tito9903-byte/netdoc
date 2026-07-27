@@ -106,9 +106,10 @@ def _collect_sync_with_privilege(
 
         set_terminal_width = getattr(connection, "set_terminal_width", None)
         if callable(set_terminal_width):
-            try:
+            device_type = str(profile.get("device_type") or "").casefold()
+            if device_type == "arista_eos":
                 set_terminal_width(command="terminal width 511")
-            except TypeError:
+            else:
                 set_terminal_width()
 
         return connection.send_command(

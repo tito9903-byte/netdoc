@@ -12,12 +12,12 @@ El módulo no crea cables automáticamente durante la consulta. El flujo es:
 4. normalizar la salida;
 5. identificar el dispositivo y la interfaz remota en NetBox;
 6. verificar que ambos extremos estén libres;
-7. presentar una propuesta;
-8. crear el cable únicamente después de la confirmación del usuario.
+7. presentar una propuesta individual;
+8. crear únicamente ese cable después de la confirmación del usuario.
 
 Un solo cable de NetBox documenta los dos extremos. NetDoc no crea una conexión duplicada en el dispositivo remoto.
 
-## Plataformas de la primera fase
+## Plataformas preparadas
 
 - Arista EOS;
 - Cisco IOS e IOS XE;
@@ -25,7 +25,9 @@ Un solo cable de NetBox documenta los dos extremos. NetDoc no crea una conexión
 - Juniper Junos;
 - MikroTik RouterOS.
 
-Netmiko administra la sesión CLI y solicita a NTC Templates una salida estructurada cuando existe una plantilla compatible. Si la plataforma devuelve texto, NetDoc utiliza parsers de respaldo para formatos comunes de Cisco, Arista, Junos y RouterOS.
+Netmiko administra la sesión CLI y solicita a NTC Templates una salida estructurada cuando existe una plantilla compatible. Si la plataforma devuelve texto, NetDoc utiliza parsers de respaldo específicos para Arista, Cisco IOS/IOS XE, Cisco NX-OS, Junos y RouterOS.
+
+Arista EOS utiliza una preparación de sesión propia que detecta el prompt y desactiva el paginador sin ejecutar el cambio de ancho de terminal incompatible con algunas versiones antiguas de EOS.
 
 ## Configuración del entorno
 
@@ -76,7 +78,7 @@ SSH
 → comprobar modo privilegiado
 → ejecutar enable si todavía no está privilegiado
 → comprobar nuevamente el prompt
-→ ejecutar show lldp neighbors detail
+→ ejecutar el comando LLDP
 ```
 
 Si `use_enable=true` y falta `secret`, NetDoc detiene la operación antes de conectarse y muestra un error de configuración. Si el usuario ya entra directamente en modo privilegiado, Netmiko lo detecta y no envía `enable` innecesariamente.
@@ -108,7 +110,7 @@ La cuenta configurada en los equipos debe tener acceso únicamente a comandos de
 
 Cada dispositivo debe tener:
 
-1. una IP principal IPv4 o IPv6 accesible desde el servidor de NetDoc;
+1. una IP principal IPv4 o IPv6 accesible desde el servidor de NetDoc para establecer SSH;
 2. una plataforma reconocible, por ejemplo `arista_eos`, `cisco_ios`, `cisco_nxos`, `juniper_junos` o `mikrotik_routeros`;
 3. interfaces cuyos nombres puedan compararse con los anunciados por LLDP.
 
@@ -131,16 +133,32 @@ netdoc_ssh_profile = arista_eos
 3. Pulsar **Descubrir LLDP**.
 4. Revisar la IP, plataforma, perfil SSH y comando que utilizará NetDoc.
 5. Pulsar **Ejecutar LLDP por SSH**.
-6. Revisar cada propuesta.
-7. Seleccionar el tipo físico del cable.
+6. Revisar cada propuesta y el campo **Identificado por**.
+7. Seleccionar el tipo físico del cable solo en la propuesta deseada.
 8. Pulsar **Confirmar y documentar**.
+
+Cada tarjeta es independiente. Confirmar una propuesta no crea ni modifica las demás.
+
+## Identificación del dispositivo remoto
+
+NetDoc no utiliza la IP como referencia principal obligatoria. El orden de selección es:
+
+1. coincidencia exacta del nombre LLDP;
+2. coincidencia del nombre corto sin dominio DNS;
+3. coincidencia única de la IP anunciada con cualquier dirección IP asignada al dispositivo en NetBox.
+
+La IP puede ser principal o secundaria. Si el nombre coincide pero la IP LLDP no está asignada al mismo dispositivo, la propuesta no se bloquea: la pantalla indica que el equipo fue identificado por nombre y conserva la IP como evidencia.
+
+Cuando el nombre no coincide pero la IP anunciada identifica un único dispositivo y ambos puertos existen y están libres, la propuesta puede confirmarse. La pantalla lo marca explícitamente como **IP principal** o **IP asignada** para que el usuario sepa cómo se reconoció el vecino.
+
+Una IP nunca reemplaza una coincidencia única de nombre. Esto evita que una dirección de administración anunciada por LLDP dirija la propuesta hacia otro equipo cuando el nombre identifica correctamente al vecino.
 
 ## Estados de una propuesta
 
 ### Lista para confirmar
 
 - existe la interfaz local en NetBox;
-- el vecino coincide con un dispositivo;
+- el vecino coincide con un dispositivo por nombre o por una IP única;
 - existe la interfaz remota;
 - ambos extremos están libres.
 
@@ -150,7 +168,7 @@ Alguno de los extremos ya tiene un cable o un extremo conectado. NetDoc no sobre
 
 ### Requiere revisión
 
-No se pudo identificar de forma segura el dispositivo remoto o su interfaz. En esta primera fase no se permite forzar una conexión sin coincidencia.
+No se pudo identificar de forma segura el dispositivo remoto o su interfaz. No se permite forzar una conexión sin coincidencia de ambos extremos.
 
 ## Confianza
 
@@ -158,11 +176,11 @@ La puntuación combina:
 
 - coincidencia exacta del nombre;
 - coincidencia del nombre sin dominio DNS;
-- coincidencia de la IP de administración anunciada con la IP principal;
+- coincidencia de la IP anunciada con una IP principal o secundaria asignada;
 - coincidencia de la interfaz local;
 - coincidencia de la interfaz remota.
 
-La confianza ayuda a ordenar la revisión, pero no sustituye la confirmación humana.
+La confianza ayuda a revisar las propuestas, pero no sustituye la confirmación humana. El campo **Identificado por** es la referencia explícita del método utilizado.
 
 ## Normalización de interfaces
 
@@ -184,13 +202,13 @@ Los nombres propios de Junos y RouterOS se conservan con cambios mínimos.
 - Los resultados y errores se registran en la auditoría de NetDoc.
 - Las contraseñas, el `secret`, las llaves y la salida completa del equipo no se guardan en la auditoría.
 
-## Limitaciones de la primera fase
+## Limitaciones actuales
 
 - El descubrimiento se ejecuta por un dispositivo a la vez.
 - La solicitud web espera a que termine el comando SSH.
 - No existe todavía validación bidireccional automática desde el vecino.
 - No se crean dispositivos o interfaces faltantes desde LLDP.
 - No se eliminan cables cuando un vecino deja de anunciarse.
-- Algunos firmwares pueden requerir un comando o parser específico mediante el perfil.
+- Algunos firmwares pueden requerir un comando personalizado mediante el perfil.
 
-Cuando el flujo manual quede validado con equipos reales, el siguiente paso será mover las consultas a un worker, agregar validación bidireccional y permitir descubrimiento por sitio o grupo.
+Después de validar Cisco, Juniper y MikroTik con salidas reales, el siguiente paso será agregar validación bidireccional, ejecución por sitio o grupo y un worker para consultas fuera del proceso web.

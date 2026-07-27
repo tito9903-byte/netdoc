@@ -100,6 +100,17 @@ def _collect_sync_with_privilege(
                     502,
                 )
 
+        disable_paging = getattr(connection, "disable_paging", None)
+        if callable(disable_paging):
+            disable_paging()
+
+        set_terminal_width = getattr(connection, "set_terminal_width", None)
+        if callable(set_terminal_width):
+            try:
+                set_terminal_width(command="terminal width 511")
+            except TypeError:
+                set_terminal_width()
+
         return connection.send_command(
             profile["command"],
             use_textfsm=True,

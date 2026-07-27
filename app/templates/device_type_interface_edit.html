@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-1">
+{% endblock %}
+
+{% block content %}
+{% set current_type = interface.get("type") or {} %}
+
+<div class="detail-navigation">
+    <a href="/device-types/{{ device_type_id }}#components">← Volver al modelo</a>
+</div>
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible guardar la interfaz del modelo.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="management-hero">
+    <div>
+        <span class="eyebrow">Interfaz reutilizable del modelo</span>
+        <h2>{{ device_type.get("_model_label") or device_type.get("model") or "Modelo" }}</h2>
+        <p>Los nuevos dispositivos heredarán esta definición. Los equipos ya creados no se modifican automáticamente.</p>
+    </div>
+    <span class="panel-badge">ID {{ interface_id }}</span>
+</section>
+
+<section class="panel management-form-panel">
+    <form method="post" action="/device-types/{{ device_type_id }}/interfaces/{{ interface_id }}/actions/update" class="management-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="management-grid">
+            <div class="field">
+                <label for="model-interface-name">Nombre</label>
+                <input id="model-interface-name" name="name" required value="{{ interface.get('name') or '' }}">
+            </div>
+
+            <div class="field">
+                <label for="model-interface-type">Tipo</label>
+                <select id="model-interface-type" name="interface_type" required>
+                    {% for item in type_choices %}
+                    <option value="{{ item.value }}" {% if item.value == current_type.get('value') %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="model-interface-label">Etiqueta</label>
+                <input id="model-interface-label" name="label" value="{{ interface.get('label') or '' }}">
+            </div>
+
+            <div class="field checkbox-field hardware-checkbox">
+                <label>
+                    <input type="checkbox" name="mgmt_only" value="true" {% if interface.get('mgmt_only') %}checked{% endif %}>
+                    <span>Solo administración</span>
+                </label>
+            </div>
+
+            <div class="field management-wide-field">
+                <label for="model-interface-description">Descripción</label>
+                <textarea id="model-interface-description" name="description" rows="4">{{ interface.get("description") or "" }}</textarea>
+            </div>
+        </div>
+
+        <div class="management-actions">
+            <a class="button secondary" href="/device-types/{{ device_type_id }}#components">Cancelar</a>
+            <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>Guardar interfaz</button>
+        </div>
+    </form>
+
+    <div class="danger-zone">
+        <div>
+            <strong>Eliminar interfaz del modelo</strong>
+            <span>La plantilla se eliminará del modelo, pero las interfaces ya creadas en equipos permanecerán intactas.</span>
+        </div>
+        <form method="post" action="/device-types/{{ device_type_id }}/interfaces/{{ interface_id }}/actions/delete">
+            <input type="hidden" name="csrf_token" value="{{ delete_token }}">
+            <button class="button danger" type="submit" {% if not write_enabled %}disabled{% endif %}>Eliminar del modelo</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

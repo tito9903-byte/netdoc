@@ -11,7 +11,9 @@ from app.core.auth import (
 )
 from app.core.config import get_settings
 from app.services.lldp_eos_support import install_lldp_eos_support
+from app.services.lldp_matching_support import install_lldp_matching_support
 from app.services.lldp_privilege_support import install_lldp_privilege_support
+from app.services.lldp_vendor_support import install_lldp_vendor_support
 from app.services.search_service import global_search
 
 
@@ -20,6 +22,8 @@ from app.services.search_service import global_search
 # antes de registrar las rutas finales.
 install_lldp_privilege_support()
 install_lldp_eos_support()
+install_lldp_vendor_support()
+install_lldp_matching_support()
 
 
 router = APIRouter()
@@ -91,6 +95,7 @@ async def search_api(request: Request, q: str = ""):
 # Estos routers se agrupan aquí para conservar compatibilidad con la estructura
 # actual. Una futura separación del bootstrap los moverá a app/main.py.
 from app.routers.change_plans import router as change_plans_router
+from app.routers.device_components import router as device_components_router
 from app.routers.device_images import router as device_images_router
 from app.routers.device_management import router as device_management_router
 from app.routers.device_management_api import router as device_management_api_router
@@ -107,6 +112,7 @@ router.include_router(rack_create_router)
 router.include_router(change_plans_router)
 router.include_router(hardware_router)
 router.include_router(device_management_router)
+router.include_router(device_components_router)
 router.include_router(device_management_api_router)
 router.include_router(lldp_run_redirect_router)
 router.include_router(lldp_discovery_router)

@@ -97,6 +97,7 @@ async def search_api(request: Request, q: str = ""):
 from app.routers.change_plans import router as change_plans_router
 from app.routers.device_components import router as device_components_router
 from app.routers.device_images import router as device_images_router
+from app.routers.device_interface_ips import router as device_interface_ips_router
 from app.routers.device_management import router as device_management_router
 from app.routers.device_management_api import router as device_management_api_router
 from app.routers.documentation import router as documentation_router
@@ -113,6 +114,7 @@ router.include_router(change_plans_router)
 router.include_router(hardware_router)
 router.include_router(device_management_router)
 router.include_router(device_components_router)
+router.include_router(device_interface_ips_router)
 router.include_router(device_management_api_router)
 router.include_router(lldp_run_redirect_router)
 router.include_router(lldp_discovery_router)

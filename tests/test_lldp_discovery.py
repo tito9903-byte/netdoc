@@ -160,12 +160,6 @@ class LldpMatchingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class LldpRouteRegistrationTests(unittest.TestCase):
-    LLDP_PATHS = (
-        "/devices/{device_id}/lldp-discovery",
-        "/devices/{device_id}/lldp-discovery/run",
-        "/devices/{device_id}/lldp-discovery/confirm",
-    )
-
     @staticmethod
     def serving_application():
         return import_module("app.main").app
@@ -178,14 +172,26 @@ class LldpRouteRegistrationTests(unittest.TestCase):
             if route_context.path
         )
 
-    def test_lldp_routes_exist_once_in_effective_route_tree(self):
+    def test_lldp_routes_exist_once_per_method_in_effective_route_tree(self):
         application = self.serving_application()
-        paths = self.effective_paths(application)
+        routes = list(iter_route_contexts(application.routes))
 
-        self.assertIn("/system", paths)
-        for path in self.LLDP_PATHS:
-            with self.subTest(path=path):
-                self.assertEqual(1, paths.count(path))
+        self.assertIn("/system", self.effective_paths(application))
+        expected = {
+            ("/devices/{device_id}/lldp-discovery", "GET"),
+            ("/devices/{device_id}/lldp-discovery/run", "GET"),
+            ("/devices/{device_id}/lldp-discovery/run", "POST"),
+            ("/devices/{device_id}/lldp-discovery/confirm", "POST"),
+        }
+        actual = [
+            (route.path, method)
+            for route in routes
+            if route.path.startswith("/devices/{device_id}/lldp-discovery")
+            for method in (route.methods or set())
+        ]
+        for route_method in expected:
+            with self.subTest(route_method=route_method):
+                self.assertEqual(1, actual.count(route_method))
 
         self.assertEqual(
             "/devices/42/lldp-discovery",

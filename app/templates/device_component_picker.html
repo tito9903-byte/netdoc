@@ -14,7 +14,7 @@
 <section class="management-hero">
     <div>
         <span class="eyebrow">Nuevo componente</span>
-        <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+        <h2>Crear componente en {{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
         <p>Selecciona el tipo de componente que deseas crear directamente en este equipo.</p>
     </div>
     <a class="button secondary" href="/devices/{{ device_id }}/components">Ver componentes</a>

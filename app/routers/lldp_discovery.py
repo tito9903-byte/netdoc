@@ -31,7 +31,7 @@ templates = Jinja2Templates(directory="app/templates")
 def context(request: Request, **extra: object) -> dict[str, object]:
     return {
         **common_session_context(request),
-        "current_page": "connections",
+        "current_page": "devices",
         "netbox_connected": True,
         "netbox_url": settings.netbox_url,
         "write_enabled": settings.netbox_write_enabled,
@@ -167,11 +167,27 @@ async def render_page(
     "/devices/{device_id}/lldp-discovery",
     response_class=HTMLResponse,
 )
-async def lldp_discovery_page(request: Request, device_id: int):
+async def lldp_discovery_page(
+    request: Request,
+    device_id: int,
+    run_method: str = "",
+):
     redirect = access_redirect(request, "connections.view")
     if redirect:
         return redirect
-    return await render_page(request, device_id=device_id)
+
+    error = ""
+    if run_method == "get":
+        error = (
+            "La ejecución LLDP no se inició porque la dirección /run fue abierta "
+            "mediante GET. Usa el botón Ejecutar LLDP por SSH desde esta pantalla."
+        )
+
+    return await render_page(
+        request,
+        device_id=device_id,
+        error=error,
+    )
 
 
 @router.post(

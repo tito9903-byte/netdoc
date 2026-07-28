@@ -51,9 +51,9 @@ class InterfaceConnectionManagementTests(unittest.TestCase):
     def test_delete_operation_targets_only_the_cable_api(self):
         source = inspect.getsource(delete_cable)
 
-        self.assertIn("/api/dcim/cables/{cable_id}/", source)
-        self.assertNotIn("/api/dcim/interfaces/", source)
-        self.assertNotIn("/api/ipam/ip-addresses/", source)
+        self.assertIn("api/dcim/cables/{cable_id}/", source)
+        self.assertNotIn("api/dcim/interfaces/", source)
+        self.assertNotIn("api/ipam/ip-addresses/", source)
 
     def test_interface_editor_separates_connection_and_interface_deletion(self):
         template = Path("app/templates/device_interface_form.html").read_text(

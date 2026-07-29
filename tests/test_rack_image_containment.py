@@ -20,8 +20,18 @@ def rule(css: str, selector: str) -> str:
     return match.group("body")
 
 
-class RackImageContainmentTests(unittest.TestCase):
-    def test_3d_photos_are_contained_without_automatic_zoom(self):
+def assert_fills_device(test: unittest.TestCase, image_rule: str) -> None:
+    test.assertIn("inset: 0", image_rule)
+    test.assertIn("width: 100%", image_rule)
+    test.assertIn("height: 100%", image_rule)
+    test.assertIn("object-fit: fill", image_rule)
+    test.assertIn("object-position: center", image_rule)
+    test.assertNotIn("object-fit: contain", image_rule)
+    test.assertNotIn("object-fit: cover", image_rule)
+
+
+class RackImageFillTests(unittest.TestCase):
+    def test_3d_photos_fill_the_physical_device_in_fit_and_detail(self):
         css = RACK_DATACENTER_CSS.read_text(encoding="utf-8")
         image_rule = rule(css, ".rack-single-topology .topology-device img")
         detail_rule = rule(
@@ -29,14 +39,14 @@ class RackImageContainmentTests(unittest.TestCase):
             '.rack-single-topology[data-scale="detail"] .topology-device img',
         )
 
-        self.assertIn("object-fit: contain", image_rule)
-        self.assertIn("object-position: center", image_rule)
-        self.assertIn("max-width: calc(100% - 14px)", image_rule)
+        assert_fills_device(self, image_rule)
+        self.assertIn("inset: 0", detail_rule)
+        self.assertIn("width: 100%", detail_rule)
         self.assertNotIn("transform:", image_rule)
         self.assertNotIn("transform:", detail_rule)
         self.assertNotRegex(css, r"topology-device[^}]*transform\s*:[^;}]*scale\(")
 
-    def test_2d_photos_are_contained_with_safe_internal_dimensions(self):
+    def test_2d_photos_fill_the_exact_rack_unit_area(self):
         base_css = RACK_DEVICES_CSS.read_text(encoding="utf-8")
         override_css = RACK_VIEW_MODES_CSS.read_text(encoding="utf-8")
         base_rule = rule(base_css, ".rack-device-image")
@@ -45,16 +55,12 @@ class RackImageContainmentTests(unittest.TestCase):
             ".rack-device-block.has-image .rack-device-image",
         )
 
-        for image_rule in (base_rule, override_rule):
-            self.assertIn("object-fit: contain", image_rule)
-            self.assertIn("object-position: center", image_rule)
-        self.assertIn("max-height: calc(100% - 2px)", override_rule)
+        assert_fills_device(self, base_rule)
+        assert_fills_device(self, override_rule)
         self.assertIn("transform: none", override_rule)
-        self.assertNotIn("object-fit: cover", override_css)
 
     def test_photos_do_not_receive_labels_or_decorative_overlays(self):
         css = RACK_VIEW_MODES_CSS.read_text(encoding="utf-8")
-
         self.assertIn(
             ".rack-device-block.has-image .rack-device-name,\n"
             ".rack-device-block.has-image .rack-device-position {\n"
@@ -76,8 +82,7 @@ class RackImageContainmentTests(unittest.TestCase):
     def test_rack_stylesheets_have_cache_busting_version(self):
         template = RACK_TEMPLATE.read_text(encoding="utf-8")
         racks_template = RACKS_TEMPLATE.read_text(encoding="utf-8")
-        version = "?v=20260729-image-containment-1"
-
+        version = "?v=20260729-image-fill-1"
         for stylesheet in (
             "css/rack_devices.css",
             "css/rack_view_modes.css",
@@ -92,7 +97,13 @@ class RackImageContainmentTests(unittest.TestCase):
             rf"path='css/rack_devices\.css'\)\s*}}}}{re.escape(version)}",
         )
 
+    def test_rack_service_serves_original_bytes_without_normalizer(self):
+        source = (ROOT / "app/services/rack_service.py").read_text(encoding="utf-8")
+        self.assertNotIn("rack_image_normalizer", source)
+        self.assertNotIn("normalize_rack_image", source)
+        self.assertIn("if local is not None:\n            return local", source)
+        self.assertIn("sha256(response.content).hexdigest()", source)
+
 
 if __name__ == "__main__":
     unittest.main()
-

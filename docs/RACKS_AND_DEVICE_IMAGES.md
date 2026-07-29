@@ -115,14 +115,13 @@ El token de NetBox nunca se entrega al navegador.
 
 ## Ajuste visual de fotografías
 
-Las imágenes no se estiran para llenar el bloque. Las vistas 2D y 3D usan `object-fit: contain`, fondo oscuro y márgenes internos mínimos para conservar la proporción del chasis.
+Las vistas 2D y 3D ajustan la fotografía al 100% del ancho y de la altura física asignada al equipo mediante `object-fit: fill`. Este ajuste puede cambiar la proporción visual, pero no recorta la imagen, no deja espacios internos y no altera la posición, la unidad inicial ni `u_height`.
+
+La ruta de medios entrega directamente los bytes originales, tanto para imágenes locales como para las obtenidas desde NetBox. No recorta, reencodifica ni almacena representaciones derivadas.
 
 Para obtener el mejor resultado:
 
-- recortar la fotografía al borde del equipo;
-- usar orientación horizontal;
-- evitar márgenes blancos grandes;
-- preferir fondo transparente u oscuro;
+- usar orientación horizontal cuando sea posible;
 - usar una fotografía diferente para frente y parte trasera;
 - documentar correctamente `u_height`, porque la fotografía no determina el espacio ocupado.
 

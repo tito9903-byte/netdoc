@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from hashlib import sha256
 from time import monotonic
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -11,7 +12,6 @@ from app.core.config import get_settings
 from app.services.device_image_service import DeviceImageService
 from app.services.device_type_service import DeviceTypeServiceError
 from app.services.netbox_client import get_shared_netbox_client
-from app.services.rack_image_normalizer import normalize_rack_image
 
 
 class RackServiceError(Exception):
@@ -320,12 +320,7 @@ class RackService:
         except DeviceTypeServiceError as exc:
             raise self._local_error(exc) from exc
         if local is not None:
-            content, content_type, _original_digest = local
-            return await asyncio.to_thread(
-                normalize_rack_image,
-                content,
-                content_type,
-            )
+            return local
 
         device_type = await self.get_device_type(device_type_id)
         image_url = self._safe_image_url(
@@ -364,8 +359,8 @@ class RackService:
                 "La imagen supera el límite de 5 MB.",
                 status_code=413,
             )
-        return await asyncio.to_thread(
-            normalize_rack_image,
+        return (
             response.content,
             content_type,
+            sha256(response.content).hexdigest(),
         )

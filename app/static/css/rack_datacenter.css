@@ -271,7 +271,6 @@
 .rack-single-topology .topology-device:focus-visible {
     border-color: #8af9ff;
     filter: brightness(1.22) saturate(1.05);
-    transform: translateX(5px) scale(1.018);
 }
 
 .rack-single-topology .topology-device.conflict {
@@ -285,26 +284,20 @@
     z-index: 1;
     width: calc(100% - 14px);
     height: calc(100% - 2px);
-    max-width: none;
+    max-width: calc(100% - 14px);
+    max-height: calc(100% - 2px);
+    box-sizing: border-box;
     object-fit: contain;
     object-position: center;
     background: rgba(2, 6, 8, 0.98);
     opacity: 1;
     filter: contrast(1.08) saturate(1.02) brightness(1.03);
-    transform: scale(1.08);
-    transform-origin: center;
 }
 
 .rack-single-topology[data-scale="detail"] .topology-device img {
     inset: 1px 5px;
     width: calc(100% - 10px);
-    transform: scale(1.18);
-}
-
-.rack-single-topology[data-scale="detail"] .topology-device[data-device-units="0.5"] img,
-.rack-single-topology[data-scale="detail"] .topology-device[data-device-units="1.0"] img,
-.rack-single-topology[data-scale="detail"] .topology-device[data-device-units="1"] img {
-    transform: scale(1.30);
+    max-width: calc(100% - 10px);
 }
 
 .rack-single-topology .topology-device-label {

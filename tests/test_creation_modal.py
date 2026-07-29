@@ -10,19 +10,6 @@ from app.main import app
 
 class CreationModalTests(unittest.TestCase):
     @staticmethod
-    def login(client: TestClient) -> None:
-        response = client.post(
-            "/login",
-            data={
-                "username": "admin",
-                "password": "AdminPassword123",
-                "next_url": "/devices",
-            },
-            follow_redirects=False,
-        )
-        assert response.status_code == 303
-
-    @staticmethod
     def devices_patches():
         return (
             patch(
@@ -42,10 +29,46 @@ class CreationModalTests(unittest.TestCase):
             ),
         )
 
+    @staticmethod
+    def authorization_patches():
+        return (
+            patch(
+                "app.core.auth.PermissionMiddleware._required_permission",
+                return_value=None,
+            ),
+            patch(
+                "app.main.access_redirect",
+                return_value=None,
+            ),
+            patch(
+                "app.main.common_session_context",
+                return_value={
+                    "current_user": "admin",
+                    "current_user_name": "Administrador de NetDoc",
+                    "current_role": "Administrador",
+                    "current_permissions": {
+                        "devices.view",
+                        "devices.create",
+                    },
+                },
+            ),
+        )
+
     def test_devices_page_has_contextual_create_button_and_no_quick_actions(self):
         list_devices, list_sites, list_roles = self.devices_patches()
-        with list_devices, list_sites, list_roles, TestClient(app) as client:
-            self.login(client)
+        permission_route, access_redirect, session_context = (
+            self.authorization_patches()
+        )
+
+        with (
+            list_devices,
+            list_sites,
+            list_roles,
+            permission_route,
+            access_redirect,
+            session_context,
+            TestClient(app) as client,
+        ):
             response = client.get("/devices")
 
         self.assertEqual(200, response.status_code)
@@ -57,8 +80,19 @@ class CreationModalTests(unittest.TestCase):
 
     def test_modal_mode_hides_parent_modal_shell(self):
         list_devices, list_sites, list_roles = self.devices_patches()
-        with list_devices, list_sites, list_roles, TestClient(app) as client:
-            self.login(client)
+        permission_route, access_redirect, session_context = (
+            self.authorization_patches()
+        )
+
+        with (
+            list_devices,
+            list_sites,
+            list_roles,
+            permission_route,
+            access_redirect,
+            session_context,
+            TestClient(app) as client,
+        ):
             response = client.get("/devices?modal=1")
 
         self.assertEqual(200, response.status_code)

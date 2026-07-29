@@ -4,6 +4,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## Unreleased
 
+### Fixed
+
+- Las fotografías frontal y trasera de los equipos se muestran completas en el rack, sin recortar sus bordes para llenar el bloque.
+
 ### Added
 
 - Dashboard conectado a NetBox.

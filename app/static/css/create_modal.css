@@ -1,3 +1,6 @@
+@import url("/static/css/interface_workspace_polish.css?v=20260729-1");
+@import url("/static/css/interface_ip_editor.css?v=20260729-1");
+
 .create-modal[hidden] {
     display: none;
 }

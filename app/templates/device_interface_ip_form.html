@@ -3,8 +3,9 @@
 {% block title %}{{ page_title }} | NetDoc{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-2">
-<link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_ip_management.css') }}?v=20260727-1">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260729-2">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_ip_management.css') }}?v=20260729-2">
+<link rel="stylesheet" href="{{ url_for('static', path='css/interface_ip_editor.css') }}?v=20260729-1">
 {% endblock %}
 
 {% block content %}
@@ -14,28 +15,36 @@
 {% set current_role_value = current_role.get("value") if current_role is mapping else current_role %}
 {% set current_vrf = address.get("vrf") if address else {} %}
 {% set current_vrf_id = current_vrf.get("id") if current_vrf is mapping else current_vrf %}
+{% set device_name = device.get("name") or device.get("display") or "Dispositivo" %}
+{% set interface_name = interface.get("name") or interface.get("display") or "Interfaz" %}
 
-<div class="detail-navigation">
-    <a href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">← Volver a la interfaz</a>
-</div>
+<div class="interface-ip-editor-page">
+    <nav class="detail-navigation interface-ip-editor-navigation" aria-label="Navegación">
+        <a href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">← Volver a {{ interface_name }}</a>
+    </nav>
 
-{% if error %}
-<div class="notice error-notice">
-    <strong>No fue posible guardar la dirección IP.</strong>
-    <span>{{ error }}</span>
-</div>
-{% endif %}
-
-<section class="management-hero">
-    <div>
-        <span class="eyebrow">Dirección IP de la interfaz</span>
-        <h2>{{ device.get("name") or device.get("display") }} · {{ interface.get("name") or interface.get("display") }}</h2>
-        <p>{% if address %}Modifica la dirección asignada sin cambiar las demás IP de la interfaz.{% else %}Agrega una dirección IPv4 o IPv6 directamente a esta interfaz.{% endif %}</p>
+    {% if error %}
+    <div class="notice error-notice">
+        <strong>No fue posible guardar la dirección IP.</strong>
+        <span>{{ error }}</span>
     </div>
-    {% if address %}<span class="panel-badge">IP ID {{ address_id }}</span>{% endif %}
-</section>
+    {% endif %}
 
-<section class="panel management-form-panel">
+    <section class="interface-ip-editor-context">
+        <div class="interface-ip-editor-identity">
+            <span class="interface-ip-editor-icon" aria-hidden="true">IP</span>
+            <div>
+                <span class="eyebrow">Direccionamiento de interfaz</span>
+                <h2>{% if address %}Editar dirección IP{% else %}Agregar dirección IP{% endif %}</h2>
+                <p>{{ device_name }} · {{ interface_name }}</p>
+            </div>
+        </div>
+        <div class="interface-ip-editor-context-badges">
+            <span class="panel-badge">{{ interface_name }}</span>
+            {% if address %}<span class="panel-badge">IP ID {{ address_id }}</span>{% else %}<span class="panel-badge">Nueva asignación</span>{% endif %}
+        </div>
+    </section>
+
     {% if not write_enabled %}
     <div class="read-only-callout compact-callout">
         <span>◌</span>
@@ -43,87 +52,125 @@
     </div>
     {% endif %}
 
-    <form
-        method="post"
-        action="{% if address %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/ip-addresses/{{ address_id }}/actions/update{% else %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/ip-addresses/actions/create{% endif %}"
-        class="management-form"
-    >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <section class="panel interface-ip-editor-card">
+        <form
+            method="post"
+            action="{% if address %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/ip-addresses/{{ address_id }}/actions/update{% else %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/ip-addresses/actions/create{% endif %}"
+            class="management-form interface-ip-editor-form"
+        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-        <div class="management-grid">
-            <div class="field management-wide-field">
-                <label for="ip-address">Dirección y prefijo</label>
-                <input
-                    id="ip-address"
-                    name="address"
-                    required
-                    value="{{ address.get('address') or address.get('display') if address else '' }}"
-                    placeholder="192.168.10.10/24 o 2001:db8::10/64"
-                    autocomplete="off"
-                >
-                <small>Incluye siempre la máscara o longitud del prefijo.</small>
-            </div>
+            <section class="interface-ip-editor-section">
+                <header class="interface-ip-editor-section-header">
+                    <span class="interface-ip-editor-step">01</span>
+                    <div>
+                        <h3>Dirección</h3>
+                        <p>IPv4 o IPv6 con su longitud de prefijo.</p>
+                    </div>
+                </header>
 
-            <div class="field">
-                <label for="ip-status">Estado</label>
-                <select id="ip-status" name="status" required>
-                    {% if not status_choices %}
-                    <option value="active" selected>Activo</option>
-                    {% else %}
-                        {% for item in status_choices %}
-                        <option value="{{ item.value }}" {% if item.value == current_status_value or (not address and item.value == 'active') %}selected{% endif %}>{{ item.label }}</option>
-                        {% endfor %}
-                    {% endif %}
-                </select>
-            </div>
+                <div class="field interface-ip-editor-address-field">
+                    <label for="ip-address">Dirección y prefijo</label>
+                    <input
+                        id="ip-address"
+                        name="address"
+                        required
+                        value="{{ address.get('address') or address.get('display') if address else '' }}"
+                        placeholder="192.168.10.10/24 o 2001:db8::10/64"
+                        autocomplete="off"
+                        inputmode="text"
+                    >
+                    <small>Incluye siempre la máscara o longitud del prefijo.</small>
+                </div>
+            </section>
 
-            <div class="field">
-                <label for="ip-role">Rol</label>
-                <select id="ip-role" name="role">
-                    <option value="">Sin rol especial</option>
-                    {% for item in role_choices %}
-                    <option value="{{ item.value }}" {% if item.value == current_role_value %}selected{% endif %}>{{ item.label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+            <section class="interface-ip-editor-section">
+                <header class="interface-ip-editor-section-header">
+                    <span class="interface-ip-editor-step">02</span>
+                    <div>
+                        <h3>Clasificación</h3>
+                        <p>Estado operativo, rol y tabla de enrutamiento.</p>
+                    </div>
+                </header>
 
-            <div class="field">
-                <label for="ip-vrf">VRF</label>
-                <select id="ip-vrf" name="vrf_id">
-                    <option value="">Tabla global</option>
-                    {% for item in vrfs %}
-                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_vrf_id %}selected{% endif %}>
-                        {{ item.get("display") or item.get("name") or item.get("rd") }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
+                <div class="interface-ip-editor-grid">
+                    <div class="field">
+                        <label for="ip-status">Estado</label>
+                        <select id="ip-status" name="status" required>
+                            {% if not status_choices %}
+                            <option value="active" selected>Activo</option>
+                            {% else %}
+                                {% for item in status_choices %}
+                                <option value="{{ item.value }}" {% if item.value == current_status_value or (not address and item.value == 'active') %}selected{% endif %}>{{ item.label }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
 
-            <div class="field">
-                <label for="ip-dns-name">Nombre DNS</label>
-                <input id="ip-dns-name" name="dns_name" value="{{ address.get('dns_name') if address else '' }}" placeholder="router.ejemplo.local">
-            </div>
+                    <div class="field">
+                        <label for="ip-role">Rol</label>
+                        <select id="ip-role" name="role">
+                            <option value="">Sin rol especial</option>
+                            {% for item in role_choices %}
+                            <option value="{{ item.value }}" {% if item.value == current_role_value %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-            <div class="field management-wide-field">
-                <label for="ip-description">Descripción</label>
-                <textarea id="ip-description" name="description" rows="4">{{ address.get("description") if address else "" }}</textarea>
-            </div>
+                    <div class="field">
+                        <label for="ip-vrf">VRF</label>
+                        <select id="ip-vrf" name="vrf_id">
+                            <option value="">Tabla global</option>
+                            {% for item in vrfs %}
+                            <option value="{{ item.get('id') }}" {% if item.get('id') == current_vrf_id %}selected{% endif %}>
+                                {{ item.get("display") or item.get("name") or item.get("rd") }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </section>
 
-            <div class="field checkbox-field hardware-checkbox management-wide-field">
-                <label>
+            <section class="interface-ip-editor-section">
+                <header class="interface-ip-editor-section-header">
+                    <span class="interface-ip-editor-step">03</span>
+                    <div>
+                        <h3>Referencia</h3>
+                        <p>Datos opcionales para identificar y documentar esta dirección.</p>
+                    </div>
+                </header>
+
+                <div class="interface-ip-editor-metadata">
+                    <div class="field">
+                        <label for="ip-dns-name">Nombre DNS</label>
+                        <input id="ip-dns-name" name="dns_name" value="{{ address.get('dns_name') if address else '' }}" placeholder="router.ejemplo.local">
+                    </div>
+
+                    <div class="field interface-ip-editor-description">
+                        <label for="ip-description">Descripción</label>
+                        <textarea id="ip-description" name="description" rows="3" placeholder="Uso, servicio o referencia de esta dirección">{{ address.get("description") if address else "" }}</textarea>
+                    </div>
+                </div>
+            </section>
+
+            <label class="interface-ip-editor-primary">
+                <span class="interface-ip-editor-primary-copy">
+                    <strong>Usar como IP principal</strong>
+                    <small>Se aplicará como principal IPv4 o IPv6 del dispositivo, según corresponda.</small>
+                </span>
+                <span class="interface-ip-editor-switch">
                     <input type="checkbox" name="make_primary" value="true" {% if is_primary %}checked{% endif %}>
-                    <span>Usar como IP principal de su familia en este dispositivo</span>
-                </label>
-                <small>IPv4 y IPv6 mantienen selecciones principales independientes.</small>
-            </div>
-        </div>
+                    <span aria-hidden="true"></span>
+                </span>
+            </label>
 
-        <div class="management-actions">
-            <a class="button secondary" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">Cancelar</a>
-            <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
-                {% if address %}Guardar dirección IP{% else %}Agregar dirección IP{% endif %}
-            </button>
-        </div>
-    </form>
-</section>
+            <div class="management-actions interface-ip-editor-actions">
+                <a class="button secondary" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">Cancelar</a>
+                <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                    {% if address %}Guardar cambios{% else %}Agregar dirección IP{% endif %}
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
 {% endblock %}

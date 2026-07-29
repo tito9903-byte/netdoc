@@ -144,16 +144,24 @@
 }
 
 .rack-device-block.has-image .rack-device-image {
-    inset: 0 !important;
+    inset: 1px 5px !important;
     z-index: 1 !important;
-    width: 100% !important;
-    height: 100% !important;
+    width: calc(100% - 10px) !important;
+    height: calc(100% - 2px) !important;
+    max-width: calc(100% - 10px) !important;
+    max-height: calc(100% - 2px) !important;
+    box-sizing: border-box !important;
     padding: 0 !important;
-    object-fit: cover !important;
+    object-fit: contain !important;
     object-position: center !important;
     background: transparent !important;
     filter: none !important;
     transform: none !important;
+}
+
+.rack-device-block.has-image::before,
+.rack-device-block.has-image::after {
+    display: none !important;
 }
 
 .rack-device-block.has-image .rack-device-name,
@@ -166,16 +174,24 @@
 }
 
 .rack-single-topology .topology-device img {
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
+    inset: 1px 5px !important;
+    width: calc(100% - 10px) !important;
+    height: calc(100% - 2px) !important;
+    max-width: calc(100% - 10px) !important;
+    max-height: calc(100% - 2px) !important;
+    box-sizing: border-box !important;
+    object-fit: contain !important;
     object-position: center !important;
     background: transparent !important;
     opacity: 1 !important;
     filter: none !important;
     transform: none !important;
     backface-visibility: hidden;
+}
+
+.rack-single-topology .topology-device:has(img:not([hidden]))::before,
+.rack-single-topology .topology-device:has(img:not([hidden]))::after {
+    display: none !important;
 }
 
 .rack-single-topology .topology-device:has(img:not([hidden])) .topology-device-label {

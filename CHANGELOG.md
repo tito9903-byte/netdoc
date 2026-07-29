@@ -62,6 +62,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- Las fotografías frontal y trasera de equipos usan `contain`, centrado y márgenes internos seguros en rack completo, detalle ampliado y elevación 2D, sin zoom ni elementos superpuestos que recorten el chasis.
 - README, roadmap, estado y documentación alineados al flujo `feature/*` → `develop` → `main`.
 - Git, pip y Python de los despliegues se ejecutan como `sshtelenord`; systemd permanece bajo root.
 - La autenticación usa cuentas persistentes y recarga identidad y permisos antes de cada solicitud protegida.

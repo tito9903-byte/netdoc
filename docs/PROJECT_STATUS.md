@@ -6,7 +6,7 @@
 - **Versión documental:** 2.3.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/rack-datacenter-report`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/rack-image-containment`.
 
 ## Resumen ejecutivo
 
@@ -56,7 +56,7 @@ Desarrollo es el entorno donde se prueban creaciones y modificaciones reales ant
 - Reemplazo idempotente y fallback a imágenes antiguas de NetBox.
 - Planes seguros, lista cerrada de capacidades y vista previa de cables.
 
-## En progreso en `feature/rack-datacenter-report`
+## En progreso en `feature/rack-image-containment`
 
 ### Experiencia 3D del rack
 
@@ -65,7 +65,7 @@ Desarrollo es el entorno donde se prueban creaciones y modificaciones reales ant
 - Perspectiva isométrica o frontal.
 - Cara frontal o trasera.
 - Escala **Ajustar** o **Detalle** para mejorar la lectura de equipos de 1U.
-- Fotografías con ajuste proporcional `contain`, sin estiramiento.
+- Fotografías frontales y traseras con ajuste proporcional `contain`, centradas y sin zoom automático tanto en rack completo como en detalle ampliado y elevación 2D; conservan la ocupación física exacta en U y no reciben etiquetas superpuestas.
 - Inspector lateral compartido entre 2D y 3D.
 - Conflictos físicos destacados en rojo.
 

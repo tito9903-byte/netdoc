@@ -106,6 +106,7 @@ from app.routers.interface_connection_management import (
     router as interface_connection_management_router,
 )
 from app.routers.interface_workspace import router as interface_workspace_router
+from app.routers.interface_workspace_aliases import router as interface_workspace_aliases_router
 from app.routers.lldp_discovery import router as lldp_discovery_router
 from app.routers.lldp_run_redirect import router as lldp_run_redirect_router
 from app.routers.rack_create import router as rack_create_router
@@ -116,6 +117,7 @@ router.include_router(device_images_router)
 router.include_router(rack_create_router)
 router.include_router(change_plans_router)
 router.include_router(hardware_router)
+router.include_router(interface_workspace_aliases_router)
 router.include_router(interface_workspace_router)
 router.include_router(device_management_router)
 router.include_router(device_components_router)

@@ -66,6 +66,7 @@ Desarrollo es el entorno donde se prueban creaciones y modificaciones reales ant
 - Cara frontal o trasera.
 - Escala **Ajustar** o **Detalle** para mejorar la lectura de equipos de 1U.
 - Fotografías frontales y traseras con ajuste proporcional `contain`, centradas y sin zoom automático tanto en rack completo como en detalle ampliado y elevación 2D; conservan la ocupación física exacta en U y no reciben etiquetas superpuestas.
+- Normalización no destructiva al servir imágenes existentes o nuevas: elimina solo transparencia o fondos uniformes conectados a los bordes, conserva el original local y cambia el ETag cuando evoluciona el normalizador.
 - Inspector lateral compartido entre 2D y 3D.
 - Conflictos físicos destacados en rojo.
 

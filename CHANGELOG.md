@@ -62,6 +62,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- Las representaciones de fotografías en racks eliminan de forma conservadora márgenes transparentes o fondos uniformes conectados a los bordes, sin modificar el archivo original ni recortar el equipo; el ETag versionado invalida representaciones anteriores.
 - Las fotografías frontal y trasera de equipos usan `contain`, centrado y márgenes internos seguros en rack completo, detalle ampliado y elevación 2D, sin zoom ni elementos superpuestos que recorten el chasis.
 - README, roadmap, estado y documentación alineados al flujo `feature/*` → `develop` → `main`.
 - Git, pip y Python de los despliegues se ejecutan como `sshtelenord`; systemd permanece bajo root.

@@ -144,15 +144,15 @@
 }
 
 .rack-device-block.has-image .rack-device-image {
-    inset: 1px 5px !important;
+    inset: 0 !important;
     z-index: 1 !important;
-    width: calc(100% - 10px) !important;
-    height: calc(100% - 2px) !important;
-    max-width: calc(100% - 10px) !important;
-    max-height: calc(100% - 2px) !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     box-sizing: border-box !important;
     padding: 0 !important;
-    object-fit: contain !important;
+    object-fit: fill !important;
     object-position: center !important;
     background: transparent !important;
     filter: none !important;
@@ -174,13 +174,13 @@
 }
 
 .rack-single-topology .topology-device img {
-    inset: 1px 5px !important;
-    width: calc(100% - 10px) !important;
-    height: calc(100% - 2px) !important;
-    max-width: calc(100% - 10px) !important;
-    max-height: calc(100% - 2px) !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     box-sizing: border-box !important;
-    object-fit: contain !important;
+    object-fit: fill !important;
     object-position: center !important;
     background: transparent !important;
     opacity: 1 !important;

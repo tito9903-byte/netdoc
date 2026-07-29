@@ -6,7 +6,7 @@
 - **Versión documental:** 2.3.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/rack-image-containment`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/rack-image-fill`.
 
 ## Resumen ejecutivo
 
@@ -56,7 +56,7 @@ Desarrollo es el entorno donde se prueban creaciones y modificaciones reales ant
 - Reemplazo idempotente y fallback a imágenes antiguas de NetBox.
 - Planes seguros, lista cerrada de capacidades y vista previa de cables.
 
-## En progreso en `feature/rack-image-containment`
+## En progreso en `feature/rack-image-fill`
 
 ### Experiencia 3D del rack
 
@@ -65,8 +65,8 @@ Desarrollo es el entorno donde se prueban creaciones y modificaciones reales ant
 - Perspectiva isométrica o frontal.
 - Cara frontal o trasera.
 - Escala **Ajustar** o **Detalle** para mejorar la lectura de equipos de 1U.
-- Fotografías frontales y traseras con ajuste proporcional `contain`, centradas y sin zoom automático tanto en rack completo como en detalle ampliado y elevación 2D; conservan la ocupación física exacta en U y no reciben etiquetas superpuestas.
-- Normalización no destructiva al servir imágenes existentes o nuevas: elimina solo transparencia o fondos uniformes conectados a los bordes, conserva el original local y cambia el ETag cuando evoluciona el normalizador.
+- Fotografías frontales y traseras ajustadas al ancho y alto completos del área física del equipo tanto en rack completo como en detalle ampliado y elevación 2D; no se recortan, conservan la posición y ocupación exactas en U y no reciben etiquetas superpuestas.
+- Entrega directa y no destructiva de las imágenes originales; el navegador ajusta cada fotografía a las dimensiones físicas del equipo sin generar ni almacenar una representación derivada.
 - Inspector lateral compartido entre 2D y 3D.
 - Conflictos físicos destacados en rojo.
 

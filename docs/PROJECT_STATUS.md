@@ -2,17 +2,19 @@
 
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
-- **Última actualización:** 2026-07-25.
-- **Versión documental:** 2.3.
+- **Última actualización:** 2026-07-29.
+- **Versión documental:** 2.4.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/rack-datacenter-report`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual `fix/rack-image-containment`, basada en `feature/navigation-performance`.
 
 ## Resumen ejecutivo
 
 La versión `0.10.0` fue promovida a `main` y reúne autenticación, roles, auditoría, búsqueda, Sistema, IPAM, fabricantes, modelos, plantillas, conexiones, racks 2D/3D y la base segura para el futuro asistente.
 
 `develop` ya contiene el almacenamiento local de imágenes de modelos mediante la migración `20260725_0002`. La rama actual mejora la representación física del rack: fotografías sin deformación, gabinete 3D estilo datacenter, escala detallada, reemplazo visible de imágenes y reporte PDF descargable con inventario.
+
+La corrección `fix/rack-image-containment` sustituye el ajuste `cover` introducido en la vista 3D por `contain` en ambas reglas de fotografía. Así conserva la imagen frontal o trasera completa dentro del espacio U asignado, sin deformarla ni recortar sus bordes.
 
 ## Entornos y servicios
 

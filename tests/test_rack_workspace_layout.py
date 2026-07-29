@@ -42,6 +42,22 @@ class RackWorkspaceLayoutTests(unittest.TestCase):
         self.assertIn("visible", javascript)
         self.assertIn("normalize(\"NFD\")", javascript)
 
+    def test_rack_photos_are_fully_visible_without_cropping(self):
+        stylesheet = (
+            ROOT / "app/static/css/rack_view_modes.css"
+        ).read_text(encoding="utf-8")
+
+        image_rules = stylesheet.split(
+            "/*\n * La vista isométrica conserva profundidad",
+            maxsplit=1,
+        )[0].split(
+            "/*\n * Fotografías:",
+            maxsplit=1,
+        )[1]
+
+        self.assertEqual(2, image_rules.count("object-fit: contain !important;"))
+        self.assertNotIn("object-fit: cover", image_rules)
+
     def test_documentation_covers_workspace_and_mobile_cards(self):
         documentation = (
             ROOT / "docs/modelos-y-componentes.md"

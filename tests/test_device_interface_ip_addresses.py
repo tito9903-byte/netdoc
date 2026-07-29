@@ -55,19 +55,6 @@ class DeviceInterfaceAddressServiceTests(unittest.IsolatedAsyncioTestCase):
 
 
 class DeviceInterfaceAddressRouteTests(unittest.TestCase):
-    @staticmethod
-    def login(client: TestClient) -> None:
-        response = client.post(
-            "/login",
-            data={
-                "username": "admin",
-                "password": "AdminPassword123",
-                "next_url": "/devices/214",
-            },
-            follow_redirects=False,
-        )
-        assert response.status_code == 303
-
     @patch(
         "app.main.NetBoxClient.get_device_interfaces",
         new_callable=AsyncMock,
@@ -124,8 +111,16 @@ class DeviceInterfaceAddressRouteTests(unittest.TestCase):
         _get_device,
         _get_interfaces,
     ):
-        with TestClient(app) as client:
-            self.login(client)
+        # Esta prueba valida únicamente el renderizado del detalle del equipo.
+        # No debe depender de la contraseña configurada en el entorno donde corre.
+        with (
+            patch(
+                "app.core.auth.PermissionMiddleware._required_permission",
+                return_value=None,
+            ),
+            patch("app.main.access_redirect", return_value=None),
+            TestClient(app) as client,
+        ):
             response = client.get("/devices/214")
 
         self.assertEqual(200, response.status_code)

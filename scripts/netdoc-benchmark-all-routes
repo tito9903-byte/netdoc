@@ -1,0 +1,349 @@
+#!/usr/bin/env bash
+# Mide todas las rutas GET navegables publicadas por NetDoc.
+set -euo pipefail
+
+APP_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+PYTHON_BIN="${PYTHON_BIN:-$APP_DIR/.venv/bin/python}"
+BASE_URL="${NETDOC_BENCHMARK_URL:-http://127.0.0.1:8101}"
+ROUNDS="${NETDOC_BENCHMARK_ROUNDS:-4}"
+
+[[ -x "$PYTHON_BIN" ]] || {
+  echo "ERROR: no existe Python en $PYTHON_BIN" >&2
+  exit 1
+}
+
+[[ "$ROUNDS" =~ ^[1-9][0-9]*$ ]] || {
+  echo "ERROR: NETDOC_BENCHMARK_ROUNDS debe ser mayor que cero." >&2
+  exit 1
+}
+
+read -r -p "Usuario de NetDoc: " NETDOC_BENCHMARK_USERNAME </dev/tty
+read -r -s -p "Contraseña de NetDoc: " NETDOC_BENCHMARK_PASSWORD </dev/tty
+printf '\n'
+
+[[ -n "$NETDOC_BENCHMARK_USERNAME" && -n "$NETDOC_BENCHMARK_PASSWORD" ]] || {
+  echo "ERROR: usuario y contraseña son obligatorios." >&2
+  exit 1
+}
+
+export NETDOC_BENCHMARK_USERNAME NETDOC_BENCHMARK_PASSWORD
+cd "$APP_DIR"
+
+"$PYTHON_BIN" - "$BASE_URL" "$ROUNDS" <<'PY'
+from __future__ import annotations
+
+import os
+import re
+import statistics
+import sys
+import time
+from dataclasses import dataclass
+from typing import Any
+
+import httpx
+
+from app.core.config import get_settings
+from app.core.database import session_scope
+from app.main import app
+from app.models.access import AuditEvent, Role, User
+
+BASE_URL = sys.argv[1].rstrip("/")
+ROUNDS = int(sys.argv[2])
+TIMEOUT = 120.0
+PARAM_RE = re.compile(r"\{([^}:]+)(?::[^}]+)?\}")
+
+EXCLUDED_PREFIXES = ("/static", "/media/", "/api/")
+EXCLUDED_PATHS = {"/login", "/logout", "/forbidden", "/favicon.ico"}
+EXCLUDED_SUFFIXES = (".pdf",)
+
+
+@dataclass
+class Result:
+    path: str
+    statuses: list[int]
+    durations: list[float]
+
+    @property
+    def first(self) -> float:
+        return self.durations[0]
+
+    @property
+    def median(self) -> float:
+        values = self.durations[1:] or self.durations
+        return statistics.median(values)
+
+    @property
+    def maximum(self) -> float:
+        return max(self.durations)
+
+    @property
+    def status(self) -> str:
+        return ",".join(str(value) for value in sorted(set(self.statuses)))
+
+
+def rating(seconds: float) -> str:
+    if seconds < 0.50:
+        return "excelente"
+    if seconds < 1.00:
+        return "bueno"
+    if seconds < 2.00:
+        return "aceptable"
+    if seconds < 4.00:
+        return "lento"
+    return "crítico"
+
+
+def netbox_headers() -> dict[str, str]:
+    settings = get_settings()
+    scheme = (
+        "Bearer"
+        if settings.netbox_token_type.strip().lower() == "bearer"
+        else "Token"
+    )
+    return {
+        "Authorization": f"{scheme} {settings.netbox_token}",
+        "Accept": "application/json",
+        "User-Agent": f"NetDoc/{settings.app_version} full-route-benchmark",
+    }
+
+
+def first_netbox_id(endpoint: str) -> int | None:
+    settings = get_settings()
+    url = f"{settings.netbox_url.rstrip('/')}/{endpoint.lstrip('/')}"
+    try:
+        with httpx.Client(
+            headers=netbox_headers(),
+            verify=settings.netbox_verify_ssl,
+            timeout=TIMEOUT,
+            follow_redirects=True,
+        ) as client:
+            response = client.get(url, params={"limit": 1, "ordering": "id"})
+            response.raise_for_status()
+            payload = response.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+
+    rows = payload.get("results") if isinstance(payload, dict) else None
+    if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
+        return None
+    value = rows[0].get("id")
+    return value if isinstance(value, int) else None
+
+
+def representative_values() -> dict[str, Any]:
+    values: dict[str, Any] = {}
+
+    try:
+        with session_scope() as session:
+            user = session.query(User).order_by(User.id.asc()).first()
+            role = session.query(Role).order_by(Role.id.asc()).first()
+            audit = session.query(AuditEvent).order_by(AuditEvent.id.asc()).first()
+            if user is not None:
+                values["user_id"] = user.id
+            if role is not None:
+                values["role_id"] = role.id
+            if audit is not None:
+                values["audit_id"] = audit.id
+                values["event_id"] = audit.id
+    except Exception:
+        pass
+
+    endpoints = {
+        "device_id": "/api/dcim/devices/",
+        "rack_id": "/api/dcim/racks/",
+        "device_type_id": "/api/dcim/device-types/",
+        "manufacturer_id": "/api/dcim/manufacturers/",
+        "site_id": "/api/dcim/sites/",
+        "cable_id": "/api/dcim/cables/",
+    }
+    for name, endpoint in endpoints.items():
+        value = first_netbox_id(endpoint)
+        if value is not None:
+            values[name] = value
+
+    return values
+
+
+def resolve_path(path: str, values: dict[str, Any]) -> str | None:
+    resolved = path
+    for name in PARAM_RE.findall(path):
+        value = values.get(name)
+        if value is None:
+            return None
+        resolved = re.sub(
+            rf"\{{{re.escape(name)}(?::[^}}]+)?\}}",
+            str(value),
+            resolved,
+            count=1,
+        )
+    return resolved
+
+
+def discover_routes(values: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Descubre rutas desde OpenAPI para soportar FastAPI con routers perezosos."""
+    discovered: set[str] = {"/health"}
+    skipped: list[str] = []
+
+    schema = app.openapi()
+    paths = schema.get("paths", {}) if isinstance(schema, dict) else {}
+
+    if not isinstance(paths, dict):
+        raise SystemExit("ERROR: FastAPI no devolvió un catálogo OpenAPI válido.")
+
+    for path, operations in paths.items():
+        if not isinstance(path, str) or not isinstance(operations, dict):
+            continue
+        if "get" not in {str(method).lower() for method in operations}:
+            continue
+        if path in EXCLUDED_PATHS:
+            continue
+        if path.startswith(EXCLUDED_PREFIXES):
+            continue
+        if path.endswith(EXCLUDED_SUFFIXES):
+            continue
+
+        resolved = resolve_path(path, values)
+        if resolved is None:
+            skipped.append(path)
+            continue
+        discovered.add(resolved)
+
+    if "/search" in discovered:
+        discovered.remove("/search")
+        discovered.add("/search?q=switch")
+
+    return (
+        sorted(discovered, key=lambda item: (item.count("/"), item.casefold())),
+        sorted(set(skipped)),
+    )
+
+
+def login(client: httpx.Client) -> None:
+    response = client.post(
+        "/login",
+        data={
+            "username": os.environ["NETDOC_BENCHMARK_USERNAME"],
+            "password": os.environ["NETDOC_BENCHMARK_PASSWORD"],
+            "next_url": "/",
+        },
+        follow_redirects=False,
+    )
+    if response.status_code not in {302, 303, 307, 308}:
+        raise SystemExit(f"ERROR: login falló con HTTP {response.status_code}.")
+
+    check = client.get("/", follow_redirects=False)
+    if check.status_code in {302, 303, 307, 308} and "/login" in check.headers.get(
+        "location", ""
+    ):
+        raise SystemExit("ERROR: la sesión no quedó autenticada.")
+
+
+def measure(client: httpx.Client, path: str) -> Result:
+    statuses: list[int] = []
+    durations: list[float] = []
+
+    for _ in range(ROUNDS):
+        started = time.perf_counter()
+        try:
+            response = client.get(path, follow_redirects=False)
+            statuses.append(response.status_code)
+        except httpx.HTTPError:
+            statuses.append(0)
+        durations.append(time.perf_counter() - started)
+
+    return Result(path, statuses, durations)
+
+
+def main() -> None:
+    values = representative_values()
+    routes, skipped = discover_routes(values)
+
+    print("\n========== CONTEXTO ==========")
+    print(f"URL:     {BASE_URL}")
+    print(f"Rondas:  {ROUNDS}")
+    print(f"Rutas:   {len(routes)}")
+    print("IDs representativos:")
+    for name, value in sorted(values.items()):
+        print(f"  {name:<18} {value}")
+
+    if skipped:
+        print("Rutas dinámicas omitidas por falta de ID:")
+        for path in skipped:
+            print(f"  {path}")
+
+    with httpx.Client(
+        base_url=BASE_URL,
+        timeout=TIMEOUT,
+        follow_redirects=False,
+        headers={"User-Agent": "NetDoc full-route benchmark"},
+    ) as client:
+        login(client)
+        print("\n========== EJECUTANDO ==========")
+        results: list[Result] = []
+        for index, path in enumerate(routes, start=1):
+            result = measure(client, path)
+            results.append(result)
+            print(
+                f"[{index:02d}/{len(routes):02d}] {path:<48} "
+                f"primera={result.first:>7.3f}s "
+                f"caliente={result.median:>7.3f}s "
+                f"HTTP={result.status}"
+            )
+
+    results.sort(key=lambda item: item.median, reverse=True)
+
+    print("\n========== RESULTADOS ORDENADOS ==========")
+    print(
+        f"{'Ruta':<50} {'Primera':>9} {'Mediana':>9} "
+        f"{'Máxima':>9} {'HTTP':>9} {'Evaluación':>11}"
+    )
+    print("-" * 104)
+    for result in results:
+        print(
+            f"{result.path:<50} "
+            f"{result.first:>8.3f}s "
+            f"{result.median:>8.3f}s "
+            f"{result.maximum:>8.3f}s "
+            f"{result.status:>9} "
+            f"{rating(result.median):>11}"
+        )
+
+    valid = [
+        item
+        for item in results
+        if item.statuses and all(200 <= status < 400 for status in item.statuses)
+    ]
+    failures = [
+        item
+        for item in results
+        if any(status == 0 or status >= 400 for status in item.statuses)
+    ]
+
+    print("\n========== RESUMEN ==========")
+    if valid:
+        medians = [item.median for item in valid]
+        print(f"Rutas válidas:           {len(valid)}")
+        print(f"Mediana global caliente: {statistics.median(medians):.3f}s")
+        print(f"Ruta válida más lenta:   {valid[0].path}")
+        print(f"Tiempo más lento:        {valid[0].median:.3f}s")
+    else:
+        print("No hubo rutas válidas.")
+
+    if failures:
+        print("Rutas con error o acceso denegado:")
+        for item in failures:
+            print(f"  {item.path}: HTTP {item.status}")
+
+    print("Interpretación:")
+    print("  < 0.50 s  excelente")
+    print("  < 1.00 s  bueno")
+    print("  < 2.00 s  aceptable")
+    print("  < 4.00 s  lento")
+    print("  >=4.00 s  crítico")
+
+
+if __name__ == "__main__":
+    main()
+PY
+
+unset NETDOC_BENCHMARK_USERNAME NETDOC_BENCHMARK_PASSWORD

@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/devices.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260729-1">
+<link rel="stylesheet" href="{{ url_for('static', path='css/interface_workspace.css') }}?v=20260729-1">
+{% endblock %}
+
+{% block content %}
+{% set data = form_data or {} %}
+{% set raw_type = interface.get("type") if interface else data.get("interface_type", "") %}
+{% set current_type_value = raw_type.get("value") if raw_type is mapping else raw_type %}
+{% set current_type_label = raw_type.get("label") if raw_type is mapping else raw_type %}
+{% set raw_lag = interface.get("lag") if interface else data.get("lag_id") %}
+{% set current_lag_id = raw_lag.get("id") if raw_lag is mapping else raw_lag %}
+{% set raw_mac = (interface.get("primary_mac_address") or interface.get("mac_address") or "") if interface else data.get("mac_address", "") %}
+{% set current_mac = (raw_mac.get("mac_address") or raw_mac.get("address") or raw_mac.get("display") or "") if raw_mac is mapping else raw_mac %}
+{% set raw_cable = interface.get("cable") if interface else none %}
+{% set cable_id = raw_cable.get("id") if raw_cable is mapping else raw_cable %}
+{% set endpoints = (interface.get("connected_endpoints") or []) if interface else [] %}
+{% set remote_endpoint = endpoints[0] if endpoints else {} %}
+{% set remote_device = remote_endpoint.get("device") if remote_endpoint is mapping else {} %}
+{% set remote_device = remote_device if remote_device is mapping else {} %}
+{% set remote_device_id = remote_device.get("id") %}
+{% set remote_device_name = remote_device.get("display") or remote_device.get("name") or "Equipo remoto" %}
+{% set remote_interface_name = (remote_endpoint.get("display") or remote_endpoint.get("name") or "Interfaz remota") if remote_endpoint is mapping else "Interfaz remota" %}
+{% set device_name = device.get("name") or device.get("display") or "Dispositivo" %}
+{% set interface_name = interface.get("name") if interface else (data.get("name") or "Nueva interfaz") %}
+
+<div class="interface-workspace-page">
+    <nav class="interface-workspace-breadcrumb" aria-label="Navegación">
+        <a href="/devices/{{ device_id }}#interfaces">Dispositivos</a>
+        <span>/</span>
+        <a href="/devices/{{ device_id }}#interfaces">{{ device_name }}</a>
+        <span>/</span>
+        <strong>{{ interface_name }}</strong>
+    </nav>
+
+    {% if notice %}
+    <div class="notice success-notice interface-workspace-notice">
+        <strong>Operación completada.</strong>
+        <span>{{ notice }}</span>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="notice error-notice interface-workspace-notice">
+        <strong>No fue posible completar la operación.</strong>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <section class="interface-workspace-hero">
+        <div class="interface-workspace-identity">
+            <span class="interface-workspace-icon" aria-hidden="true">⇆</span>
+            <div>
+                <span class="eyebrow">{% if interface %}Interfaz del dispositivo{% else %}Nueva interfaz{% endif %}</span>
+                <h2>{{ interface_name }}</h2>
+                <p>
+                    <a href="/devices/{{ device_id }}#interfaces">{{ device_name }}</a>
+                    <span>·</span>
+                    <span>{% if interface %}Propiedades, direccionamiento y conexión en un solo espacio.{% else %}Crea el puerto y asigna opcionalmente su primera dirección IP.{% endif %}</span>
+                </p>
+            </div>
+        </div>
+        <div class="interface-workspace-badges">
+            {% if interface %}
+            <span class="interface-workspace-status {% if interface.get('enabled') %}is-active{% else %}is-inactive{% endif %}">
+                {{ "Habilitada" if interface.get("enabled") else "Deshabilitada" }}
+            </span>
+            {% if current_type_label %}<span class="panel-badge">{{ current_type_label }}</span>{% endif %}
+            <span class="panel-badge">ID {{ interface_id }}</span>
+            {% else %}
+            <span class="panel-badge">Creación guiada</span>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if not write_enabled %}
+    <div class="read-only-callout compact-callout interface-workspace-readonly">
+        <span>◌</span>
+        <div><strong>Solo lectura</strong><span>La escritura en NetBox está deshabilitada.</span></div>
+    </div>
+    {% endif %}
+
+    <div class="interface-workspace-layout {% if not interface %}is-creation{% endif %}">
+        <main class="interface-workspace-main">
+            <section class="panel interface-workspace-card">
+                <form
+                    method="post"
+                    action="{% if interface %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/actions/update{% else %}/devices/{{ device_id }}/interfaces/actions/create-workspace{% endif %}"
+                    class="management-form interface-workspace-form"
+                >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                    <header class="interface-workspace-section-header">
+                        <div>
+                            <span class="eyebrow">01 · Configuración</span>
+                            <h3>Propiedades de la interfaz</h3>
+                            <p>Identidad, tipo físico, agrupación y parámetros operativos.</p>
+                        </div>
+                    </header>
+
+                    <div class="management-grid interface-workspace-fields">
+                        <div class="field">
+                            <label for="interface-name">Nombre</label>
+                            <input id="interface-name" name="name" required value="{{ interface.get('name') if interface else data.get('name', '') }}" placeholder="Ethernet1">
+                            <small>Debe coincidir con el nombre utilizado por el equipo.</small>
+                        </div>
+
+                        <div class="field">
+                            <label for="interface-type">Tipo</label>
+                            <select id="interface-type" name="interface_type" required>
+                                <option value="">Seleccionar</option>
+                                {% for item in type_choices %}
+                                <option value="{{ item.value }}" {% if item.value|string == current_type_value|string %}selected{% endif %}>{{ item.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <small>Define velocidad, medio y comportamiento físico.</small>
+                        </div>
+
+                        <div class="field">
+                            <label for="interface-label">Etiqueta</label>
+                            <input id="interface-label" name="label" value="{{ interface.get('label') if interface else data.get('label', '') }}" placeholder="Uplink principal">
+                        </div>
+
+                        <div class="field">
+                            <label for="interface-mtu">MTU</label>
+                            <input id="interface-mtu" name="mtu" type="number" min="0" step="1" value="{{ interface.get('mtu') if interface and interface.get('mtu') is not none else data.get('mtu', '') }}" placeholder="1500">
+                        </div>
+
+                        <div class="field">
+                            <label for="interface-lag">LAG</label>
+                            <select id="interface-lag" name="lag_id">
+                                <option value="">Sin LAG</option>
+                                {% for item in lags %}
+                                <option value="{{ item.get('id') }}" {% if item.get('id')|string == current_lag_id|string %}selected{% endif %}>{{ item.get("display") or item.get("name") }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="interface-mac">Dirección MAC</label>
+                            <input id="interface-mac" name="mac_address" value="{{ current_mac }}" placeholder="AA:BB:CC:DD:EE:FF">
+                        </div>
+                    </div>
+
+                    <section class="interface-workspace-subsection">
+                        <header class="interface-workspace-section-header compact">
+                            <div>
+                                <span class="eyebrow">02 · Operación</span>
+                                <h3>Estado y comportamiento</h3>
+                            </div>
+                        </header>
+
+                        <div class="interface-workspace-toggle-grid">
+                            <label class="interface-workspace-toggle-card">
+                                <span><strong>Interfaz habilitada</strong><small>Disponible para documentación y operación.</small></span>
+                                <span class="interface-workspace-switch">
+                                    <input type="checkbox" name="enabled" value="true" {% if (interface and interface.get('enabled')) or (not interface and data.get('enabled', 'true')) %}checked{% endif %}>
+                                    <span aria-hidden="true"></span>
+                                </span>
+                            </label>
+
+                            <label class="interface-workspace-toggle-card">
+                                <span><strong>Solo administración</strong><small>Puerto dedicado a gestión del equipo.</small></span>
+                                <span class="interface-workspace-switch">
+                                    <input type="checkbox" name="mgmt_only" value="true" {% if (interface and interface.get('mgmt_only')) or data.get('mgmt_only') %}checked{% endif %}>
+                                    <span aria-hidden="true"></span>
+                                </span>
+                            </label>
+
+                            <label class="interface-workspace-toggle-card {% if cable_id %}is-disabled{% endif %}">
+                                <span><strong>Marcar como conectada</strong><small>{% if cable_id %}No aplica mientras exista un cable.{% else %}Solo cuando no exista cable documentado.{% endif %}</small></span>
+                                <span class="interface-workspace-switch">
+                                    <input type="checkbox" name="mark_connected" value="true" {% if (interface and interface.get('mark_connected')) or data.get('mark_connected') %}checked{% endif %} {% if cable_id %}disabled{% endif %}>
+                                    <span aria-hidden="true"></span>
+                                </span>
+                            </label>
+                        </div>
+                    </section>
+
+                    <div class="field interface-workspace-description">
+                        <label for="interface-description">Descripción</label>
+                        <textarea id="interface-description" name="description" rows="4" placeholder="Uso, destino o referencia técnica de la interfaz">{{ interface.get("description") if interface else data.get("description", "") }}</textarea>
+                    </div>
+
+                    {% if not interface %}
+                    <section class="interface-workspace-subsection interface-workspace-ip-create">
+                        <header class="interface-workspace-section-header compact">
+                            <div>
+                                <span class="eyebrow">03 · Direccionamiento inicial</span>
+                                <h3>Primera dirección IP</h3>
+                                <p>Opcional. Déjalo vacío para crear solamente la interfaz.</p>
+                            </div>
+                            <span class="interface-workspace-optional">Opcional</span>
+                        </header>
+
+                        <div class="management-grid interface-workspace-fields">
+                            <div class="field management-wide-field">
+                                <label for="initial-ip-address">Dirección y prefijo</label>
+                                <input id="initial-ip-address" name="initial_ip_address" value="{{ data.get('initial_ip_address', '') }}" placeholder="192.168.10.10/24 o 2001:db8::10/64" autocomplete="off">
+                                <small>Incluye siempre la máscara o longitud del prefijo.</small>
+                            </div>
+
+                            <div class="field">
+                                <label for="initial-ip-status">Estado</label>
+                                <select id="initial-ip-status" name="initial_ip_status">
+                                    {% if not status_choices %}
+                                    <option value="active" selected>Activo</option>
+                                    {% else %}
+                                        {% for item in status_choices %}
+                                        <option value="{{ item.value }}" {% if item.value == data.get('initial_ip_status', 'active') %}selected{% endif %}>{{ item.label }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label for="initial-ip-role">Rol</label>
+                                <select id="initial-ip-role" name="initial_ip_role">
+                                    <option value="">Sin rol especial</option>
+                                    {% for item in role_choices %}
+                                    <option value="{{ item.value }}" {% if item.value == data.get('initial_ip_role', '') %}selected{% endif %}>{{ item.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label for="initial-ip-vrf">VRF</label>
+                                <select id="initial-ip-vrf" name="initial_ip_vrf_id">
+                                    <option value="">Tabla global</option>
+                                    {% for item in vrfs %}
+                                    <option value="{{ item.get('id') }}" {% if item.get('id')|string == data.get('initial_ip_vrf_id', '')|string %}selected{% endif %}>{{ item.get("display") or item.get("name") or item.get("rd") }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label for="initial-ip-dns">Nombre DNS</label>
+                                <input id="initial-ip-dns" name="initial_ip_dns_name" value="{{ data.get('initial_ip_dns_name', '') }}" placeholder="equipo.ejemplo.local">
+                            </div>
+
+                            <div class="field management-wide-field">
+                                <label for="initial-ip-description">Descripción de la IP</label>
+                                <textarea id="initial-ip-description" name="initial_ip_description" rows="3">{{ data.get("initial_ip_description", "") }}</textarea>
+                            </div>
+
+                            <label class="interface-workspace-primary-option management-wide-field">
+                                <input type="checkbox" name="initial_ip_make_primary" value="true" {% if data.get('initial_ip_make_primary') %}checked{% endif %}>
+                                <span><strong>Usar como IP principal</strong><small>Se aplicará como principal de su familia IPv4 o IPv6.</small></span>
+                            </label>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <div class="management-actions interface-workspace-actions">
+                        <a class="button secondary" href="/devices/{{ device_id }}#interfaces">Cancelar</a>
+                        <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                            {% if interface %}Guardar cambios{% else %}Crear interfaz{% endif %}
+                        </button>
+                    </div>
+                </form>
+
+                {% if interface %}
+                <section class="interface-workspace-addresses">
+                    <header class="interface-workspace-section-header compact">
+                        <div>
+                            <span class="eyebrow">03 · Direccionamiento</span>
+                            <h3>Direcciones IP</h3>
+                            <p>{{ addresses|length }} dirección{% if addresses|length != 1 %}es{% endif %} asignada{% if addresses|length != 1 %}s{% endif %} a {{ interface_name }}.</p>
+                        </div>
+                        <a class="button primary" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/ip-addresses/new">＋ Agregar IP</a>
+                    </header>
+
+                    {% if addresses %}
+                    <div class="interface-workspace-ip-list">
+                        {% for item in addresses %}
+                        <article class="interface-workspace-ip-row">
+                            <div>
+                                <div class="interface-workspace-ip-line">
+                                    <strong>{{ item.address }}</strong>
+                                    {% if item.is_primary %}<span class="interface-workspace-ip-primary">Principal</span>{% endif %}
+                                    <span class="interface-workspace-ip-status">{{ item.status }}</span>
+                                    {% if item.role %}<span class="interface-workspace-ip-role">{{ item.role }}</span>{% endif %}
+                                </div>
+                                {% if item.dns_name or item.description %}
+                                <div class="interface-workspace-ip-meta">
+                                    {% if item.dns_name %}<span>DNS: {{ item.dns_name }}</span>{% endif %}
+                                    {% if item.description %}<span>{{ item.description }}</span>{% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <a class="button secondary" href="{{ item.edit_url }}">Editar IP</a>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="interface-workspace-empty">
+                        <strong>Sin direccionamiento</strong>
+                        <span>Esta interfaz todavía no tiene direcciones IP asignadas.</span>
+                    </div>
+                    {% endif %}
+                </section>
+                {% endif %}
+            </section>
+        </main>
+
+        {% if interface %}
+        <aside class="interface-workspace-sidebar">
+            <section class="panel interface-workspace-connection {% if cable_id %}is-connected{% elif interface.get('mark_connected') %}is-marked{% else %}is-free{% endif %}">
+                <header>
+                    <div>
+                        <span class="eyebrow">Conexión</span>
+                        <h3>{% if cable_id %}Conexión documentada{% elif interface.get('mark_connected') %}Conectada manualmente{% else %}Interfaz libre{% endif %}</h3>
+                    </div>
+                    <span class="interface-workspace-connection-icon" aria-hidden="true">{% if cable_id %}⇄{% elif interface.get('mark_connected') %}•{% else %}○{% endif %}</span>
+                </header>
+
+                {% if cable_id %}
+                <div class="interface-workspace-route">
+                    <article><span>Local</span><strong>{{ device_name }}</strong><small>{{ interface_name }}</small></article>
+                    <span aria-hidden="true">⟷</span>
+                    <article>
+                        <span>Remoto</span>
+                        {% if remote_device_id %}<a href="/devices/{{ remote_device_id }}#interfaces">{{ remote_device_name }}</a>{% else %}<strong>{{ remote_device_name }}</strong>{% endif %}
+                        <small>{{ remote_interface_name }}</small>
+                    </article>
+                </div>
+                <dl class="interface-workspace-meta">
+                    <div><dt>Cable</dt><dd>#{{ cable_id }}</dd></div>
+                    <div><dt>Estado</dt><dd>Documentado en NetBox</dd></div>
+                </dl>
+                <div class="interface-workspace-connection-actions">
+                    {% if remote_device_id %}<a class="button secondary" href="/devices/{{ remote_device_id }}#interfaces">Abrir equipo remoto</a>{% endif %}
+                    <a class="button danger ghost-danger" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/connection/delete">Eliminar conexión</a>
+                </div>
+                {% elif interface.get('mark_connected') %}
+                <p>La interfaz está marcada como conectada, pero no existe un cable asociado.</p>
+                <small>Desactiva “Marcar como conectada” para dejarla libre.</small>
+                {% else %}
+                <p>No existe un cable ni una conexión remota documentada.</p>
+                <small>Puede utilizarse en una nueva conexión o mediante LLDP.</small>
+                {% endif %}
+            </section>
+
+            <section class="panel interface-workspace-summary">
+                <span class="eyebrow">Resumen</span>
+                <h3>Referencia técnica</h3>
+                <dl>
+                    <div><dt>Dispositivo</dt><dd>{{ device_name }}</dd></div>
+                    <div><dt>Interfaz</dt><dd>{{ interface_name }}</dd></div>
+                    <div><dt>Tipo</dt><dd>{{ current_type_label or "Sin definir" }}</dd></div>
+                    <div><dt>Direcciones IP</dt><dd>{{ addresses|length }}</dd></div>
+                    <div><dt>MAC</dt><dd>{{ current_mac or "Sin asignar" }}</dd></div>
+                </dl>
+            </section>
+        </aside>
+        {% endif %}
+    </div>
+
+    {% if interface %}
+    <section class="panel interface-workspace-danger">
+        <div>
+            <span class="eyebrow">Zona delicada</span>
+            <strong>Eliminar interfaz completa</strong>
+            <p>Esta acción es distinta de eliminar la conexión y se bloqueará si existen cables o direcciones IP.</p>
+        </div>
+        <a class="button danger ghost-danger" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/delete">Eliminar interfaz</a>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

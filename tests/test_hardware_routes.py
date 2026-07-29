@@ -24,7 +24,7 @@ MODEL = {
     "manufacturer": {"id": 1, "name": "ZTE", "display": "ZTE"},
     "part_number": "C600",
     "slug": "zte-c600",
-    "u_height": 6,
+    "u_height": 10,
     "is_full_depth": True,
     "front_image": None,
     "rear_image": None,
@@ -47,6 +47,35 @@ DEVICE = {
     "site": {"name": "Samaná"},
     "rack": {"name": "SMN01"},
     "status": {"label": "Active"},
+}
+
+
+MODEL_DETAIL = {
+    "device_type": MODEL,
+    "interfaces": [INTERFACE],
+    "module_bays": [],
+    "power_ports": [],
+    "power_outlets": [],
+    "console_ports": [],
+    "console_server_ports": [],
+    "front_ports": [],
+    "rear_ports": [],
+    "device_bays": [],
+    "inventory_items": [],
+    "devices": [DEVICE],
+    "component_summary": {
+        "interfaces": 1,
+        "module_bays": 0,
+        "power_ports": 0,
+        "power_outlets": 0,
+        "console_ports": 0,
+        "console_server_ports": 0,
+        "front_ports": 0,
+        "rear_ports": 0,
+        "device_bays": 0,
+        "inventory_items": 0,
+        "devices": 1,
+    },
 }
 
 
@@ -92,51 +121,38 @@ class HardwareRouteTests(unittest.TestCase):
     @patch(
         "app.routers.hardware.HardwareService.model_detail",
         new_callable=AsyncMock,
-        return_value={
-            "device_type": MODEL,
-            "interfaces": [INTERFACE],
-            "module_bays": [],
-            "power_ports": [],
-            "console_ports": [],
-            "front_ports": [],
-            "rear_ports": [],
-            "devices": [DEVICE],
-            "component_summary": {
-                "interfaces": 1,
-                "module_bays": 0,
-                "power_ports": 0,
-                "console_ports": 0,
-                "front_ports": 0,
-                "rear_ports": 0,
-                "devices": 1,
-            },
-        },
+        return_value=MODEL_DETAIL,
     )
-    def test_model_detail_renders_all_workspaces(
+    def test_model_detail_renders_integrated_documentation_workspaces(
         self,
         _detail,
         _manufacturers,
     ):
         response = self.client.get("/device-types/10")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Ficha del modelo", response.text)
+        self.assertIn("Ficha única de documentación", response.text)
         self.assertIn("Información general", response.text)
         self.assertIn("Imágenes del modelo", response.text)
-        self.assertIn("Plantillas de interfaces", response.text)
+        self.assertIn("Puertos, interfaces y componentes", response.text)
+        self.assertIn("Interfaces de red", response.text)
+        self.assertIn("Puertos frontales", response.text)
+        self.assertIn("Entradas de energía", response.text)
+        self.assertIn("data-create-modal", response.text)
         self.assertIn("OLT-SMN-01", response.text)
+        self.assertNotIn("Plantillas de interfaces", response.text)
 
     @patch(
         "app.routers.hardware.HardwareService.update_device_type",
         new_callable=AsyncMock,
     )
-    def test_model_update_is_blocked_in_read_only_mode(self, update_model):
+    def test_model_update_is_blocked_with_invalid_csrf(self, update_model):
         response = self.client.post(
             "/device-types/10/actions/update",
             data={
                 "csrf": "invalid",
                 "manufacturer_id": "1",
                 "model": "C600",
-                "u_height": "6",
+                "u_height": "10",
             },
             follow_redirects=False,
         )

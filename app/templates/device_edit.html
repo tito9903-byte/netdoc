@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/devices.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-1">
+{% endblock %}
+
+{% block content %}
+{% set current_type = device.get("device_type") or {} %}
+{% set current_role = device.get("role") or device.get("device_role") or {} %}
+{% set current_site = device.get("site") or {} %}
+{% set current_location = device.get("location") or {} %}
+{% set current_rack = device.get("rack") or {} %}
+{% set current_platform = device.get("platform") or {} %}
+{% set current_status = device.get("status") or {} %}
+{% set current_face = device.get("face") or {} %}
+
+<div class="detail-navigation">
+    <a href="/devices/{{ device_id }}">← Volver al dispositivo</a>
+</div>
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible guardar el dispositivo.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="management-hero">
+    <div>
+        <span class="eyebrow">Administración del dispositivo</span>
+        <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+        <p>Los cambios se aplican directamente sobre la ficha correspondiente en NetBox.</p>
+    </div>
+    <span class="panel-badge">ID {{ device_id }}</span>
+</section>
+
+<section class="panel management-form-panel">
+    {% if not write_enabled %}
+    <div class="read-only-callout compact-callout">
+        <span>◌</span>
+        <div><strong>Solo lectura</strong><span>La escritura en NetBox está deshabilitada.</span></div>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/devices/{{ device_id }}/edit" class="management-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="management-grid">
+            <div class="field">
+                <label for="device-name">Nombre</label>
+                <input id="device-name" name="name" required value="{{ device.get('name') or '' }}">
+            </div>
+
+            <div class="field">
+                <label for="device-type">Modelo</label>
+                <select id="device-type" name="device_type_id" required>
+                    {% for item in device_types %}
+                    {% set manufacturer = item.get("manufacturer") or {} %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_type.get('id') %}selected{% endif %}>
+                        {{ manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" }} · {{ item.get("model") or item.get("display") }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-role">Rol</label>
+                <select id="device-role" name="role_id" required>
+                    {% for item in roles %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_role.get('id') %}selected{% endif %}>
+                        {{ item.get("display") or item.get("name") }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-status">Estado</label>
+                <select id="device-status" name="status" required>
+                    {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if value == current_status.get('value') %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-site">Sitio</label>
+                <select id="device-site" name="site_id" required>
+                    {% for item in sites %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_site.get('id') %}selected{% endif %}>
+                        {{ item.get("display") or item.get("name") }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-platform">Plataforma</label>
+                <select id="device-platform" name="platform_id">
+                    <option value="">Sin plataforma</option>
+                    {% for item in platforms %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_platform.get('id') %}selected{% endif %}>
+                        {{ item.get("display") or item.get("name") }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-location">Ubicación</label>
+                <select id="device-location" name="location_id">
+                    <option value="">Sin ubicación</option>
+                    {% for item in locations %}
+                    {% set item_site = item.get("site") or {} %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_location.get('id') %}selected{% endif %}>
+                        {{ item_site.get("display") or item_site.get("name") or "Sin sitio" }} · {{ item.get("display") or item.get("name") }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-rack">Rack</label>
+                <select id="device-rack" name="rack_id">
+                    <option value="">Sin rack</option>
+                    {% for item in racks %}
+                    {% set item_site = item.get("site") or {} %}
+                    <option value="{{ item.get('id') }}" {% if item.get('id') == current_rack.get('id') %}selected{% endif %}>
+                        {{ item_site.get("display") or item_site.get("name") or "Sin sitio" }} · {{ item.get("display") or item.get("name") }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-position">Posición U</label>
+                <input id="device-position" name="position" type="number" min="0" step="0.5" value="{{ device.get('position') if device.get('position') is not none else '' }}">
+            </div>
+
+            <div class="field">
+                <label for="device-face">Cara</label>
+                <select id="device-face" name="face">
+                    <option value="">Sin cara</option>
+                    <option value="front" {% if current_face.get('value') == 'front' %}selected{% endif %}>Frontal</option>
+                    <option value="rear" {% if current_face.get('value') == 'rear' %}selected{% endif %}>Trasera</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="device-serial">Número de serie</label>
+                <input id="device-serial" name="serial" value="{{ device.get('serial') or '' }}">
+            </div>
+
+            <div class="field">
+                <label for="device-asset">Etiqueta de activo</label>
+                <input id="device-asset" name="asset_tag" value="{{ device.get('asset_tag') or '' }}">
+            </div>
+
+            <div class="field management-wide-field">
+                <label for="device-description">Descripción</label>
+                <textarea id="device-description" name="description" rows="3">{{ device.get("description") or "" }}</textarea>
+            </div>
+
+            <div class="field management-wide-field">
+                <label for="device-comments">Comentarios</label>
+                <textarea id="device-comments" name="comments" rows="5">{{ device.get("comments") or "" }}</textarea>
+            </div>
+        </div>
+
+        <div class="management-actions">
+            <a class="button secondary" href="/devices/{{ device_id }}">Cancelar</a>
+            <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>Guardar cambios</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

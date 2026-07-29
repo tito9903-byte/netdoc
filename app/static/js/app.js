@@ -2,9 +2,19 @@ const menuButton = document.getElementById("menuToggle");
 const sidebar = document.getElementById("sidebar");
 
 if (menuButton && sidebar) {
+    const mobileNavQuery = window.matchMedia("(max-width: 900px)");
+
     const setOpen = (open) => {
         sidebar.classList.toggle("open", open);
+        document.body.classList.toggle(
+            "mobile-nav-open",
+            open && mobileNavQuery.matches,
+        );
         menuButton.setAttribute("aria-expanded", String(open));
+        menuButton.setAttribute(
+            "aria-label",
+            open ? "Cerrar menú" : "Abrir menú",
+        );
     };
 
     menuButton.addEventListener("click", () => {
@@ -34,10 +44,16 @@ if (menuButton && sidebar) {
     sidebar.addEventListener("click", (event) => {
         const target = event.target;
         if (
-            window.matchMedia("(max-width: 900px)").matches &&
+            mobileNavQuery.matches &&
             target instanceof Element &&
             target.closest("a.nav-item")
         ) {
+            setOpen(false);
+        }
+    });
+
+    mobileNavQuery.addEventListener("change", (event) => {
+        if (!event.matches) {
             setOpen(false);
         }
     });
@@ -115,11 +131,27 @@ function finishNavigationFeedback() {
 
 window.addEventListener("pageshow", finishNavigationFeedback);
 
-// Prefetch solo cuando el usuario demuestra intención de abrir un enlace.
+// Prefetch solo para páginas livianas. Las rutas que consultan inventario amplio
+// deben comenzar únicamente después de un clic explícito del usuario.
 const prefetched = new Set();
 const prefetchTimers = new WeakMap();
 const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 const allowPrefetch = !(connection && connection.saveData);
+const noPrefetchPrefixes = [
+    "/racks",
+    "/connections",
+    "/device-types",
+    "/manufacturers",
+    "/search",
+    "/system",
+    "/admin/audit",
+];
+
+function isHeavyNavigationPath(pathname) {
+    return noPrefetchPrefixes.some((prefix) => (
+        pathname === prefix || pathname.startsWith(`${prefix}/`)
+    ));
+}
 
 function eligibleInternalLink(anchor) {
     if (!(anchor instanceof HTMLAnchorElement)) {
@@ -146,7 +178,8 @@ function eligibleInternalLink(anchor) {
         url.pathname === window.location.pathname && url.search === window.location.search ||
         url.pathname.endsWith(".pdf") ||
         url.pathname.startsWith("/media/") ||
-        url.pathname === "/logout"
+        url.pathname === "/logout" ||
+        isHeavyNavigationPath(url.pathname)
     ) {
         return null;
     }
@@ -220,7 +253,23 @@ document.addEventListener("click", (event) => {
     const anchor = event.target instanceof Element
         ? event.target.closest("a[href]")
         : null;
-    if (eligibleInternalLink(anchor)) {
+    if (!(anchor instanceof HTMLAnchorElement)) {
+        return;
+    }
+
+    let url;
+    try {
+        url = new URL(anchor.href, window.location.href);
+    } catch (_error) {
+        return;
+    }
+
+    if (
+        url.origin === window.location.origin &&
+        !anchor.target &&
+        !anchor.hasAttribute("download") &&
+        !anchor.getAttribute("href")?.startsWith("#")
+    ) {
         startNavigationFeedback();
     }
 });
@@ -228,3 +277,62 @@ document.addEventListener("click", (event) => {
 document.addEventListener("submit", () => {
     startNavigationFeedback();
 });
+
+// Muestra en la navegación de la ficha del modelo la cantidad de puertos
+// documentados. En paneles de parcheo, frente y parte trasera representan las
+// dos caras del mismo canal físico, por eso se cuenta la mayor de ambas y no
+// se duplican los puertos cuando existe una relación uno a uno.
+function showDocumentedPortCount() {
+    const componentsLink = document.querySelector(
+        '.hardware-section-nav a[href="#components"]',
+    );
+    const componentCards = document.querySelectorAll(
+        ".component-type-card[href*='kind=']",
+    );
+
+    if (!(componentsLink instanceof HTMLAnchorElement) || !componentCards.length) {
+        return;
+    }
+
+    const counts = new Map();
+    componentCards.forEach((card) => {
+        if (!(card instanceof HTMLAnchorElement)) {
+            return;
+        }
+
+        let url;
+        try {
+            url = new URL(card.href, window.location.href);
+        } catch (_error) {
+            return;
+        }
+
+        const kind = url.searchParams.get("kind");
+        const countElement = card.querySelector(".component-card-count");
+        const count = Number.parseInt(countElement?.textContent || "0", 10);
+        if (kind) {
+            counts.set(kind, Number.isFinite(count) ? count : 0);
+        }
+    });
+
+    const patchPanelPorts = Math.max(
+        counts.get("front_port") || 0,
+        counts.get("rear_port") || 0,
+    );
+    const portTotal =
+        (counts.get("interface") || 0) +
+        (counts.get("console_port") || 0) +
+        (counts.get("console_server_port") || 0) +
+        (counts.get("power_port") || 0) +
+        (counts.get("power_outlet") || 0) +
+        patchPanelPorts;
+
+    const badge = document.createElement("span");
+    badge.className = "hardware-section-nav-count";
+    badge.textContent = String(portTotal);
+    badge.title = `${portTotal} puertos documentados`;
+    badge.setAttribute("aria-label", `${portTotal} puertos documentados`);
+    componentsLink.appendChild(badge);
+}
+
+showDocumentedPortCount();

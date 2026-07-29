@@ -11,41 +11,56 @@
         {% block title %}{{ page_title }} | NetDoc{% endblock %}
     </title>
 
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', path='css/app.css') }}"
-    >
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', path='css/auth.css') }}"
-    >
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', path='css/workflows.css') }}"
-    >
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', path='css/navigation.css') }}"
-    >
+    <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/auth.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/workflows.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/navigation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/create_modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/topbar_professional.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/device_primary_ip_link.css') }}?v=20260726-primary-ip-1">
+
+    <style>
+        /* Respaldo visible para el contador de puertos aunque el navegador tenga
+           una versión anterior del CSS específico de componentes en caché. */
+        .hardware-section-nav a[href="#components"] {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .hardware-section-nav-count {
+            display: inline-grid;
+            min-width: 22px;
+            height: 20px;
+            place-items: center;
+            padding: 0 7px;
+            border: 1px solid rgba(32, 200, 210, 0.32);
+            border-radius: 999px;
+            background: rgba(32, 200, 210, 0.1);
+            color: #20c8d2;
+            font-size: 9px;
+            font-weight: 800;
+            line-height: 1;
+        }
+    </style>
 
     {% block extra_head %}{% endblock %}
 </head>
 
-<body>
+{% set modal_mode = request.query_params.get("modal") == "1" %}
+<body class="{% if modal_mode %}modal-page{% endif %}">
     {% set permissions = current_permissions | default(request.session.get("permissions", []), true) %}
     {% set role_label = current_role | default(request.session.get("role_name", "Usuario"), true) %}
     {% set user_label = current_user_name | default(request.session.get("full_name", ""), true) %}
     {% set is_manufacturers_page = request.url.path.startswith("/manufacturers") %}
     {% set general_pages = ["dashboard", "search", "profile"] %}
-    {% set documentation_pages = ["devices", "device_types", "interface_templates", "ipam", "connections", "racks"] %}
-    {% set action_pages = ["rack_create"] %}
+    {% set documentation_pages = ["devices", "device_types", "device_type_new", "ipam", "connections", "racks"] %}
     {% set administration_pages = ["users", "roles", "audit", "system"] %}
 
     <div class="app-shell">
         <aside class="sidebar" id="sidebar">
             <div class="brand">
                 <div class="brand-symbol">N</div>
-
                 <div>
                     <strong>NetDoc</strong>
                     <span>Documentación de red</span>
@@ -66,32 +81,20 @@
                     </summary>
                     <div class="nav-group-items">
                         {% if "dashboard.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'dashboard' %}active{% endif %}"
-                            href="/"
-                            {% if current_page == 'dashboard' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'dashboard' %}active{% endif %}" href="/" {% if current_page == 'dashboard' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">⌂</span>
                             <span>Dashboard</span>
                         </a>
                         {% endif %}
 
                         {% if "search.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'search' %}active{% endif %}"
-                            href="/search"
-                            {% if current_page == 'search' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'search' %}active{% endif %}" href="/search" {% if current_page == 'search' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">⌕</span>
                             <span>Búsqueda global</span>
                         </a>
                         {% endif %}
 
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'profile' %}active{% endif %}"
-                            href="/profile"
-                            {% if current_page == 'profile' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'profile' %}active{% endif %}" href="/profile" {% if current_page == 'profile' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">◎</span>
                             <span>Mi perfil</span>
                         </a>
@@ -112,106 +115,40 @@
                     </summary>
                     <div class="nav-group-items">
                         {% if "devices.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'devices' %}active{% endif %}"
-                            href="/devices"
-                            {% if current_page == 'devices' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'devices' %}active{% endif %}" href="/devices" {% if current_page == 'devices' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">▣</span>
                             <span>Dispositivos</span>
                         </a>
 
-                        <a
-                            class="nav-item nav-subitem {% if is_manufacturers_page %}active{% endif %}"
-                            href="/manufacturers"
-                            {% if is_manufacturers_page %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if is_manufacturers_page %}active{% endif %}" href="/manufacturers" {% if is_manufacturers_page %}aria-current="page"{% endif %}>
                             <span class="nav-icon">◫</span>
                             <span>Fabricantes</span>
                         </a>
 
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'device_types' and not is_manufacturers_page %}active{% endif %}"
-                            href="/device-types"
-                            {% if current_page == 'device_types' and not is_manufacturers_page %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page in ['device_types', 'device_type_new'] and not is_manufacturers_page %}active{% endif %}" href="/device-types" {% if current_page in ['device_types', 'device_type_new'] and not is_manufacturers_page %}aria-current="page"{% endif %}>
                             <span class="nav-icon">▦</span>
                             <span>Modelos de equipos</span>
-                        </a>
-
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'interface_templates' %}active{% endif %}"
-                            href="/interface-templates"
-                            {% if current_page == 'interface_templates' %}aria-current="page"{% endif %}
-                        >
-                            <span class="nav-icon">⇆</span>
-                            <span>Plantillas de puertos</span>
                         </a>
                         {% endif %}
 
                         {% if "search.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'ipam' %}active{% endif %}"
-                            href="/ipam"
-                            {% if current_page == 'ipam' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'ipam' %}active{% endif %}" href="/ipam" {% if current_page == 'ipam' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">⌁</span>
                             <span>Direccionamiento IP</span>
                         </a>
                         {% endif %}
 
                         {% if "connections.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'connections' %}active{% endif %}"
-                            href="/connections"
-                            {% if current_page == 'connections' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'connections' %}active{% endif %}" href="/connections" {% if current_page == 'connections' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">⇄</span>
                             <span>Conexiones</span>
                         </a>
                         {% endif %}
 
                         {% if "racks.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'racks' %}active{% endif %}"
-                            href="/racks"
-                            {% if current_page == 'racks' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'racks' %}active{% endif %}" href="/racks" {% if current_page == 'racks' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">◇</span>
                             <span>Racks</span>
-                        </a>
-                        {% endif %}
-                    </div>
-                </details>
-                {% endif %}
-
-                {% if "devices.create" in permissions or "racks.view" in permissions %}
-                <details
-                    class="nav-group"
-                    data-nav-group="actions"
-                    data-active="{{ 'true' if current_page in action_pages else 'false' }}"
-                    {% if current_page in action_pages %}open{% endif %}
-                >
-                    <summary class="nav-group-summary">
-                        <span class="nav-group-icon">＋</span>
-                        <span>Acciones rápidas</span>
-                        <span class="nav-group-chevron">⌄</span>
-                    </summary>
-                    <div class="nav-group-items">
-                        {% if "devices.create" in permissions %}
-                        <a class="nav-item nav-subitem" href="/devices/actions/new">
-                            <span class="nav-icon">＋</span>
-                            <span>Crear equipo</span>
-                        </a>
-                        {% endif %}
-                        {% if "racks.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'rack_create' %}active{% endif %}"
-                            href="/racks/actions/new"
-                            {% if current_page == 'rack_create' %}aria-current="page"{% endif %}
-                        >
-                            <span class="nav-icon">◇</span>
-                            <span>Crear rack</span>
                         </a>
                         {% endif %}
                     </div>
@@ -232,44 +169,28 @@
                     </summary>
                     <div class="nav-group-items">
                         {% if "users.manage" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'users' %}active{% endif %}"
-                            href="/admin/users"
-                            {% if current_page == 'users' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'users' %}active{% endif %}" href="/admin/users" {% if current_page == 'users' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">♙</span>
                             <span>Usuarios</span>
                         </a>
                         {% endif %}
 
                         {% if "roles.manage" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'roles' %}active{% endif %}"
-                            href="/admin/roles"
-                            {% if current_page == 'roles' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'roles' %}active{% endif %}" href="/admin/roles" {% if current_page == 'roles' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">◆</span>
                             <span>Roles y permisos</span>
                         </a>
                         {% endif %}
 
                         {% if "audit.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'audit' %}active{% endif %}"
-                            href="/admin/audit"
-                            {% if current_page == 'audit' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'audit' %}active{% endif %}" href="/admin/audit" {% if current_page == 'audit' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">≣</span>
                             <span>Auditoría</span>
                         </a>
                         {% endif %}
 
                         {% if "system.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'system' %}active{% endif %}"
-                            href="/system"
-                            {% if current_page == 'system' %}aria-current="page"{% endif %}
-                        >
+                        <a class="nav-item nav-subitem {% if current_page == 'system' %}active{% endif %}" href="/system" {% if current_page == 'system' %}aria-current="page"{% endif %}>
                             <span class="nav-icon">◉</span>
                             <span>Sistema</span>
                         </a>
@@ -281,18 +202,9 @@
 
             <div class="sidebar-footer">
                 <div class="connection-status">
-                    <span
-                        class="status-dot {% if netbox_connected %}online{% else %}offline{% endif %}"
-                    ></span>
-
+                    <span class="status-dot {% if netbox_connected %}online{% else %}offline{% endif %}"></span>
                     <div>
-                        <strong>
-                            {% if netbox_connected %}
-                                NetBox conectado
-                            {% else %}
-                                Conexión limitada
-                            {% endif %}
-                        </strong>
+                        <strong>{% if netbox_connected %}NetBox conectado{% else %}Conexión limitada{% endif %}</strong>
                         <span title="{{ netbox_url }}">{{ netbox_url }}</span>
                     </div>
                 </div>
@@ -301,16 +213,7 @@
 
         <div class="main-area">
             <header class="topbar">
-                <button
-                    class="menu-button"
-                    id="menuToggle"
-                    type="button"
-                    aria-label="Abrir menú"
-                    aria-controls="sidebar"
-                    aria-expanded="false"
-                >
-                    ☰
-                </button>
+                <button class="menu-button" id="menuToggle" type="button" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">☰</button>
 
                 <div class="page-heading">
                     <h1>{{ page_title }}</h1>
@@ -318,27 +221,28 @@
                 </div>
 
                 <div class="topbar-actions auth-topbar-actions">
-                    <span class="environment-badge">
-                        {% if write_enabled | default(false) %}
-                            Escritura controlada
-                        {% else %}
-                            Solo lectura
-                        {% endif %}
+                    <span class="environment-badge" title="Todos los cambios quedan auditados">
+                        <span class="environment-indicator" aria-hidden="true"></span>
+                        <span class="environment-copy">
+                            <strong>{% if write_enabled | default(false) %}Escritura controlada{% else %}Solo lectura{% endif %}</strong>
+                            <small>{% if write_enabled | default(false) %}Cambios auditados{% else %}Sin cambios en NetBox{% endif %}</small>
+                        </span>
                     </span>
 
                     <a class="current-user" href="/profile" aria-label="Abrir mi perfil">
-                        <span class="current-user-avatar">
-                            {{ (current_user or "U")[0] | upper }}
-                        </span>
-
-                        <div>
+                        <span class="current-user-avatar">{{ (current_user or "U")[0] | upper }}</span>
+                        <span class="current-user-meta">
                             <strong>{{ user_label or current_user }}</strong>
                             <span>{{ role_label }}</span>
-                        </div>
+                        </span>
+                        <span class="current-user-chevron" aria-hidden="true">›</span>
                     </a>
 
                     <form action="/logout" method="post">
-                        <button class="logout-button" type="submit">Salir</button>
+                        <button class="logout-button" type="submit" aria-label="Cerrar sesión">
+                            <span class="logout-icon" aria-hidden="true">↪</span>
+                            <span class="logout-label">Salir</span>
+                        </button>
                     </form>
                 </div>
             </header>
@@ -349,7 +253,34 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', path='js/app.js') }}"></script>
+    {% if not modal_mode %}
+    <div class="create-modal" id="createModal" data-create-modal-root hidden aria-hidden="true">
+        <button class="create-modal-backdrop" type="button" data-create-modal-close aria-label="Cerrar ventana de creación"></button>
+
+        <section class="create-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
+            <header class="create-modal-header">
+                <div>
+                    <span>Nueva documentación</span>
+                    <h2 id="createModalTitle">Crear registro</h2>
+                </div>
+                <button class="create-modal-close" type="button" data-create-modal-close aria-label="Cerrar">×</button>
+            </header>
+
+            <div class="create-modal-loading" data-create-modal-loading>
+                <span></span>
+                <strong>Cargando formulario…</strong>
+            </div>
+
+            <iframe class="create-modal-frame" data-create-modal-frame title="Formulario de creación"></iframe>
+        </section>
+    </div>
+    {% endif %}
+
+    {% if not modal_mode %}
+    <script src="{{ url_for('static', path='js/create_modal.js') }}"></script>
+    {% endif %}
+    <script src="{{ url_for('static', path='js/app.js') }}?v=20260726-port-counter-2"></script>
+    <script src="{{ url_for('static', path='js/device_primary_ip_link.js') }}?v=20260726-primary-ip-1"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

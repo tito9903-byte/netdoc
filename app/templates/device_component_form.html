@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-2">
+{% endblock %}
+
+{% block content %}
+<div class="detail-navigation">
+    <a href="/devices/{{ device_id }}/components/new">← Volver a tipos de componentes</a>
+</div>
+
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible crear el componente.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="management-hero">
+    <div>
+        <span class="eyebrow">{{ component_kind.label }}</span>
+        <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+        <p>{{ component_kind.description }}</p>
+    </div>
+    <span class="component-kind-icon" aria-hidden="true">{{ component_kind.icon }}</span>
+</section>
+
+<section class="panel management-form-panel">
+    {% if not write_enabled %}
+    <div class="read-only-callout compact-callout">
+        <span>◌</span>
+        <div><strong>Solo lectura</strong><span>La escritura en NetBox está deshabilitada.</span></div>
+    </div>
+    {% endif %}
+
+    <form
+        method="post"
+        action="/devices/{{ device_id }}/components/{{ component_kind.key }}/actions/create"
+        class="management-form"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="management-grid">
+            {% for field in fields %}
+            {% if field.supported %}
+                {% if field.kind == "boolean" %}
+                <div class="field checkbox-field hardware-checkbox">
+                    <label>
+                        <input type="checkbox" name="{{ field.name }}" value="true">
+                        <span>{{ field.label }}</span>
+                    </label>
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                </div>
+                {% elif field.kind in ["choice", "relation", "relation-global"] %}
+                <div class="field">
+                    <label for="component-{{ field.name }}">{{ field.label }}</label>
+                    <select id="component-{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                        <option value="">Seleccionar</option>
+                        {% for choice in field.choices %}
+                        <option value="{{ choice.value }}">{{ choice.label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                </div>
+                {% elif field.kind == "textarea" %}
+                <div class="field management-wide-field">
+                    <label for="component-{{ field.name }}">{{ field.label }}</label>
+                    <textarea id="component-{{ field.name }}" name="{{ field.name }}" rows="4" {% if field.required %}required{% endif %}>{{ field.default }}</textarea>
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                </div>
+                {% else %}
+                <div class="field">
+                    <label for="component-{{ field.name }}">{{ field.label }}</label>
+                    <input
+                        id="component-{{ field.name }}"
+                        name="{{ field.name }}"
+                        {% if field.kind == "integer" %}type="number" min="0" step="1"{% else %}type="text"{% endif %}
+                        value="{{ field.default }}"
+                        {% if field.required %}required{% endif %}
+                    >
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                </div>
+                {% endif %}
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="management-actions">
+            <a class="button secondary" href="/devices/{{ device_id }}/components/new">Cancelar</a>
+            <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                Crear {{ component_kind.label | lower }}
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}

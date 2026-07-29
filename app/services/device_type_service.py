@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import re
+from time import monotonic
 import unicodedata
 from typing import Any
 
 import httpx
 
 from app.core.config import get_settings
+from app.services.netbox_client import get_shared_netbox_client
 
 
 class DeviceTypeServiceError(Exception):
@@ -101,22 +103,31 @@ def build_interface_names(
 
 
 class DeviceTypeService:
+    _get_all_cache: dict[
+        tuple[str, tuple[tuple[str, str], ...], int, int],
+        tuple[float, list[dict[str, Any]]],
+    ] = {}
+    _get_all_cache_seconds = 30.0
+    _get_all_cache_limit = 128
+    _interface_choices_cache: tuple[
+        float,
+        list[dict[str, str]],
+    ] | None = None
+    _interface_choices_cache_seconds = 300.0
+
     def __init__(self) -> None:
         self.settings = get_settings()
         self.base_url = self.settings.netbox_url.rstrip("/")
 
+    @classmethod
+    def clear_read_caches(cls) -> None:
+        cls._get_all_cache.clear()
+        cls._interface_choices_cache = None
+
     def _headers(self) -> dict[str, str]:
-        token_type = self.settings.netbox_token_type.strip().lower()
-        authorization = (
-            f"Bearer {self.settings.netbox_token}"
-            if token_type == "bearer"
-            else f"Token {self.settings.netbox_token}"
-        )
         return {
-            "Authorization": authorization,
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": "NetDoc/0.10.1",
         }
 
     @staticmethod
@@ -155,7 +166,6 @@ class DeviceTypeService:
         params: dict[str, Any] | None = None,
         json_body: dict[str, Any] | list[dict[str, Any]] | None = None,
     ) -> Any:
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
         clean_params = {
             key: value
             for key, value in (params or {}).items()
@@ -163,18 +173,14 @@ class DeviceTypeService:
         }
 
         try:
-            async with httpx.AsyncClient(
+            client = await get_shared_netbox_client()
+            response = await client.request(
+                method=method,
+                url=endpoint.lstrip("/"),
+                params=clean_params,
+                json=json_body,
                 headers=self._headers(),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.request(
-                    method=method,
-                    url=url,
-                    params=clean_params,
-                    json=json_body,
-                )
+            )
         except httpx.ConnectError as exc:
             raise DeviceTypeServiceError(
                 f"No fue posible conectar con NetBox en {self.base_url}."
@@ -191,11 +197,30 @@ class DeviceTypeService:
             )
 
         try:
-            return response.json()
+            payload = response.json()
         except ValueError as exc:
             raise DeviceTypeServiceError(
                 "NetBox no devolvió una respuesta JSON válida."
             ) from exc
+
+        if method.upper() not in {"GET", "HEAD", "OPTIONS"}:
+            type(self).clear_read_caches()
+
+        return payload
+
+    @staticmethod
+    def _cache_key(
+        endpoint: str,
+        params: dict[str, Any] | None,
+        page_limit: int,
+        maximum_pages: int,
+    ) -> tuple[str, tuple[tuple[str, str], ...], int, int]:
+        normalized = tuple(sorted(
+            (str(key), repr(value))
+            for key, value in (params or {}).items()
+            if value not in (None, "")
+        ))
+        return endpoint, normalized, page_limit, maximum_pages
 
     async def get_all(
         self,
@@ -205,6 +230,17 @@ class DeviceTypeService:
         page_limit: int = 200,
         maximum_pages: int = 50,
     ) -> list[dict[str, Any]]:
+        key = self._cache_key(
+            endpoint,
+            params,
+            page_limit,
+            maximum_pages,
+        )
+        now = monotonic()
+        cached = type(self)._get_all_cache.get(key)
+        if cached is not None and cached[0] > now:
+            return [dict(item) for item in cached[1]]
+
         results: list[dict[str, Any]] = []
         offset = 0
 
@@ -237,6 +273,16 @@ class DeviceTypeService:
 
             offset += page_limit
 
+        cache = type(self)._get_all_cache
+        expired = [cache_key for cache_key, value in cache.items() if value[0] <= now]
+        for cache_key in expired:
+            cache.pop(cache_key, None)
+        if len(cache) >= self._get_all_cache_limit:
+            cache.clear()
+        cache[key] = (
+            monotonic() + self._get_all_cache_seconds,
+            [dict(item) for item in results],
+        )
         return results
 
     async def list_manufacturers(self) -> list[dict[str, Any]]:
@@ -328,6 +374,11 @@ class DeviceTypeService:
         return rows
 
     async def interface_type_choices(self) -> list[dict[str, str]]:
+        cached = type(self)._interface_choices_cache
+        now = monotonic()
+        if cached is not None and cached[0] > now:
+            return [dict(item) for item in cached[1]]
+
         try:
             payload = await self.request(
                 "OPTIONS",
@@ -351,11 +402,15 @@ class DeviceTypeService:
                     })
 
             if choices:
+                type(self)._interface_choices_cache = (
+                    monotonic() + self._interface_choices_cache_seconds,
+                    [dict(item) for item in choices],
+                )
                 return choices
         except DeviceTypeServiceError:
             pass
 
-        return [
+        fallback = [
             {"value": "1000base-t", "label": "1GBASE-T"},
             {"value": "10gbase-t", "label": "10GBASE-T"},
             {"value": "1000base-x-sfp", "label": "SFP (1G)"},
@@ -365,6 +420,11 @@ class DeviceTypeService:
             {"value": "100gbase-x-qsfp28", "label": "QSFP28 (100G)"},
             {"value": "virtual", "label": "Virtual"},
         ]
+        type(self)._interface_choices_cache = (
+            monotonic() + self._interface_choices_cache_seconds,
+            [dict(item) for item in fallback],
+        )
+        return fallback
 
     async def create_device_type(
         self,

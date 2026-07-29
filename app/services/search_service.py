@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 from app.services.netbox_client import NetBoxClient, NetBoxError
+
+
+logger = logging.getLogger(__name__)
 
 
 def _label(value: Any, fallback: str = "—") -> str:
@@ -168,16 +172,33 @@ async def global_search(
                     "ordering": ordering,
                 },
             )
+            if not isinstance(payload, dict):
+                raise TypeError(
+                    f"NetBox devolvió {type(payload).__name__} para {endpoint}"
+                )
+
+            raw_results = payload.get("results", [])
+            if not isinstance(raw_results, list):
+                raise TypeError(
+                    f"NetBox devolvió resultados inválidos para {endpoint}"
+                )
+
             results = [
                 formatter(item)
-                for item in payload.get("results", [])
+                for item in raw_results
                 if isinstance(item, dict)
             ]
+            raw_count = payload.get("count")
+            try:
+                count = int(raw_count if raw_count is not None else len(results))
+            except (TypeError, ValueError):
+                count = len(results)
+
             return {
                 "code": code,
                 "label": label,
                 "results": results,
-                "count": int(payload.get("count") or len(results)),
+                "count": count,
                 "error": None,
             }
         except NetBoxError as exc:
@@ -187,6 +208,22 @@ async def global_search(
                 "results": [],
                 "count": 0,
                 "error": exc.message,
+            }
+        except Exception:
+            logger.exception(
+                "La búsqueda global falló en la sección %s (%s)",
+                code,
+                endpoint,
+            )
+            return {
+                "code": code,
+                "label": label,
+                "results": [],
+                "count": 0,
+                "error": (
+                    f"No fue posible procesar la sección {label.lower()}. "
+                    "Las demás categorías continúan disponibles."
+                ),
             }
 
     sections = list(

@@ -54,6 +54,13 @@ class FakeSearchClient:
         return payloads[endpoint]
 
 
+class PartiallyFailingSearchClient(FakeSearchClient):
+    async def get_list(self, endpoint, params=None):
+        if endpoint == "/api/dcim/interfaces/":
+            raise RuntimeError("respuesta inesperada de prueba")
+        return await super().get_list(endpoint, params=params)
+
+
 class SearchServiceTests(unittest.IsolatedAsyncioTestCase):
     async def test_global_search_groups_results_and_links(self):
         result = await global_search("core", client=FakeSearchClient())
@@ -69,6 +76,17 @@ class SearchServiceTests(unittest.IsolatedAsyncioTestCase):
         result = await global_search("x", client=FakeSearchClient())
         self.assertFalse(result["searched"])
         self.assertEqual([], result["sections"])
+
+    async def test_unexpected_section_failure_does_not_break_whole_search(self):
+        result = await global_search(
+            "core",
+            client=PartiallyFailingSearchClient(),
+        )
+
+        self.assertTrue(result["searched"])
+        self.assertEqual(1, result["total"])
+        self.assertEqual("CORE-01", result["sections"][0]["results"][0]["title"])
+        self.assertIn("No fue posible procesar", result["sections"][1]["error"])
 
 
 class SystemServiceTests(unittest.TestCase):

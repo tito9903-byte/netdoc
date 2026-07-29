@@ -10,7 +10,20 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
+from app.services.lldp_eos_support import install_lldp_eos_support
+from app.services.lldp_matching_support import install_lldp_matching_support
+from app.services.lldp_privilege_support import install_lldp_privilege_support
+from app.services.lldp_vendor_support import install_lldp_vendor_support
 from app.services.search_service import global_search
+
+
+# El router de búsqueda ya se monta directamente en app.main junto al resto de
+# documentación. Instalar aquí los adaptadores LLDP garantiza que estén activos
+# antes de registrar las rutas finales.
+install_lldp_privilege_support()
+install_lldp_eos_support()
+install_lldp_vendor_support()
+install_lldp_matching_support()
 
 
 router = APIRouter()
@@ -82,13 +95,34 @@ async def search_api(request: Request, q: str = ""):
 # Estos routers se agrupan aquí para conservar compatibilidad con la estructura
 # actual. Una futura separación del bootstrap los moverá a app/main.py.
 from app.routers.change_plans import router as change_plans_router
+from app.routers.device_components import router as device_components_router
 from app.routers.device_images import router as device_images_router
+from app.routers.device_interface_ips import router as device_interface_ips_router
+from app.routers.device_management import router as device_management_router
+from app.routers.device_management_api import router as device_management_api_router
 from app.routers.documentation import router as documentation_router
 from app.routers.hardware import router as hardware_router
+from app.routers.interface_connection_management import (
+    router as interface_connection_management_router,
+)
+from app.routers.interface_workspace import router as interface_workspace_router
+from app.routers.interface_workspace_aliases import router as interface_workspace_aliases_router
+from app.routers.lldp_discovery import router as lldp_discovery_router
+from app.routers.lldp_run_redirect import router as lldp_run_redirect_router
 from app.routers.rack_create import router as rack_create_router
+
 
 router.include_router(documentation_router)
 router.include_router(device_images_router)
 router.include_router(rack_create_router)
 router.include_router(change_plans_router)
 router.include_router(hardware_router)
+router.include_router(interface_workspace_aliases_router)
+router.include_router(interface_workspace_router)
+router.include_router(device_management_router)
+router.include_router(device_components_router)
+router.include_router(device_interface_ips_router)
+router.include_router(device_management_api_router)
+router.include_router(interface_connection_management_router)
+router.include_router(lldp_run_redirect_router)
+router.include_router(lldp_discovery_router)

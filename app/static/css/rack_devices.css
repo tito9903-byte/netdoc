@@ -178,9 +178,203 @@
     font-weight: 700;
 }
 
+.rack-inventory-panel {
+    margin-top: 20px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+}
+
+.rack-inventory-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.rack-inventory-header span {
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+}
+
+.rack-inventory-header h3,
+.rack-inventory-header p {
+    margin: 0;
+}
+
+.rack-inventory-header h3 {
+    margin-top: 4px;
+    color: var(--text);
+    font-size: 18px;
+}
+
+.rack-inventory-header p {
+    max-width: 720px;
+    margin-top: 6px;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.rack-inventory-header > strong {
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    border: 1px solid rgba(32, 200, 210, 0.28);
+    border-radius: 999px;
+    color: var(--accent);
+    background: rgba(32, 200, 210, 0.08);
+    font-size: 10px;
+}
+
+.rack-inventory-table-wrapper {
+    overflow-x: auto;
+}
+
+.rack-inventory-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+}
+
+.rack-inventory-table th,
+.rack-inventory-table td {
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.rack-inventory-table th {
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.015);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.55px;
+    text-transform: uppercase;
+}
+
+.rack-inventory-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.rack-inventory-table tbody tr:hover {
+    background: rgba(32, 200, 210, 0.035);
+}
+
+.rack-inventory-device,
+.rack-inventory-open {
+    color: var(--text);
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.rack-inventory-device:hover,
+.rack-inventory-open:hover {
+    color: var(--accent);
+}
+
+.rack-inventory-open {
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 10px;
+}
+
+.rack-inventory-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+}
+
+.rack-inventory-status {
+    display: inline-flex;
+    min-height: 25px;
+    align-items: center;
+    padding: 0 9px;
+    border: 1px solid rgba(72, 229, 154, 0.24);
+    border-radius: 999px;
+    color: #8ef0bb;
+    background: rgba(72, 229, 154, 0.07);
+    font-size: 9px;
+    font-weight: 750;
+}
+
+.rack-inventory-status.status-failed,
+.rack-inventory-status.status-offline {
+    border-color: rgba(255, 125, 134, 0.28);
+    color: #ffb4ba;
+    background: rgba(255, 125, 134, 0.07);
+}
+
+.rack-inventory-empty {
+    padding: 34px 20px;
+    color: var(--muted);
+    text-align: center;
+}
+
 @media (max-width: 760px) {
-    .rack-detail-navigation {
+    .rack-detail-navigation,
+    .rack-inventory-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+}
+
+/*
+ * Mantiene la vista 3D con una proporción estable de gabinete de 19 pulgadas.
+ * El ancho no aumenta al ampliar la ventana; solo cambia la altura entre
+ * Rack completo y Detalle ampliado.
+ */
+.rack-single-topology[data-scale="fit"] .topology-rack-frame {
+    width: 310px !important;
+    max-width: 310px;
+    flex: 0 0 310px;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-frame {
+    width: 400px !important;
+    max-width: 400px;
+    flex: 0 0 400px;
+}
+
+.rack-single-topology .topology-rack-card {
+    width: min(100%, 540px) !important;
+    max-width: 540px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-card {
+    width: min(100%, 580px) !important;
+    max-width: 580px;
+}
+
+@media (max-width: 640px) {
+    .rack-single-topology[data-scale="fit"] .topology-rack-frame {
+        width: 245px !important;
+        max-width: 245px;
+        flex-basis: 245px;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 320px !important;
+        max-width: 320px;
+        flex-basis: 320px;
+    }
+
+    .rack-inventory-panel {
+        border-radius: 12px;
+    }
+
+    .rack-inventory-header {
+        padding: 16px;
     }
 }

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
@@ -15,12 +14,13 @@ from app.core.auth import (
     common_session_context,
 )
 from app.core.config import get_settings
-from app.services.rack_presentation import (
-    nested_label,
-    prepare_elevation,
-    prepare_topology,
+from app.routers.model_builder import router as model_builder_router
+from app.services.navigation_read_service import (
+    NavigationReadError,
+    NavigationReadService,
 )
-from app.services.rack_report_service import (
+from app.services.rack_presentation import nested_label, prepare_elevation
+from app.services.rack_report_detailed_service import (
     RackReportError,
     build_rack_report,
 )
@@ -30,6 +30,11 @@ from app.services.rack_service import RackService, RackServiceError
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+
+
+# El constructor de modelos forma parte de Documentación. Se registra aquí porque
+# este router ya está montado por la aplicación y evita duplicar rutas en main.py.
+router.include_router(model_builder_router)
 
 
 def is_authenticated(request: Request) -> bool:
@@ -90,23 +95,12 @@ async def racks_page(
         return redirect
 
     selected_site_id = parse_optional_int(site_id)
-    service = RackService()
-
     try:
-        sites, racks, devices = await asyncio.gather(
-            service.list_sites(),
-            service.list_racks(
-                site_id=selected_site_id,
-                query=q,
-            ),
-            service.list_devices(site_id=selected_site_id),
+        sites, racks = await NavigationReadService().rack_catalog(
+            site_id=selected_site_id,
+            query=q,
         )
-        topology = prepare_topology(
-            sites=sites,
-            racks=racks,
-            devices=devices,
-        )
-    except RackServiceError as exc:
+    except NavigationReadError as exc:
         return templates.TemplateResponse(
             request=request,
             name="error.html",
@@ -128,10 +122,10 @@ async def racks_page(
             request,
             page_title="Racks",
             page_subtitle=(
-                "Capacidad física calculada desde posiciones y altura de modelos"
+                "Catálogo rápido; la ocupación física se calcula al abrir cada rack"
             ),
             sites=sites,
-            racks=topology["topology_racks"],
+            racks=racks,
             selected_site_id=selected_site_id,
             query=q,
         ),
@@ -252,14 +246,17 @@ async def rack_detail_page(
     request: Request,
     rack_id: int,
     face: str = "front",
-    view: str = "2d",
+    view: str = "3d",
 ):
     redirect = access_redirect(request, "racks.view")
     if redirect:
         return redirect
 
+    # La elevación 2D fue retirada. Conservamos el parámetro ``view`` para que
+    # enlaces antiguos no fallen, pero cualquier valor abre siempre la vista 3D.
+    _ = view
     selected_face = face if face in {"front", "rear"} else "front"
-    selected_view = view if view in {"2d", "3d"} else "2d"
+    selected_view = "3d"
     service = RackService()
 
     try:
@@ -295,7 +292,7 @@ async def rack_detail_page(
                 or "Rack"
             ),
             page_subtitle=(
-                "Vista 2D o 3D basada en posición, cara, imagen y altura del modelo"
+                "Vista 3D basada en posición, cara, imagen y altura del modelo"
             ),
             rack=rack,
             devices=devices,

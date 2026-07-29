@@ -39,6 +39,13 @@ def _prepared_manufacturer(
     }
 
 
+def _count(model: dict[str, Any], field: str) -> int:
+    try:
+        return int(model.get(field) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _prepared_model(model: dict[str, Any]) -> dict[str, Any]:
     manufacturer = model.get("manufacturer") or {}
     return {
@@ -52,15 +59,19 @@ def _prepared_model(model: dict[str, Any]) -> dict[str, Any]:
             or model.get("display")
             or "Sin modelo"
         ),
-        "_interface_count": int(
-            model.get("interface_template_count") or 0
+        "_interface_count": _count(model, "interface_template_count"),
+        "_module_bay_count": _count(model, "module_bay_template_count"),
+        "_power_port_count": _count(model, "power_port_template_count"),
+        "_power_outlet_count": _count(model, "power_outlet_template_count"),
+        "_console_port_count": _count(model, "console_port_template_count"),
+        "_console_server_port_count": _count(
+            model,
+            "console_server_port_template_count",
         ),
-        "_module_bay_count": int(
-            model.get("module_bay_template_count") or 0
-        ),
-        "_power_port_count": int(
-            model.get("power_port_template_count") or 0
-        ),
+        "_front_port_count": _count(model, "front_port_template_count"),
+        "_rear_port_count": _count(model, "rear_port_template_count"),
+        "_device_bay_count": _count(model, "device_bay_template_count"),
+        "_inventory_item_count": _count(model, "inventory_item_template_count"),
     }
 
 
@@ -167,9 +178,13 @@ class HardwareService:
                 interfaces,
                 module_bays,
                 power_ports,
+                power_outlets,
                 console_ports,
+                console_server_ports,
                 front_ports,
                 rear_ports,
+                device_bays,
+                inventory_items,
                 devices,
             ) = await asyncio.gather(
                 self.client.list_interface_templates(device_type_id),
@@ -188,7 +203,21 @@ class HardwareService:
                     },
                 ),
                 self.client.get_all(
+                    "/api/dcim/power-outlet-templates/",
+                    params={
+                        "device_type_id": device_type_id,
+                        "ordering": "name",
+                    },
+                ),
+                self.client.get_all(
                     "/api/dcim/console-port-templates/",
+                    params={
+                        "device_type_id": device_type_id,
+                        "ordering": "name",
+                    },
+                ),
+                self.client.get_all(
+                    "/api/dcim/console-server-port-templates/",
                     params={
                         "device_type_id": device_type_id,
                         "ordering": "name",
@@ -203,6 +232,20 @@ class HardwareService:
                 ),
                 self.client.get_all(
                     "/api/dcim/rear-port-templates/",
+                    params={
+                        "device_type_id": device_type_id,
+                        "ordering": "name",
+                    },
+                ),
+                self.client.get_all(
+                    "/api/dcim/device-bay-templates/",
+                    params={
+                        "device_type_id": device_type_id,
+                        "ordering": "name",
+                    },
+                ),
+                self.client.get_all(
+                    "/api/dcim/inventory-item-templates/",
                     params={
                         "device_type_id": device_type_id,
                         "ordering": "name",
@@ -224,17 +267,25 @@ class HardwareService:
             "interfaces": interfaces,
             "module_bays": module_bays,
             "power_ports": power_ports,
+            "power_outlets": power_outlets,
             "console_ports": console_ports,
+            "console_server_ports": console_server_ports,
             "front_ports": front_ports,
             "rear_ports": rear_ports,
+            "device_bays": device_bays,
+            "inventory_items": inventory_items,
             "devices": devices,
             "component_summary": {
                 "interfaces": len(interfaces),
                 "module_bays": len(module_bays),
                 "power_ports": len(power_ports),
+                "power_outlets": len(power_outlets),
                 "console_ports": len(console_ports),
+                "console_server_ports": len(console_server_ports),
                 "front_ports": len(front_ports),
                 "rear_ports": len(rear_ports),
+                "device_bays": len(device_bays),
+                "inventory_items": len(inventory_items),
                 "devices": len(devices),
             },
         }

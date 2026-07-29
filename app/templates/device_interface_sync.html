@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_sync.css') }}?v=20260726-sync-1">
+{% endblock %}
+
+{% block content %}
+{% set device = preview.device %}
+{% set device_type = preview.device_type or {} %}
+
+<div class="interface-sync-page">
+    <a class="back-link" href="/devices/{{ device.get('id') }}#interfaces">← Volver al dispositivo</a>
+
+    {% if error %}
+    <div class="notice error-notice">
+        <strong>No fue posible sincronizar las interfaces.</strong>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <section class="workflow-intro compact-workflow-intro">
+        <div class="interface-sync-identity">
+            <span class="interface-sync-icon">⇆</span>
+            <div>
+                <span class="eyebrow">Sincronización desde el modelo</span>
+                <h2>{{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+                <p>
+                    Modelo: {{ device_type.get("display") or device_type.get("model") or "Sin modelo" }}.
+                    NetDoc creará únicamente las interfaces que todavía no existen.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="interface-sync-metrics" aria-label="Resumen de comparación">
+        <article>
+            <span>Plantillas del modelo</span>
+            <strong>{{ preview.template_count }}</strong>
+            <small>Fuente de documentación</small>
+        </article>
+        <article>
+            <span>Interfaces actuales</span>
+            <strong>{{ preview.existing_count }}</strong>
+            <small>Ya presentes en el dispositivo</small>
+        </article>
+        <article>
+            <span>Faltantes</span>
+            <strong>{{ preview.missing_count }}</strong>
+            <small>Se crearán en esta operación</small>
+        </article>
+        <article>
+            <span>Revisión manual</span>
+            <strong>{{ preview.conflict_count }}</strong>
+            <small>Mismo nombre con tipo diferente</small>
+        </article>
+    </section>
+
+    <section class="interface-sync-section">
+        <div class="interface-sync-section-header">
+            <div>
+                <h2>Interfaces faltantes</h2>
+                <p>La creación se ejecutará como un lote en NetBox.</p>
+            </div>
+            <span class="panel-badge">{{ preview.missing_count }} pendientes</span>
+        </div>
+
+        {% if preview.missing %}
+        <div class="interface-sync-list">
+            {% for interface in preview.missing %}
+            <div class="interface-sync-item">
+                <strong title="{{ interface.get('name') or '' }}">{{ interface.get("name") or "Sin nombre" }}</strong>
+                <span>{{ interface.get("_type_label") or "Sin tipo" }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="interfaces-empty-state" style="padding: 24px;">
+            <strong>El dispositivo ya contiene todas las interfaces del modelo.</strong>
+            <span>No hay registros nuevos que crear.</span>
+        </div>
+        {% endif %}
+
+        {% if preview.conflicts %}
+        <div class="interface-sync-warning">
+            <strong>{{ preview.conflict_count }} interfaz(es) requieren revisión manual.</strong>
+            NetDoc encontró el mismo nombre en el dispositivo, pero con un tipo diferente al modelo.
+            No serán modificadas ni duplicadas.
+        </div>
+        {% endif %}
+
+        <form class="interface-sync-footer" method="post" action="/devices/{{ device.get('id') }}/interfaces/sync">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="interface-sync-footer-copy">
+                <strong>Operación segura y no destructiva</strong>
+                <span>No se eliminarán, renombrarán ni sobrescribirán interfaces existentes.</span>
+            </div>
+            <button
+                class="button primary"
+                type="submit"
+                {% if not write_enabled or preview.missing_count == 0 %}disabled{% endif %}
+            >
+                {% if preview.missing_count == 1 %}
+                    Crear 1 interfaz faltante
+                {% else %}
+                    Crear {{ preview.missing_count }} interfaces faltantes
+                {% endif %}
+            </button>
+        </form>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/devices.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-3">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_interface_ip_management.css') }}?v=20260727-2">
+{% if interface %}
+<script defer src="{{ url_for('static', path='js/device_interface_ip_management.js') }}?v=20260727-2"></script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% set raw_type = interface.get("type") if interface else "" %}
+{% set current_type_value = raw_type.get("value") if raw_type is mapping else raw_type %}
+{% set current_type_label = raw_type.get("label") if raw_type is mapping else raw_type %}
+{% set raw_lag = interface.get("lag") if interface else none %}
+{% set current_lag_id = raw_lag.get("id") if raw_lag is mapping else raw_lag %}
+{% set current_lag_label = (raw_lag.get("display") or raw_lag.get("name") or "Sin LAG") if raw_lag is mapping else (raw_lag or "Sin LAG") %}
+{% set raw_mac = (interface.get("primary_mac_address") or interface.get("mac_address") or "") if interface else "" %}
+{% set current_mac = (raw_mac.get("mac_address") or raw_mac.get("address") or raw_mac.get("display") or "") if raw_mac is mapping else raw_mac %}
+{% set raw_cable = interface.get("cable") if interface else none %}
+{% set cable_id = raw_cable.get("id") if raw_cable is mapping else raw_cable %}
+{% set endpoints = (interface.get("connected_endpoints") or []) if interface else [] %}
+{% set remote_endpoint = endpoints[0] if endpoints else {} %}
+{% set remote_device = remote_endpoint.get("device") if remote_endpoint is mapping else {} %}
+{% set remote_device = remote_device if remote_device is mapping else {} %}
+{% set remote_device_id = remote_device.get("id") %}
+{% set remote_device_name = remote_device.get("display") or remote_device.get("name") or "Equipo remoto" %}
+{% set remote_interface_name = (remote_endpoint.get("display") or remote_endpoint.get("name") or "Interfaz remota") if remote_endpoint is mapping else "Interfaz remota" %}
+{% set device_name = device.get("name") or device.get("display") or "Dispositivo" %}
+{% set interface_name = interface.get("name") if interface else "Nueva interfaz" %}
+
+<div class="interface-editor-page">
+    <nav class="interface-editor-breadcrumb" aria-label="Navegación">
+        <a href="/devices/{{ device_id }}#interfaces">Dispositivos</a>
+        <span>/</span>
+        <a href="/devices/{{ device_id }}#interfaces">{{ device_name }}</a>
+        <span>/</span>
+        <strong>{{ interface_name }}</strong>
+    </nav>
+
+    {% if error %}
+    <div class="notice error-notice interface-editor-notice">
+        <strong>No fue posible completar la operación.</strong>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <section class="interface-editor-hero">
+        <div class="interface-editor-identity">
+            <span class="interface-editor-icon" aria-hidden="true">⇆</span>
+            <div>
+                <span class="eyebrow">Interfaz del dispositivo</span>
+                <h2>{{ interface_name }}</h2>
+                <p>
+                    <a href="/devices/{{ device_id }}#interfaces">{{ device_name }}</a>
+                    <span>·</span>
+                    <span>{% if interface %}Edita propiedades, direccionamiento y conexión documentada.{% else %}Crea una interfaz individual en NetBox.{% endif %}</span>
+                </p>
+            </div>
+        </div>
+        <div class="interface-editor-badges">
+            {% if interface %}
+            <span class="interface-editor-status {% if interface.get('enabled') %}is-active{% else %}is-inactive{% endif %}">
+                {{ "Habilitada" if interface.get("enabled") else "Deshabilitada" }}
+            </span>
+            {% if current_type_label %}<span class="panel-badge">{{ current_type_label }}</span>{% endif %}
+            <span class="panel-badge">ID {{ interface_id }}</span>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if not write_enabled %}
+    <div class="read-only-callout compact-callout interface-editor-readonly">
+        <span>◌</span>
+        <div><strong>Solo lectura</strong><span>La escritura en NetBox está deshabilitada.</span></div>
+    </div>
+    {% endif %}
+
+    <div class="interface-editor-layout">
+        <section class="panel interface-editor-main">
+            <form
+                method="post"
+                action="{% if interface %}/devices/{{ device_id }}/interfaces/{{ interface_id }}/actions/update{% else %}/devices/{{ device_id }}/interfaces/actions/create{% endif %}"
+                class="management-form interface-editor-form"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <header class="interface-editor-section-header">
+                    <div>
+                        <span class="eyebrow">Configuración</span>
+                        <h3>Propiedades de la interfaz</h3>
+                        <p>Nombre, tipo físico, agrupación y parámetros operativos.</p>
+                    </div>
+                    <span class="interface-editor-section-number">01</span>
+                </header>
+
+                <div class="management-grid interface-editor-fields">
+                    <div class="field">
+                        <label for="interface-name">Nombre</label>
+                        <input id="interface-name" name="name" required value="{{ interface.get('name') if interface else '' }}" placeholder="Ethernet1">
+                        <small>Debe coincidir con el nombre utilizado por el equipo.</small>
+                    </div>
+
+                    <div class="field">
+                        <label for="interface-type">Tipo</label>
+                        <select id="interface-type" name="interface_type" required>
+                            <option value="">Seleccionar</option>
+                            {% for item in type_choices %}
+                            <option value="{{ item.value }}" {% if item.value == current_type_value %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small>Define velocidad, medio y comportamiento físico.</small>
+                    </div>
+
+                    <div class="field">
+                        <label for="interface-label">Etiqueta</label>
+                        <input id="interface-label" name="label" value="{{ interface.get('label') if interface else '' }}" placeholder="Uplink principal">
+                    </div>
+
+                    <div class="field">
+                        <label for="interface-mtu">MTU</label>
+                        <input id="interface-mtu" name="mtu" type="number" min="0" step="1" value="{{ interface.get('mtu') if interface and interface.get('mtu') is not none else '' }}" placeholder="1500">
+                    </div>
+
+                    <div class="field">
+                        <label for="interface-lag">LAG</label>
+                        <select id="interface-lag" name="lag_id">
+                            <option value="">Sin LAG</option>
+                            {% for item in lags %}
+                            <option value="{{ item.get('id') }}" {% if item.get('id') == current_lag_id %}selected{% endif %}>{{ item.get("display") or item.get("name") }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="interface-mac">Dirección MAC</label>
+                        <input id="interface-mac" name="mac_address" value="{{ current_mac }}" placeholder="AA:BB:CC:DD:EE:FF">
+                    </div>
+                </div>
+
+                <section class="interface-editor-behavior">
+                    <header class="interface-editor-section-header compact">
+                        <div>
+                            <span class="eyebrow">Comportamiento</span>
+                            <h3>Estado operativo</h3>
+                        </div>
+                        <span class="interface-editor-section-number">02</span>
+                    </header>
+
+                    <div class="interface-toggle-grid">
+                        <label class="interface-toggle-card">
+                            <span class="interface-toggle-copy">
+                                <strong>Interfaz habilitada</strong>
+                                <small>Disponible para documentación y operación.</small>
+                            </span>
+                            <span class="interface-switch">
+                                <input type="checkbox" name="enabled" value="true" {% if not interface or interface.get('enabled') %}checked{% endif %}>
+                                <span class="interface-switch-track" aria-hidden="true"></span>
+                            </span>
+                        </label>
+
+                        <label class="interface-toggle-card">
+                            <span class="interface-toggle-copy">
+                                <strong>Solo administración</strong>
+                                <small>Identifica puertos dedicados a gestión.</small>
+                            </span>
+                            <span class="interface-switch">
+                                <input type="checkbox" name="mgmt_only" value="true" {% if interface and interface.get('mgmt_only') %}checked{% endif %}>
+                                <span class="interface-switch-track" aria-hidden="true"></span>
+                            </span>
+                        </label>
+
+                        <label class="interface-toggle-card {% if cable_id %}is-disabled{% endif %}">
+                            <span class="interface-toggle-copy">
+                                <strong>Marcar como conectada</strong>
+                                <small>{% if cable_id %}No aplica mientras exista un cable documentado.{% else %}Úsalo solo cuando no exista un cable documentado.{% endif %}</small>
+                            </span>
+                            <span class="interface-switch">
+                                <input type="checkbox" name="mark_connected" value="true" {% if interface and interface.get('mark_connected') %}checked{% endif %} {% if cable_id %}disabled{% endif %}>
+                                <span class="interface-switch-track" aria-hidden="true"></span>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                <div class="field interface-editor-description">
+                    <label for="interface-description">Descripción</label>
+                    <textarea id="interface-description" name="description" rows="5" placeholder="Uso, destino o referencia técnica de la interfaz">{{ interface.get("description") if interface else "" }}</textarea>
+                </div>
+
+                <div class="management-actions interface-editor-actions">
+                    <a class="button secondary" href="/devices/{{ device_id }}#interfaces">Cancelar</a>
+                    <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                        {% if interface %}Guardar cambios{% else %}Crear interfaz{% endif %}
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        {% if interface %}
+        <aside class="interface-editor-sidebar">
+            <section class="panel interface-connection-summary {% if cable_id %}is-connected{% elif interface.get('mark_connected') %}is-marked{% else %}is-free{% endif %}">
+                <header>
+                    <div>
+                        <span class="eyebrow">Conexión</span>
+                        <h3>{% if cable_id %}Conexión documentada{% elif interface.get('mark_connected') %}Conectada manualmente{% else %}Interfaz libre{% endif %}</h3>
+                    </div>
+                    <span class="connection-state-icon" aria-hidden="true">{% if cable_id %}⇄{% elif interface.get('mark_connected') %}•{% else %}○{% endif %}</span>
+                </header>
+
+                {% if cable_id %}
+                <div class="interface-connection-route">
+                    <article>
+                        <span>Local</span>
+                        <strong>{{ device_name }}</strong>
+                        <small>{{ interface_name }}</small>
+                    </article>
+                    <span aria-hidden="true">⟷</span>
+                    <article>
+                        <span>Remoto</span>
+                        {% if remote_device_id %}
+                        <a href="/devices/{{ remote_device_id }}#interfaces">{{ remote_device_name }}</a>
+                        {% else %}
+                        <strong>{{ remote_device_name }}</strong>
+                        {% endif %}
+                        <small>{{ remote_interface_name }}</small>
+                    </article>
+                </div>
+                <dl class="interface-connection-meta">
+                    <div><dt>Cable</dt><dd>#{{ cable_id }}</dd></div>
+                    <div><dt>Estado</dt><dd>Documentado en NetBox</dd></div>
+                </dl>
+                <div class="interface-connection-actions">
+                    {% if remote_device_id %}
+                    <a class="button secondary" href="/devices/{{ remote_device_id }}#interfaces">Abrir equipo remoto</a>
+                    {% endif %}
+                    <a class="button danger ghost-danger" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/connection/delete">Eliminar conexión</a>
+                </div>
+                {% elif interface.get('mark_connected') %}
+                <p>La interfaz está marcada como conectada, pero no existe un cable asociado en NetBox.</p>
+                <small>Desactiva “Marcar como conectada” para dejarla libre.</small>
+                {% else %}
+                <p>No existe un cable ni una conexión remota documentada.</p>
+                <small>Puede utilizarse en una nueva conexión o mediante descubrimiento LLDP.</small>
+                {% endif %}
+            </section>
+
+            <section class="panel interface-editor-context-card">
+                <span class="eyebrow">Referencia</span>
+                <h3>Resumen técnico</h3>
+                <dl>
+                    <div><dt>Dispositivo</dt><dd>{{ device_name }}</dd></div>
+                    <div><dt>Interfaz</dt><dd>{{ interface_name }}</dd></div>
+                    <div><dt>Tipo</dt><dd>{{ current_type_label or "Sin definir" }}</dd></div>
+                    <div><dt>LAG</dt><dd>{{ current_lag_label }}</dd></div>
+                    <div><dt>MAC</dt><dd>{{ current_mac or "Sin asignar" }}</dd></div>
+                </dl>
+            </section>
+        </aside>
+        {% endif %}
+    </div>
+
+    {% if interface %}
+    <div
+        data-interface-ip-management
+        data-device-id="{{ device_id }}"
+        data-interface-id="{{ interface_id }}"
+    >
+        <section class="panel interface-ip-management">
+            <span class="interface-ip-loading">Cargando direcciones IP de la interfaz…</span>
+        </section>
+    </div>
+
+    <section class="panel interface-danger-panel">
+        <div>
+            <span class="eyebrow">Zona delicada</span>
+            <strong>Eliminar interfaz completa</strong>
+            <p>Esta acción es distinta de eliminar la conexión. NetDoc la bloqueará si existen cables o direcciones IP asignadas.</p>
+        </div>
+        <a class="button danger ghost-danger" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/delete">Eliminar interfaz</a>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

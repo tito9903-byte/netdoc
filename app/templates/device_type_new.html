@@ -5,6 +5,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/device_type_create_images.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_model_form.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -26,16 +27,12 @@
 
 <section class="workflow-intro compact-workflow-intro">
     <div>
-        <span class="eyebrow">Ficha física reutilizable</span>
+        <span class="eyebrow">Ficha reutilizable de documentación</span>
         <h2>Crear modelo de equipo</h2>
         <p>
-            El fabricante, las dimensiones y los componentes se registran en NetBox.
-            Las vistas frontal y trasera se guardan en NetDoc y se reutilizan
-            automáticamente en la elevación 2D y la vista 3D del rack.
+            Completa la información física, carga las imágenes y utiliza también los
+            campos avanzados que la versión conectada de NetBox publique mediante su API.
         </p>
-    </div>
-    <div class="workflow-intro-actions">
-        <a class="button secondary" href="/interface-templates">Ver plantillas</a>
     </div>
 </section>
 
@@ -44,7 +41,7 @@
     <span>◌</span>
     <div>
         <strong>La creación de modelos en NetBox está deshabilitada.</strong>
-        <span>Puedes revisar el formulario, pero el modelo no podrá crearse hasta habilitar la escritura controlada.</span>
+        <span>Puedes revisar el formulario, pero no se enviará ningún cambio.</span>
     </div>
 </div>
 {% endif %}
@@ -52,16 +49,16 @@
 <section class="panel model-form-panel">
     <div class="panel-header compact-panel-header">
         <div>
-            <h2>Datos e imágenes del modelo</h2>
-            <p>La ficha se guarda en NetBox y los archivos de imagen en la base local de NetDoc.</p>
+            <h2>Datos, capacidades e imágenes</h2>
+            <p>NetDoc documentará el modelo en NetBox y guardará las fotografías en su base local.</p>
         </div>
-        <span class="panel-badge">Modelo físico</span>
+        <span class="panel-badge">Formulario conectado a NetBox</span>
     </div>
 
     <form
         class="model-create-form"
         method="post"
-        action="/device-types/actions/create-with-images"
+        action="/device-types/actions/create-complete"
         enctype="multipart/form-data"
     >
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
@@ -81,12 +78,12 @@
 
             <div class="field model-name-field">
                 <label for="new-model">Modelo</label>
-                <input id="new-model" name="model" type="text" placeholder="Ejemplo: C600" required>
+                <input id="new-model" name="model" type="text" placeholder="Ejemplo: ZXA10 C600" required>
             </div>
 
             <div class="field">
                 <label for="new-part-number">Part number</label>
-                <input id="new-part-number" name="part_number" type="text" placeholder="Opcional">
+                <input id="new-part-number" name="part_number" type="text" placeholder="Referencia del fabricante">
             </div>
 
             <div class="field">
@@ -97,31 +94,48 @@
             <div class="field">
                 <label for="new-height">Altura U</label>
                 <input id="new-height" name="u_height" type="number" min="0" step="0.5" value="1" required>
-                <small>Define cuánto espacio ocupará el equipo en el rack.</small>
+                <small>Define cuánto espacio ocupará el modelo dentro del rack.</small>
             </div>
 
             <label class="checkbox-field model-depth-field">
                 <input type="checkbox" name="full_depth" value="true">
                 <span>
                     <strong>Profundidad completa</strong>
-                    <small>El equipo ocupa ambas caras del rack.</small>
+                    <small>El equipo bloquea la misma posición en ambas caras del rack.</small>
                 </span>
             </label>
 
             <div class="field model-description-field">
                 <label for="new-description">Descripción</label>
-                <textarea id="new-description" name="description" rows="4" placeholder="Función, familia o notas técnicas del modelo"></textarea>
+                <textarea id="new-description" name="description" rows="4" placeholder="Función, familia, capacidad o notas técnicas del modelo"></textarea>
             </div>
+
+            <section class="model-capability-panel">
+                <div class="model-capability-heading">
+                    <div>
+                        <span class="eyebrow">Capacidades de la API</span>
+                        <h3>Campos avanzados disponibles en NetBox</h3>
+                        <p>
+                            Esta sección se construye desde OPTIONS y se adapta a la versión
+                            instalada de NetBox, sin mantener una lista cerrada en NetDoc.
+                        </p>
+                    </div>
+                    <span class="model-capability-status" data-netbox-model-status>
+                        Consultando capacidades…
+                    </span>
+                </div>
+
+                <div class="netbox-model-fields" data-netbox-model-fields></div>
+            </section>
 
             <section class="model-image-section">
                 <div class="model-image-section-heading">
                     <div>
-                        <span class="eyebrow">Representación del equipo</span>
-                        <h3>Imágenes para el rack</h3>
+                        <span class="eyebrow">Representación física</span>
+                        <h3>Imágenes para el rack 3D</h3>
                         <p>
-                            Usa fotografías o diagramas recortados del frente y la
-                            parte trasera. Se guardan en NetDoc, son opcionales y
-                            pueden sustituirse después.
+                            Usa fotografías frontales y traseras recortadas, centradas y sin
+                            márgenes excesivos. El fondo transparente produce el mejor resultado.
                         </p>
                     </div>
                     <span class="panel-badge">Máximo 5 MB por imagen</span>
@@ -154,17 +168,26 @@
                 </div>
 
                 <p class="model-image-guidance">
-                    Formatos admitidos: JPG, PNG, WEBP y GIF. Para una elevación
-                    más limpia, utiliza fondo transparente o una imagen frontal
-                    centrada y sin márgenes excesivos.
+                    Formatos admitidos: JPG, PNG, WEBP y GIF. PNG transparente es la
+                    opción recomendada para una elevación profesional.
                 </p>
             </section>
         </div>
 
+        <div class="model-create-next-step">
+            <span aria-hidden="true">ⓘ</span>
+            <div>
+                <strong>Los puertos ya no se administran en una pantalla separada.</strong>
+                Después de crear el modelo, NetDoc abrirá su ficha y desde allí podrás
+                documentar interfaces, consola, energía, front ports, rear ports, bahías
+                y elementos internos según lo que soporte NetBox.
+            </div>
+        </div>
+
         <div class="model-form-actions">
             <div>
-                <strong>Después agrega las plantillas de puertos.</strong>
-                <span>Primero se crea el modelo en NetBox y se guardan sus imágenes en NetDoc; las interfaces se administran en una pantalla independiente.</span>
+                <strong>Revisa dimensiones e imágenes antes de guardar.</strong>
+                <span>El alta quedará registrada en la auditoría de NetDoc y en el historial de NetBox.</span>
             </div>
             <div>
                 <a class="button secondary" href="/device-types">Cancelar</a>
@@ -179,4 +202,8 @@
         </div>
     </form>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/device_model_form.js') }}"></script>
 {% endblock %}

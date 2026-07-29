@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-2">
+{% endblock %}
+
+{% block content %}
+<div class="detail-navigation">
+    <a href="/devices/{{ device_id }}#interfaces">← Volver al dispositivo</a>
+</div>
+
+<section class="management-hero">
+    <div>
+        <span class="eyebrow">Nuevo componente</span>
+        <h2>Crear componente en {{ device.get("name") or device.get("display") or "Dispositivo" }}</h2>
+        <p>Selecciona el tipo de componente que deseas crear directamente en este equipo.</p>
+    </div>
+    <a class="button secondary" href="/devices/{{ device_id }}/components">Ver componentes</a>
+</section>
+
+<section class="panel management-form-panel">
+    <div class="component-kind-grid">
+        {% for item in component_kinds %}
+        <a
+            class="component-kind-card"
+            href="{% if item.key == 'interface' %}/devices/{{ device_id }}/interfaces/new{% else %}/devices/{{ device_id }}/components/{{ item.key }}/new{% endif %}"
+        >
+            <span class="component-kind-icon" aria-hidden="true">{{ item.icon }}</span>
+            <strong>{{ item.label }}</strong>
+            <span>{{ item.description }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

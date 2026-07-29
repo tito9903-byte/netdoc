@@ -298,6 +298,12 @@ class IPAMService:
         list[dict[str, Any]],
     ] | None = None
     _inventory_cache_seconds = 60.0
+    _overview_cache: dict[
+        tuple[str, str, int | None, int | None],
+        tuple[float, dict[str, Any]],
+    ] = {}
+    _overview_cache_seconds = 30.0
+    _overview_cache_limit = 64
 
     def __init__(self) -> None:
         self.client = NetBoxClient()
@@ -467,37 +473,57 @@ class IPAMService:
         family: int | None = None,
         role_id: int | None = None,
     ) -> dict[str, Any]:
+        clean_query = query.strip()
+        clean_status = status.strip()
+        clean_family = family if family in {4, 6} else None
+        clean_role_id = role_id if role_id else None
+        cache_key = (
+            clean_query,
+            clean_status,
+            clean_family,
+            clean_role_id,
+        )
+        now = monotonic()
+        cached = type(self)._overview_cache.get(cache_key)
+        if cached is not None and cached[0] > now:
+            return cached[1]
+
         has_filters = bool(
-            query.strip()
-            or status.strip()
-            or family in {4, 6}
-            or role_id
+            clean_query
+            or clean_status
+            or clean_family is not None
+            or clean_role_id
         )
 
         try:
             if has_filters:
-                prefixes, all_prefixes, roles = await asyncio.gather(
+                (
+                    prefixes,
+                    all_prefixes,
+                    roles,
+                    inventory,
+                ) = await asyncio.gather(
                     self.list_prefixes(
-                        query=query,
-                        status=status,
-                        family=family,
-                        role_id=role_id,
+                        query=clean_query,
+                        status=clean_status,
+                        family=clean_family,
+                        role_id=clean_role_id,
                     ),
                     self.list_prefixes(),
                     self.list_roles(),
+                    self.load_ip_inventory(),
                 )
             else:
-                prefixes, roles = await asyncio.gather(
+                prefixes, roles, inventory = await asyncio.gather(
                     self.list_prefixes(),
                     self.list_roles(),
+                    self.load_ip_inventory(),
                 )
                 all_prefixes = prefixes
         except NetBoxError as exc:
             raise IPAMServiceError(exc.message) from exc
 
-        ip_addresses, ip_ranges, inventory_warning = (
-            await self.load_ip_inventory()
-        )
+        ip_addresses, ip_ranges, inventory_warning = inventory
         (
             address_intervals,
             reserved_ranges,
@@ -561,7 +587,7 @@ class IPAMService:
                 "_vrf_label": nested_label(vrf_data, "Global"),
             })
 
-        return {
+        result = {
             "prefixes": prefix_rows,
             "pools": prepared_pools,
             "roles": roles,
@@ -575,3 +601,15 @@ class IPAMService:
                 "scopes": len(scopes),
             },
         }
+
+        cache = type(self)._overview_cache
+        expired = [key for key, value in cache.items() if value[0] <= now]
+        for key in expired:
+            cache.pop(key, None)
+        if len(cache) >= self._overview_cache_limit:
+            cache.clear()
+        cache[cache_key] = (
+            monotonic() + self._overview_cache_seconds,
+            result,
+        )
+        return result

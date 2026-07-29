@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_management.css') }}?v=20260727-3">
+{% endblock %}
+
+{% block content %}
+{% set remote_device_data = remote_device if remote_device is mapping else {} %}
+{% set remote_device_name = remote_device_data.get("display") or remote_device_data.get("name") or "Equipo remoto" %}
+{% set remote_device_id = remote_device_data.get("id") %}
+{% set remote_interface_name = endpoint.get("display") or endpoint.get("name") or "Interfaz remota" %}
+{% set cable_type = cable.get("type") or {} %}
+{% set cable_status = cable.get("status") or {} %}
+
+<div class="interface-editor-page">
+    <nav class="interface-editor-breadcrumb" aria-label="Navegación">
+        <a href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">← Volver a la interfaz</a>
+        <span>/</span>
+        <span>Eliminar conexión</span>
+    </nav>
+
+    <section class="panel connection-delete-confirmation">
+        <div class="connection-delete-icon" aria-hidden="true">⇄</div>
+        <div class="connection-delete-copy">
+            <span class="eyebrow">Conexión documentada en NetBox</span>
+            <h2>Desconectar {{ interface.get("name") or "interfaz" }}</h2>
+            <p>
+                Esta acción elimina únicamente el cable documentado. Los dos equipos,
+                sus interfaces y sus direcciones IP permanecerán intactos.
+            </p>
+        </div>
+
+        <div class="connection-delete-path" aria-label="Extremos del cable">
+            <article>
+                <span>Extremo local</span>
+                <strong>{{ device.get("name") or device.get("display") }}</strong>
+                <small>{{ interface.get("name") or "Interfaz local" }}</small>
+            </article>
+            <span class="connection-delete-arrow" aria-hidden="true">⟷</span>
+            <article>
+                <span>Extremo remoto</span>
+                {% if remote_device_id %}
+                <a href="/devices/{{ remote_device_id }}#interfaces">{{ remote_device_name }}</a>
+                {% else %}
+                <strong>{{ remote_device_name }}</strong>
+                {% endif %}
+                <small>{{ remote_interface_name }}</small>
+            </article>
+        </div>
+
+        <dl class="connection-delete-meta">
+            <div>
+                <dt>Cable</dt>
+                <dd>#{{ cable_id }}</dd>
+            </div>
+            <div>
+                <dt>Tipo</dt>
+                <dd>{{ cable_type.get("label") or cable_type.get("value") or cable.get("type") or "Sin especificar" }}</dd>
+            </div>
+            <div>
+                <dt>Estado</dt>
+                <dd>{{ cable_status.get("label") or cable_status.get("value") or cable.get("status") or "Sin especificar" }}</dd>
+            </div>
+            <div>
+                <dt>Etiqueta</dt>
+                <dd>{{ cable.get("label") or "Sin etiqueta" }}</dd>
+            </div>
+        </dl>
+
+        <div class="connection-delete-warning">
+            <strong>Ambos puertos quedarán libres en NetBox.</strong>
+            <span>La operación no envía comandos a los equipos físicos.</span>
+        </div>
+
+        <form
+            method="post"
+            action="/devices/{{ device_id }}/interfaces/{{ interface_id }}/connection/actions/delete"
+            class="connection-delete-actions"
+        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="cable_id" value="{{ cable_id }}">
+            <a class="button secondary" href="/devices/{{ device_id }}/interfaces/{{ interface_id }}/edit">Cancelar</a>
+            <button class="button danger" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                Eliminar conexión
+            </button>
+        </form>
+    </section>
+</div>
+{% endblock %}

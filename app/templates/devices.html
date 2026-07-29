@@ -7,6 +7,35 @@
     rel="stylesheet"
     href="{{ url_for('static', path='css/devices.css') }}"
 >
+<style>
+    .device-panel-header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .device-create-button {
+        gap: 7px;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 680px) {
+        .device-panel-header {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .device-panel-header-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .device-create-button {
+            min-height: 44px;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -127,9 +156,23 @@
             </p>
         </div>
 
-        <span class="result-badge">
-            {{ total_count }} registrados
-        </span>
+        <div class="device-panel-header-actions">
+            <span class="result-badge">
+                {{ total_count }} registrados
+            </span>
+
+            {% if "devices.create" in current_permissions %}
+            <a
+                class="primary-button device-create-button"
+                href="/devices/actions/new"
+                data-create-modal
+                data-modal-title="Crear dispositivo"
+            >
+                <span aria-hidden="true">＋</span>
+                <span>Crear dispositivo</span>
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     {% if devices %}

@@ -1,5 +1,6 @@
+import re
 import secrets
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote, urlencode
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -165,6 +166,8 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         request: StarletteRequest,
         call_next,
     ) -> Response:
+        self._normalize_optional_device_filters(request)
+
         permission = self._required_permission(
             request.url.path,
             request.method,
@@ -205,6 +208,53 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         self._audit_mutation(request, response)
         return response
+
+    @staticmethod
+    def _normalize_optional_device_filters(
+        request: StarletteRequest,
+    ) -> None:
+        """Elimina filtros numéricos vacíos antes de validar la ruta /devices.
+
+        Los navegadores envían `site_id=` y `role_id=` cuando se selecciona la
+        opción «Todos». FastAPI no convierte una cadena vacía en `int | None`, por
+        lo que sin esta normalización respondería con JSON 422 antes de renderizar
+        la página.
+        """
+
+        if request.method.upper() != "GET" or request.scope.get("path") != "/devices":
+            return
+
+        raw_query = request.scope.get("query_string", b"")
+        if not raw_query:
+            return
+
+        try:
+            pairs = parse_qsl(
+                raw_query.decode("utf-8"),
+                keep_blank_values=True,
+            )
+        except UnicodeDecodeError:
+            return
+
+        normalized = [
+            (key, value)
+            for key, value in pairs
+            if not (
+                key in {"site_id", "role_id"}
+                and not value.strip()
+            )
+        ]
+
+        if normalized == pairs:
+            return
+
+        request.scope["query_string"] = urlencode(
+            normalized,
+            doseq=True,
+        ).encode("utf-8")
+
+        request.__dict__.pop("_url", None)
+        request.__dict__.pop("_query_params", None)
 
     @staticmethod
     def _authentication_required(
@@ -261,6 +311,19 @@ class PermissionMiddleware(BaseHTTPMiddleware):
                 "connection",
             ),
         }.get((request.method.upper(), request.url.path))
+
+        if (
+            mutation is None
+            and request.method.upper() == "POST"
+            and re.fullmatch(
+                r"/devices/\d+/primary-ip/new",
+                request.url.path,
+            )
+        ):
+            mutation = (
+                "DEVICE_PRIMARY_IP_UPDATE",
+                "device",
+            )
 
         if mutation is None:
             return
@@ -342,6 +405,24 @@ class PermissionMiddleware(BaseHTTPMiddleware):
 
         if path.startswith("/devices/actions/new"):
             return "devices.create"
+
+        if (
+            method.upper() == "POST"
+            and re.fullmatch(r"/devices/\d+/primary-ip/new", path)
+        ):
+            return "devices.create"
+
+        if re.fullmatch(
+            r"/devices/\d+/lldp-discovery/confirm",
+            path,
+        ):
+            return "devices.create"
+
+        if re.fullmatch(
+            r"/devices/\d+/lldp-discovery(?:/run)?",
+            path,
+        ):
+            return "connections.view"
 
         if path.startswith("/devices"):
             return "devices.view"

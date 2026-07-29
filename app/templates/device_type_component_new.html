@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/component_sequences.css') }}?v=20260726-sequences-1">
+{% endblock %}
+
+{% block content %}
+{% set manufacturer = device_type.get("manufacturer") or {} %}
+{% set model_name = device_type.get("model") or device_type.get("display") or "Modelo" %}
+{% if selected_kind == "interface" %}
+    {% set default_pattern = "GigabitEthernet0/{n}" %}
+{% elif selected_kind == "front_port" %}
+    {% set default_pattern = "F{n}" %}
+{% elif selected_kind == "rear_port" %}
+    {% set default_pattern = "R{n}" %}
+{% else %}
+    {% set default_pattern = (component_definition.singular | replace(" ", "-")) ~ "-{n}" %}
+{% endif %}
+
+<div class="component-create-page">
+    <a class="back-link" href="/device-types/{{ device_type_id }}#components">← Volver al modelo</a>
+
+    {% if error %}
+    <div class="notice error-notice">
+        <strong>No fue posible crear los componentes.</strong>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <section class="workflow-intro compact-workflow-intro">
+        <div>
+            <span class="eyebrow">{{ manufacturer.get("display") or manufacturer.get("name") or "Fabricante" }}</span>
+            <h2>{{ model_name }}</h2>
+            <p>
+                Agrega documentación reutilizable. Los campos y opciones se obtienen
+                directamente del esquema OPTIONS publicado por NetBox.
+            </p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header compact-panel-header">
+            <div>
+                <h2>Tipo de componente</h2>
+                <p>Selecciona qué heredarán los dispositivos creados con este modelo.</p>
+            </div>
+            <span class="panel-badge">Esquema NetBox</span>
+        </div>
+
+        <form class="component-create-selector" method="get" action="/device-types/{{ device_type_id }}/components/new" style="padding: 16px;">
+            <div class="field">
+                <label for="component-kind">Componente</label>
+                <select id="component-kind" name="kind">
+                    {% for item in component_types %}
+                    <option value="{{ item.key }}" {% if selected_kind == item.key %}selected{% endif %}>
+                        {{ item.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="button secondary" type="submit">Cambiar tipo</button>
+        </form>
+    </section>
+
+    {% if not write_enabled %}
+    <div class="read-only-callout">
+        <span>◌</span>
+        <div>
+            <strong>La escritura está deshabilitada.</strong>
+            <span>Los campos pueden revisarse, pero NetBox no recibirá cambios.</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <section class="panel">
+        <div class="panel-header compact-panel-header">
+            <div>
+                <h2>{{ component_definition.label }}</h2>
+                <p>{{ component_definition.description }}</p>
+            </div>
+            <span class="panel-badge">{{ component_fields | length }} campos</span>
+        </div>
+
+        <form
+            class="component-create-form"
+            method="post"
+            action="/device-types/{{ device_type_id }}/components/actions/create"
+            data-component-sequence-form
+        >
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <input type="hidden" name="kind" value="{{ selected_kind }}">
+
+            <div class="component-sequence-builder">
+                <div class="component-sequence-toolbar">
+                    <div class="component-sequence-toolbar-copy">
+                        <strong>Secuencias de nombres</strong>
+                        <span>
+                            Agrega varias líneas para crear, por ejemplo,
+                            <code>gpon-olt_1/2/{n}</code> y <code>gpon-olt_1/3/{n}</code> juntas.
+                        </span>
+                    </div>
+                    <span class="component-sequence-total" data-sequence-total>1 registro</span>
+                </div>
+
+                <div class="component-sequence-list" data-sequence-list>
+                    <div class="component-sequence-row" data-sequence-row>
+                        <div class="component-sequence-row-title">
+                            <strong data-sequence-heading>Secuencia 1</strong>
+                            <button
+                                class="sequence-remove-button"
+                                type="button"
+                                data-remove-sequence
+                                aria-label="Eliminar secuencia"
+                                hidden
+                            >×</button>
+                        </div>
+
+                        <div class="field sequence-pattern-field">
+                            <label>Nombre o patrón</label>
+                            <input
+                                name="sequence_pattern"
+                                type="text"
+                                value="{{ default_pattern }}"
+                                required
+                            >
+                            <small>Usa <code>{n}</code> o <code>{n:02}</code>.</small>
+                        </div>
+
+                        <div class="field">
+                            <label>Inicio</label>
+                            <input name="sequence_start" type="number" min="0" value="1" required>
+                        </div>
+
+                        <div class="field">
+                            <label>Cantidad</label>
+                            <input name="sequence_count" type="number" min="1" max="256" value="1" required>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="button secondary add-sequence-button" type="button" data-add-sequence>
+                    <span aria-hidden="true">＋</span>
+                    Agregar otra secuencia
+                </button>
+            </div>
+
+            <template id="component-sequence-template">
+                <div class="component-sequence-row" data-sequence-row>
+                    <div class="component-sequence-row-title">
+                        <strong data-sequence-heading>Nueva secuencia</strong>
+                        <button
+                            class="sequence-remove-button"
+                            type="button"
+                            data-remove-sequence
+                            aria-label="Eliminar secuencia"
+                        >×</button>
+                    </div>
+
+                    <div class="field sequence-pattern-field">
+                        <label>Nombre o patrón</label>
+                        <input
+                            name="sequence_pattern"
+                            type="text"
+                            value="{{ default_pattern }}"
+                            required
+                        >
+                        <small>Usa <code>{n}</code> o <code>{n:02}</code>.</small>
+                    </div>
+
+                    <div class="field">
+                        <label>Inicio</label>
+                        <input name="sequence_start" type="number" min="0" value="1" required>
+                    </div>
+
+                    <div class="field">
+                        <label>Cantidad</label>
+                        <input name="sequence_count" type="number" min="1" max="256" value="1" required>
+                    </div>
+                </div>
+            </template>
+
+            <div class="component-dynamic-fields">
+                {% for field in component_fields %}
+                <div class="field {% if field.input_type == 'checkbox' %}component-dynamic-checkbox{% endif %}">
+                    {% if field.input_type == "checkbox" %}
+                    <label class="checkbox-field">
+                        <input
+                            type="checkbox"
+                            name="{{ field.name }}"
+                            value="true"
+                            {% if field.default is sameas true %}checked{% endif %}
+                        >
+                        <span>
+                            <strong>{{ field.label }}</strong>
+                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                        </span>
+                    </label>
+                    {% else %}
+                    <label for="component-field-{{ field.name }}">
+                        {{ field.label }}{% if field.required %} <span>*</span>{% endif %}
+                    </label>
+
+                    {% if field.input_type == "select" %}
+                    <select
+                        id="component-field-{{ field.name }}"
+                        name="{{ field.name }}"
+                        {% if field.required %}required{% endif %}
+                        {% if field.multiple %}multiple{% endif %}
+                    >
+                        {% if not field.multiple %}
+                        <option value="">{% if field.required %}Seleccionar{% else %}Sin definir{% endif %}</option>
+                        {% endif %}
+                        {% for choice in field.choices %}
+                        <option
+                            value="{{ choice.value }}"
+                            {% if field.default|string == choice.value|string %}selected{% endif %}
+                        >
+                            {{ choice.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% elif field.input_type == "textarea" %}
+                    <textarea
+                        id="component-field-{{ field.name }}"
+                        name="{{ field.name }}"
+                        rows="3"
+                        {% if field.required %}required{% endif %}
+                    >{{ field.default or "" }}</textarea>
+                    {% else %}
+                    <input
+                        id="component-field-{{ field.name }}"
+                        name="{{ field.name }}"
+                        type="{% if field.input_type in ['number', 'decimal'] %}number{% else %}text{% endif %}"
+                        {% if field.input_type == 'decimal' %}step="any"{% endif %}
+                        value="{{ field.default if field.default is not none else '' }}"
+                        {% if field.required %}required{% endif %}
+                    >
+                    {% endif %}
+
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="component-create-summary">
+                <div>
+                    <strong>NetBox validará todas las secuencias como un solo lote.</strong>
+                    <span>
+                        Los campos de tipo, etiqueta, descripción y demás opciones se aplicarán
+                        a cada registro generado por las líneas anteriores.
+                    </span>
+                </div>
+                <button class="button primary" type="submit" {% if not write_enabled %}disabled{% endif %}>
+                    Crear todas las secuencias
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/component_sequences.js') }}?v=20260726-sequences-1"></script>
+{% endblock %}

@@ -92,6 +92,11 @@ class SiteRouteTests(unittest.TestCase):
         self.assertIn("San Francisco de Macorís", response.text)
         self.assertIn("Crear site", response.text)
         self.assertIn("TEL-SFM-01", response.text)
+        self.assertNotIn("Acciones rápidas", response.text)
+        self.assertEqual(
+            1,
+            response.text.count('href="/sites/actions/new"'),
+        )
 
     @patch(
         "app.routers.sites.SiteService.site_choices",

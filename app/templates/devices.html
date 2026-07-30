@@ -127,9 +127,17 @@
             </p>
         </div>
 
-        <span class="result-badge">
-            {{ total_count }} registrados
-        </span>
+        <div class="device-panel-actions">
+            <span class="result-badge">
+                {{ total_count }} registrados
+            </span>
+
+            {% if "devices.create" in current_permissions %}
+            <a class="primary-button" href="/devices/actions/new">
+                ＋ Crear equipo
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     {% if devices %}

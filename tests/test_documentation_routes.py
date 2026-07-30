@@ -124,6 +124,37 @@ class DocumentationRouteTests(unittest.TestCase):
         self.assertIn("error=", response.headers["location"])
 
     @patch(
+        "app.main.NetBoxClient.list_device_roles",
+        new_callable=AsyncMock,
+        return_value=[],
+    )
+    @patch(
+        "app.main.NetBoxClient.list_sites",
+        new_callable=AsyncMock,
+        return_value=[],
+    )
+    @patch(
+        "app.main.NetBoxClient.list_devices",
+        new_callable=AsyncMock,
+        return_value={"count": 0, "results": []},
+    )
+    def test_device_catalog_keeps_contextual_create_action(
+        self,
+        _devices,
+        _sites,
+        _roles,
+    ):
+        response = self.client.get("/devices")
+
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Crear equipo", response.text)
+        self.assertEqual(
+            1,
+            response.text.count('href="/devices/actions/new"'),
+        )
+        self.assertNotIn("Acciones rápidas", response.text)
+
+    @patch(
         "app.routers.documentation.DeviceTypeService.list_interface_templates",
         new_callable=AsyncMock,
         return_value=INTERFACES,

@@ -3,16 +3,23 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-30.
-- **Versión documental:** 2.5.
+- **Versión documental:** 2.6.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/site-management`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual `refactor/module-scoped-creation`.
 
 ## Resumen ejecutivo
 
 La versión `0.10.0` fue promovida a `main` y reúne autenticación, roles, auditoría, búsqueda, Sistema, IPAM, fabricantes, modelos, plantillas, conexiones, racks 2D/3D y la base segura para el futuro asistente.
 
-La rama `feature/site-management` incorpora Sites como nivel superior de organización para racks y equipos. NetBox conserva el inventario oficial; NetDoc añade catálogo, filtros y formularios controlados para crear, editar y retirar sites.
+Sites fue integrado en `develop` mediante el PR #13 y desplegado en desarrollo
+en el commit `b85553346b5580ed37353d035168c0efec30befc`; el servicio terminó activo y
+`/login` respondió HTTP 200. La revisión funcional completa del módulo sigue
+pendiente.
+
+La rama `refactor/module-scoped-creation` elimina el bloque redundante
+`Acciones rápidas`. La navegación principal abre módulos y cada operación de
+alta permanece dentro del catálogo o detalle correspondiente.
 
 ## Entornos y servicios
 
@@ -35,7 +42,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Las imágenes se entregan mediante una ruta autenticada; el token de NetBox no se expone.
 - Los cambios futuros de formularios e IA convergen en un `ChangePlan` determinista.
 
-## Funcionalidades disponibles en 0.10.0
+## Funcionalidades disponibles
 
 - Dashboard, dispositivos, interfaces, filtros y paginación.
 - Creación guiada de equipos.
@@ -49,8 +56,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Fabricantes, modelos, ficha completa y plantillas de puertos.
 - Creación de modelos con imágenes opcionales.
 - Planes seguros, lista cerrada de capacidades y vista previa de cables.
+- Sites con catálogo, filtros y operaciones controladas.
 
-## En progreso en `feature/site-management`
+## Integrado en `develop`
 
 ### Gestión de Sites
 
@@ -91,7 +99,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Los errores SQL se convierten en mensajes controlados.
 - Las imágenes pasan a formar parte del respaldo de `DATABASE_URL`.
 
-## Validaciones automatizadas de la rama
+## Validaciones automatizadas disponibles
 
 - compilación Python;
 - grafo Alembic con una sola cabeza;
@@ -107,7 +115,6 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Requiere verificación en desarrollo
 
-- desplegar la rama únicamente en el puerto 8101;
 - confirmar `alembic current` y `alembic heads` en `20260725_0002`;
 - cargar una imagen en un modelo existente;
 - confirmar la etiqueta **Guardada en NetDoc**;
@@ -118,6 +125,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - crear, editar y retirar un site de prueba en desarrollo;
 - confirmar permisos de Administrador, Operador y Consulta;
 - revisar los eventos `SITE_CREATE`, `SITE_UPDATE` y `SITE_DEACTIVATE`.
+- tras integrar la rama actual, confirmar que no aparece `Acciones rápidas`;
+- comprobar que crear equipos, racks y sites sigue disponible dentro de cada
+  módulo y que ninguna ruta de creación fue eliminada.
 
 ## Riesgos y deuda
 
@@ -131,7 +141,10 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Validar el módulo Sites en desarrollo y confirmar que los racks existentes filtran correctamente por el site creado. La imagen representativa queda diferida hasta definir almacenamiento, respaldo y asociación sin duplicar el inventario oficial.
+Integrar y validar la navegación con creación contextual, y completar la
+revisión funcional de Sites en desarrollo. La imagen representativa del site
+queda diferida hasta definir almacenamiento, respaldo y asociación sin duplicar
+el inventario oficial.
 
 ## Reglas de mantenimiento
 
@@ -142,5 +155,7 @@ publicar la rama, verificar el SHA remoto, abrir PR hacia `develop`, desplegar
 solo después de una autorización explícita. Las pruebas específicas y completas
 se ejecutan mediante `scripts/netdoc-test-isolated`; los servidores solo
 descargan commits remotos verificados y no reconstruyen ni publican historial.
+La navegación principal no debe duplicar acciones: cada creación comienza
+dentro del módulo responsable.
 
 Actualizar este documento en todo PR que modifique funcionalidad, arquitectura, seguridad, despliegue, dependencias, pruebas, riesgos o prioridades. Estados permitidos: **Completado**, **En progreso**, **Planificado**, **Bloqueado**, **Diferido** y **Requiere verificación**.

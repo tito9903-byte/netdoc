@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from decimal import Decimal, InvalidOperation
 import secrets
 from urllib.parse import urlencode
@@ -11,6 +12,7 @@ from fastapi.responses import (
     RedirectResponse,
 )
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.services.connection_service import (
@@ -22,6 +24,26 @@ from app.services.connection_service import (
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+
+
+class ConnectionBatchItem(BaseModel):
+    interface_a_id: int = Field(gt=0)
+    interface_b_id: int = Field(gt=0)
+    label: str = Field(default="", max_length=100)
+
+
+class ConnectionBatchRequest(BaseModel):
+    csrf: str
+    connections: list[ConnectionBatchItem] = Field(
+        min_length=1,
+        max_length=50,
+    )
+    cable_type: str = Field(min_length=1, max_length=50)
+    status: str = Field(default="connected", max_length=50)
+    color: str = Field(default="", max_length=20)
+    length: str = Field(default="", max_length=30)
+    length_unit: str = Field(default="m", max_length=20)
+    description: str = Field(default="", max_length=500)
 
 
 def is_authenticated(request: Request) -> bool:
@@ -86,6 +108,25 @@ def valid_csrf(
     )
 
 
+def parse_cable_length(value: str) -> Decimal | None:
+    if not value.strip():
+        return None
+
+    try:
+        parsed = Decimal(value.strip())
+    except InvalidOperation as exc:
+        raise ValueError(
+            "La longitud no tiene un formato válido."
+        ) from exc
+
+    if parsed <= 0:
+        raise ValueError(
+            "La longitud debe ser mayor que cero."
+        )
+
+    return parsed
+
+
 def context(
     request: Request,
     **extra: object,
@@ -108,24 +149,6 @@ async def render_connections(
     created_id: int | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
-    service = ConnectionService()
-
-    try:
-        sites = await service.list_sites()
-        choices = await service.get_cable_choices()
-        recent_cables = await service.list_recent_cables()
-    except ConnectionServiceError as exc:
-        sites = []
-        choices = {
-            "types": [],
-            "statuses": [],
-            "length_units": [],
-        }
-        recent_cables = []
-
-        if error is None:
-            error = exc.message
-
     return templates.TemplateResponse(
         request=request,
         name="connections.html",
@@ -137,11 +160,6 @@ async def render_connections(
                 "Creación guiada de cables entre "
                 "interfaces documentadas"
             ),
-            sites=sites,
-            cable_types=choices["types"],
-            cable_statuses=choices["statuses"],
-            length_units=choices["length_units"],
-            recent_cables=recent_cables,
             csrf_token=csrf_token(request),
             error=error,
             form_data=form_data or {},
@@ -169,6 +187,82 @@ async def connections_page(
     )
 
 
+@router.get("/api/connections/bootstrap")
+async def connection_bootstrap(
+    request: Request,
+):
+    unauthorized = api_unauthorized(request)
+
+    if unauthorized:
+        return unauthorized
+
+    try:
+        async with ConnectionService() as service:
+            sites, choices = await asyncio.gather(
+                service.list_sites(),
+                service.get_cable_choices(),
+            )
+
+        return {
+            "ok": True,
+            "sites": [
+                {
+                    "id": site.get("id"),
+                    "name": (
+                        site.get("display")
+                        or site.get("name")
+                        or "Sin nombre"
+                    ),
+                }
+                for site in sites
+            ],
+            "cable_types": choices["types"],
+            "cable_statuses": choices["statuses"],
+            "length_units": choices["length_units"],
+        }
+
+    except ConnectionServiceError as exc:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ok": False,
+                "error": exc.message,
+            },
+        )
+
+
+@router.get("/api/connections/recent")
+async def recent_connections(
+    request: Request,
+    limit: int = 20,
+):
+    unauthorized = api_unauthorized(request)
+
+    if unauthorized:
+        return unauthorized
+
+    safe_limit = max(1, min(limit, 50))
+
+    try:
+        async with ConnectionService() as service:
+            cables = await service.list_recent_cables(safe_limit)
+
+        return {
+            "ok": True,
+            "results": cables,
+            "count": len(cables),
+        }
+
+    except ConnectionServiceError as exc:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ok": False,
+                "error": exc.message,
+            },
+        )
+
+
 @router.get("/api/connections/devices")
 async def connection_devices(
     request: Request,
@@ -180,7 +274,8 @@ async def connection_devices(
         return unauthorized
 
     try:
-        devices = await ConnectionService().list_devices(site_id)
+        async with ConnectionService() as service:
+            devices = await service.list_devices(site_id)
 
         return {
             "ok": True,
@@ -222,9 +317,8 @@ async def connection_interfaces(
         return unauthorized
 
     try:
-        interfaces = (
-            await ConnectionService().list_free_interfaces(device_id)
-        )
+        async with ConnectionService() as service:
+            interfaces = await service.list_free_interfaces(device_id)
 
         return {
             "ok": True,
@@ -239,6 +333,163 @@ async def connection_interfaces(
                 "error": exc.message,
             },
         )
+
+
+@router.post("/api/connections/bulk")
+async def create_connection_batch(
+    request: Request,
+    payload: ConnectionBatchRequest,
+):
+    unauthorized = api_unauthorized(request)
+
+    if unauthorized:
+        return unauthorized
+
+    if not valid_csrf(request, payload.csrf):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "ok": False,
+                "error": (
+                    "La sesión del formulario expiró. "
+                    "Recarga la página e inténtalo nuevamente."
+                ),
+            },
+        )
+
+    if not settings.netbox_write_enabled:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "ok": False,
+                "error": (
+                    "La escritura está deshabilitada "
+                    "en la configuración de NetDoc."
+                ),
+            },
+        )
+
+    connections = [
+        item.model_dump()
+        for item in payload.connections
+    ]
+    interface_ids: list[int] = []
+
+    for index, item in enumerate(connections, start=1):
+        interface_a_id = int(item["interface_a_id"])
+        interface_b_id = int(item["interface_b_id"])
+
+        if interface_a_id == interface_b_id:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "ok": False,
+                    "error": (
+                        f"La conexión {index} usa la misma "
+                        "interfaz en ambos extremos."
+                    ),
+                },
+            )
+
+        interface_ids.extend([
+            interface_a_id,
+            interface_b_id,
+        ])
+
+    if len(set(interface_ids)) != len(interface_ids):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "ok": False,
+                "error": (
+                    "Una interfaz no puede repetirse dentro "
+                    "del mismo lote."
+                ),
+            },
+        )
+
+    try:
+        parsed_length = parse_cable_length(payload.length)
+    except ValueError as exc:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "ok": False,
+                "error": str(exc),
+            },
+        )
+
+    try:
+        async with ConnectionService() as service:
+            interfaces = await asyncio.gather(*(
+                service.get_interface(interface_id)
+                for interface_id in interface_ids
+            ))
+
+            for index, interface in enumerate(interfaces):
+                if service.interface_is_connected(interface):
+                    row = (index // 2) + 1
+                    side = "A" if index % 2 == 0 else "B"
+                    raise ConnectionServiceError(
+                        "La interfaz del extremo "
+                        f"{side} en la conexión {row} "
+                        "ya está conectada.",
+                        status_code=409,
+                    )
+
+            created = await service.create_interface_cables(
+                connections=connections,
+                cable_type=payload.cable_type,
+                status=payload.status,
+                color=payload.color,
+                length=parsed_length,
+                length_unit=payload.length_unit,
+                description=payload.description,
+                username=str(
+                    request.session.get(
+                        "username",
+                        "desconocido",
+                    )
+                ),
+            )
+
+    except ConnectionServiceError as exc:
+        return JSONResponse(
+            status_code=(
+                400
+                if exc.status_code in (400, 409)
+                else 503
+            ),
+            content={
+                "ok": False,
+                "error": exc.message,
+            },
+        )
+
+    if len(created) != len(connections):
+        return JSONResponse(
+            status_code=502,
+            content={
+                "ok": False,
+                "error": (
+                    "NetBox no confirmó todas las conexiones "
+                    "solicitadas. Revisa el historial antes "
+                    "de repetir el lote."
+                ),
+            },
+        )
+
+    cable_ids = [
+        item.get("id")
+        for item in created
+        if isinstance(item.get("id"), int)
+    ]
+
+    return {
+        "ok": True,
+        "created_count": len(created),
+        "cable_ids": cable_ids,
+    }
 
 
 @router.post(
@@ -307,57 +558,50 @@ async def create_connection(
             status_code=400,
         )
 
-    parsed_length: Decimal | None = None
-
-    if length.strip():
-        try:
-            parsed_length = Decimal(length.strip())
-        except InvalidOperation:
-            return await render_connections(
-                request,
-                error="La longitud no tiene un formato válido.",
-                form_data=form_data,
-                status_code=400,
-            )
-
-        if parsed_length <= 0:
-            return await render_connections(
-                request,
-                error="La longitud debe ser mayor que cero.",
-                form_data=form_data,
-                status_code=400,
-            )
-
-    service = ConnectionService()
+    try:
+        parsed_length = parse_cable_length(length)
+    except ValueError as exc:
+        return await render_connections(
+            request,
+            error=str(exc),
+            form_data=form_data,
+            status_code=400,
+        )
 
     try:
-        interface_a = await service.get_interface(interface_a_id)
-        interface_b = await service.get_interface(interface_b_id)
-
-        if service.interface_is_connected(interface_a):
-            raise ConnectionServiceError(
-                "La interfaz del extremo A ya está conectada."
+        async with ConnectionService() as service:
+            interface_a, interface_b = await asyncio.gather(
+                service.get_interface(interface_a_id),
+                service.get_interface(interface_b_id),
             )
 
-        if service.interface_is_connected(interface_b):
-            raise ConnectionServiceError(
-                "La interfaz del extremo B ya está conectada."
-            )
+            if service.interface_is_connected(interface_a):
+                raise ConnectionServiceError(
+                    "La interfaz del extremo A ya está conectada."
+                )
 
-        created = await service.create_interface_cable(
-            interface_a_id=interface_a_id,
-            interface_b_id=interface_b_id,
-            cable_type=cable_type,
-            status=status,
-            label=label,
-            color=color,
-            length=parsed_length,
-            length_unit=length_unit,
-            description=description,
-            username=str(
-                request.session.get("username", "desconocido")
-            ),
-        )
+            if service.interface_is_connected(interface_b):
+                raise ConnectionServiceError(
+                    "La interfaz del extremo B ya está conectada."
+                )
+
+            created = await service.create_interface_cable(
+                interface_a_id=interface_a_id,
+                interface_b_id=interface_b_id,
+                cable_type=cable_type,
+                status=status,
+                label=label,
+                color=color,
+                length=parsed_length,
+                length_unit=length_unit,
+                description=description,
+                username=str(
+                    request.session.get(
+                        "username",
+                        "desconocido",
+                    )
+                ),
+            )
 
     except ConnectionServiceError as exc:
         return await render_connections(

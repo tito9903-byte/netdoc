@@ -3,42 +3,48 @@
 {% block title %}Conexiones | NetDoc{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/connections.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/connections.css') }}?v=20260730-2">
 {% endblock %}
 
 {% block content %}
-{% if created_id %}
-<div class="connection-alert success">
-    <strong>Conexión creada correctamente.</strong>
-    <span>NetBox registró el cable con ID {{ created_id }}.</span>
-</div>
-{% endif %}
+<div id="connectionFeedback" aria-live="polite">
+    {% if created_id %}
+    <div class="connection-alert success">
+        <strong>Conexión creada correctamente.</strong>
+        <span>NetBox registró el cable con ID {{ created_id }}.</span>
+    </div>
+    {% endif %}
 
-{% if error %}
-<div class="connection-alert error">
-    <strong>No fue posible completar la operación.</strong>
-    <span>{{ error }}</span>
+    {% if error %}
+    <div class="connection-alert error">
+        <strong>No fue posible completar la operación.</strong>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
 </div>
-{% endif %}
 
 {% if not write_enabled %}
 <div class="read-only-callout">
     <span>◌</span>
     <div>
         <strong>Desarrollo está en modo de solo lectura.</strong>
-        <span>Puedes revisar el flujo y consultar cables, pero el botón de creación permanece bloqueado.</span>
+        <span>Puedes preparar el lote y consultar cables, pero la creación permanece bloqueada.</span>
     </div>
 </div>
 {% endif %}
 
 <section class="connection-form-panel">
-    <form id="connectionForm" method="post" action="/connections">
-        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <form
+        id="connectionForm"
+        data-write-enabled="{{ 'true' if write_enabled else 'false' }}"
+        novalidate
+    >
+        <input id="connectionCsrf" type="hidden" value="{{ csrf_token }}">
 
         <div class="connection-panel-header">
             <div>
-                <h2>Nueva conexión</h2>
-                <p>Selecciona dos interfaces libres y documenta el cable.</p>
+                <h2>Nuevas conexiones</h2>
+                <p>Selecciona los dos equipos y agrega todas las parejas de interfaces del lote.</p>
             </div>
             <span class="write-badge">
                 {% if write_enabled %}Escritura controlada{% else %}Vista previa{% endif %}
@@ -52,19 +58,14 @@
                     <span>{{ side | upper }}</span>
                     <div>
                         <h3>{{ title }}</h3>
-                        <p>Selecciona sitio, equipo e interfaz.</p>
+                        <p>Selecciona una vez el sitio y el equipo.</p>
                     </div>
                 </div>
 
                 <div class="connection-field">
                     <label for="site_{{ side }}">Sitio</label>
-                    <select id="site_{{ side }}" data-side="{{ side }}" data-role="site" required>
-                        <option value="">Seleccionar sitio</option>
-                        {% for site in sites %}
-                        <option value="{{ site.get('id') }}">
-                            {{ site.get("display") or site.get("name") or "Sin nombre" }}
-                        </option>
-                        {% endfor %}
+                    <select id="site_{{ side }}" data-side="{{ side }}" data-role="site" disabled required>
+                        <option value="">Cargando sitios...</option>
                     </select>
                 </div>
 
@@ -73,107 +74,158 @@
                     <select id="device_{{ side }}" data-side="{{ side }}" data-role="device" disabled required>
                         <option value="">Seleccionar equipo</option>
                     </select>
-                </div>
-
-                <div class="connection-field">
-                    <label for="interface_{{ side }}">Interfaz libre</label>
-                    <select
-                        id="interface_{{ side }}"
-                        name="interface_{{ side }}_id"
-                        data-side="{{ side }}"
-                        data-role="interface"
-                        disabled
-                        required
-                    >
-                        <option value="">Seleccionar interfaz</option>
-                    </select>
-                    <small id="interface_help_{{ side }}" class="field-help">
-                        Se mostrarán únicamente interfaces sin cable.
+                    <small id="device_help_{{ side }}" class="field-help">
+                        Los equipos se cargarán al seleccionar el sitio.
                     </small>
                 </div>
             </section>
             {% endfor %}
         </div>
 
+        <section class="connection-batch">
+            <div class="batch-heading">
+                <div class="section-heading">
+                    <span>3</span>
+                    <div>
+                        <h3>Conexiones del lote</h3>
+                        <p>Cada fila conecta una interfaz A con una interfaz B.</p>
+                    </div>
+                </div>
+                <button id="addConnectionRow" class="add-connection-button" type="button">
+                    <span>+</span>
+                    Agregar conexión
+                </button>
+            </div>
+
+            <div class="batch-table-wrapper">
+                <table class="batch-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Interfaz del extremo A</th>
+                            <th>Interfaz del extremo B</th>
+                            <th>Etiqueta</th>
+                            <th><span class="sr-only">Acciones</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="connectionRows"></tbody>
+                </table>
+            </div>
+
+            <small class="batch-help">
+                Una interfaz solo puede utilizarse una vez dentro del mismo lote. Máximo 50 conexiones.
+            </small>
+        </section>
+
+        <template id="connectionRowTemplate">
+            <tr class="batch-row">
+                <td class="batch-row-number" data-role="row-number"></td>
+                <td>
+                    <select data-side="a" data-role="interface" disabled required>
+                        <option value="">Seleccionar interfaz A</option>
+                    </select>
+                </td>
+                <td>
+                    <select data-side="b" data-role="interface" disabled required>
+                        <option value="">Seleccionar interfaz B</option>
+                    </select>
+                </td>
+                <td>
+                    <input
+                        data-role="label"
+                        type="text"
+                        maxlength="100"
+                        placeholder="Ejemplo: FO-SMN-001"
+                    >
+                </td>
+                <td>
+                    <button
+                        class="remove-connection-button"
+                        data-action="remove-row"
+                        type="button"
+                        aria-label="Eliminar conexión del lote"
+                        title="Eliminar fila"
+                    >
+                        ×
+                    </button>
+                </td>
+            </tr>
+        </template>
+
         <section class="cable-details">
             <div class="section-heading">
-                <span>3</span>
+                <span>4</span>
                 <div>
-                    <h3>Datos del cable</h3>
-                    <p>Registra el tipo, estado y datos físicos.</p>
+                    <h3>Datos compartidos del cable</h3>
+                    <p>Estos valores se aplicarán a todas las conexiones del lote.</p>
                 </div>
             </div>
 
             <div class="cable-fields-grid">
                 <div class="connection-field">
                     <label for="cable_type">Tipo de cable</label>
-                    <select id="cable_type" name="cable_type" required>
-                        <option value="">Seleccionar tipo</option>
-                        {% for item in cable_types %}
-                        <option value="{{ item.value }}" {% if form_data.get("cable_type") == item.value %}selected{% endif %}>
-                            {{ item.label }}
-                        </option>
-                        {% endfor %}
+                    <select id="cable_type" required disabled>
+                        <option value="">Cargando tipos...</option>
                     </select>
                 </div>
 
                 <div class="connection-field">
                     <label for="status">Estado</label>
-                    <select id="status" name="status" required>
-                        {% for item in cable_statuses %}
-                        <option value="{{ item.value }}" {% if form_data.get("status", "connected") == item.value %}selected{% endif %}>
-                            {{ item.label }}
-                        </option>
-                        {% endfor %}
+                    <select id="status" required disabled>
+                        <option value="">Cargando estados...</option>
                     </select>
                 </div>
 
                 <div class="connection-field">
-                    <label for="label">Etiqueta</label>
-                    <input id="label" name="label" type="text" value="{{ form_data.get('label', '') }}" placeholder="Ejemplo: FO-SMN-001">
-                </div>
-
-                <div class="connection-field">
                     <label for="color">Color</label>
-                    <input id="color" name="color" type="color" value="{{ form_data.get('color', '#00c8d2') }}">
+                    <input id="color" type="color" value="{{ form_data.get('color', '#00c8d2') }}">
                 </div>
 
                 <div class="connection-field">
                     <label for="length">Longitud</label>
-                    <input id="length" name="length" type="number" min="0" step="0.01" value="{{ form_data.get('length', '') }}" placeholder="Ejemplo: 3">
+                    <input
+                        id="length"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value="{{ form_data.get('length', '') }}"
+                        placeholder="Ejemplo: 3"
+                    >
                 </div>
 
                 <div class="connection-field">
                     <label for="length_unit">Unidad</label>
-                    <select id="length_unit" name="length_unit">
-                        {% for item in length_units %}
-                        <option value="{{ item.value }}" {% if form_data.get("length_unit", "m") == item.value %}selected{% endif %}>
-                            {{ item.label }}
-                        </option>
-                        {% endfor %}
+                    <select id="length_unit" disabled>
+                        <option value="">Cargando unidades...</option>
                     </select>
                 </div>
 
                 <div class="connection-field description-field">
                     <label for="description">Descripción</label>
-                    <textarea id="description" name="description" rows="3" placeholder="Uso, ruta física, ticket o información adicional">{{ form_data.get("description", "") }}</textarea>
+                    <textarea
+                        id="description"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Uso, ruta física, ticket o información adicional"
+                    >{{ form_data.get("description", "") }}</textarea>
                 </div>
             </div>
         </section>
 
         <div class="connection-actions">
             <div>
-                <strong>Verifica ambos extremos antes de guardar.</strong>
-                <span>La operación quedará registrada en el historial de NetBox.</span>
+                <strong><span id="batchConnectionCount">1</span> conexión lista para completar.</strong>
+                <span>NetBox validará y registrará el lote en una sola operación.</span>
             </div>
             <div class="action-buttons">
-                <a class="secondary-connection-button" href="/devices">Cancelar</a>
+                <a class="secondary-connection-button" href="/connections">Limpiar</a>
                 <button
+                    id="submitConnectionBatch"
                     class="primary-connection-button"
                     type="submit"
                     {% if not write_enabled %}disabled{% endif %}
                 >
-                    Crear conexión
+                    Crear conexiones
                 </button>
             </div>
         </div>
@@ -184,13 +236,17 @@
     <div class="connection-panel-header">
         <div>
             <h2>Conexiones recientes</h2>
-            <p>Equipo e interfaz de cada extremo, datos físicos y estado documentado.</p>
+            <p>Se cargan después del formulario para no retrasar la apertura de la ventana.</p>
         </div>
-        <span class="result-count">{{ recent_cables | length }} mostrados</span>
+        <span id="recentConnectionCount" class="result-count">Cargando...</span>
     </div>
 
-    {% if recent_cables %}
-    <div class="connections-table-wrapper">
+    <div id="recentConnectionsLoading" class="connections-loading">
+        <span></span>
+        Consultando conexiones recientes...
+    </div>
+
+    <div id="recentConnectionsTable" class="connections-table-wrapper" hidden>
         <table class="connections-table">
             <thead>
                 <tr>
@@ -203,35 +259,18 @@
                     <th>Longitud</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for cable in recent_cables %}
-                <tr>
-                    <td class="mono-value">{{ cable.get("id") or "—" }}</td>
-                    <td><strong>{{ cable.get("_a_label") or "—" }}</strong></td>
-                    <td><strong>{{ cable.get("_b_label") or "—" }}</strong></td>
-                    <td>{{ cable.get("_type_label") or "—" }}</td>
-                    <td>{{ cable.get("label") or "—" }}</td>
-                    <td>
-                        <span class="cable-status">
-                            {{ cable.get("_status_label") or "—" }}
-                        </span>
-                    </td>
-                    <td>{{ cable.get("_length_label") or "—" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
+            <tbody id="recentConnectionsBody"></tbody>
         </table>
     </div>
-    {% else %}
-    <div class="connections-empty">
+
+    <div id="recentConnectionsEmpty" class="connections-empty" hidden>
         <div>⇄</div>
         <h3>No hay cables para mostrar</h3>
         <p>Las conexiones creadas aparecerán aquí.</p>
     </div>
-    {% endif %}
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{{ url_for('static', path='js/connections.js') }}"></script>
+<script src="{{ url_for('static', path='js/connections.js') }}?v=20260730-2"></script>
 {% endblock %}

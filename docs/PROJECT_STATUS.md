@@ -6,8 +6,8 @@
 - **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; documentación actual
-  `docs/rack-performance-validation`.
+- **Ramas:** producción `main`; integración `develop`; validación actual de
+  creación múltiple y rendimiento de Conexiones.
 
 ## Resumen ejecutivo
 
@@ -37,6 +37,10 @@ todo el inventario de dispositivos y modelos. Fue integrado en `develop` en
 desarrollo en el puerto 8101 y validado funcionalmente por el propietario. El
 catálogo abre con agilidad, el detalle del rack carga y el selector **Rack
 completo / Detalle ampliado** funciona. Producción permanece sin cambios.
+
+El PR #19 contiene la creación de varias conexiones entre dos equipos en una
+sola operación y evita que la consulta de cables recientes bloquee la apertura
+inicial de la pantalla. Su validación funcional en desarrollo sigue pendiente.
 
 ## Entornos y servicios
 
@@ -141,6 +145,11 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - catálogo de racks sin carga global de dispositivos ni consultas de modelos;
 - reutilización de un mismo cliente HTTP y su pool por solicitud del módulo de
   racks.
+- apertura de Conexiones sin esperar sites, opciones ni cables recientes;
+- carga diferida del historial y carga paralela de los datos iniciales;
+- creación por lote de hasta 50 pares de interfaces entre dos equipos;
+- rechazo de interfaces repetidas dentro del lote y un único POST masivo hacia
+  NetBox.
 
 ## Requiere verificación en desarrollo
 
@@ -157,6 +166,11 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - confirmar que no aparece `Acciones rápidas`;
 - comprobar que crear equipos, racks y sites sigue disponible dentro de cada
   módulo y que ninguna ruta de creación fue eliminada.
+- medir la apertura de Conexiones con el inventario real;
+- crear varias filas entre dos equipos y comprobar etiquetas individuales;
+- confirmar que una interfaz usada desaparece de las demás filas;
+- validar que un lote real crea exactamente todos los cables solicitados y
+  genera auditoría controlada.
 
 ## Riesgos y deuda
 
@@ -170,11 +184,10 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Completar la revisión funcional de Sites, incluidos los permisos
-`sites.view`/`sites.manage` con Administrador, Operador y Consulta, y validar
-creación, edición, retiro y auditoría. La imagen representativa del site queda
-diferida hasta definir almacenamiento, respaldo y asociación sin duplicar el
-inventario oficial.
+Desplegar y validar en desarrollo la creación múltiple y la carga rápida de
+Conexiones. Después, completar la revisión funcional de Sites. La imagen
+representativa del site queda diferida hasta definir almacenamiento, respaldo y
+asociación sin duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
 

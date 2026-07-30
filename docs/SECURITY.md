@@ -20,6 +20,11 @@
 
 Los roles iniciales son Administrador, Operador y Consulta. Debe aplicarse mínimo privilegio y crear roles personalizados cuando los perfiles iniciales resulten demasiado amplios. El administrador conserva todos los permisos. Las variables `ADMIN_USERNAME` y `ADMIN_PASSWORD_HASH` solo crean la primera cuenta cuando la base está vacía.
 
+La gestión de Sites usa permisos separados: `sites.view` permite consultar y
+`sites.manage` permite crear, editar o retirar. Solo el Administrador recibe
+gestión por defecto. Las escrituras requieren CSRF y
+`NETBOX_WRITE_ENABLED=true`; retirar cambia el estado y no elimina el objeto.
+
 La cookie de sesión contiene identidad y datos de presentación, pero no es la autoridad final. En cada ruta protegida, NetDoc carga nuevamente el usuario activo, el rol y los permisos. Por ello, la desactivación de una cuenta y los cambios de rol o permisos se aplican en la siguiente solicitud sin esperar un nuevo inicio de sesión. Las sesiones antiguas que no contienen un identificador válido son enviadas al login.
 
 Un fallo de lectura de identidad se trata de forma cerrada: la sesión se limpia y se exige autenticación. Queda pendiente distinguir en la interfaz un fallo de base de datos de una sesión realmente revocada.

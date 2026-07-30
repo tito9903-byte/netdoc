@@ -6,6 +6,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Added
 
+- Módulo de Sites con catálogo, filtros, alta, edición y retiro controlado sobre NetBox.
+- Permisos separados `sites.view` y `sites.manage`, validación de duplicados, CSRF y auditoría.
 - Dashboard conectado a NetBox.
 - Consulta y detalle de dispositivos.
 - Creación guiada de equipos.

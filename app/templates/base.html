@@ -37,8 +37,8 @@
     {% set user_label = current_user_name | default(request.session.get("full_name", ""), true) %}
     {% set is_manufacturers_page = request.url.path.startswith("/manufacturers") %}
     {% set general_pages = ["dashboard", "search", "profile"] %}
-    {% set documentation_pages = ["devices", "device_types", "interface_templates", "ipam", "connections", "racks"] %}
-    {% set action_pages = ["rack_create"] %}
+    {% set documentation_pages = ["devices", "device_types", "interface_templates", "ipam", "connections", "racks", "sites"] %}
+    {% set action_pages = ["rack_create", "sites"] %}
     {% set administration_pages = ["users", "roles", "audit", "system"] %}
 
     <div class="app-shell">
@@ -98,7 +98,7 @@
                     </div>
                 </details>
 
-                {% if "devices.view" in permissions or "connections.view" in permissions or "racks.view" in permissions or "search.view" in permissions %}
+                {% if "devices.view" in permissions or "connections.view" in permissions or "racks.view" in permissions or "sites.view" in permissions or "search.view" in permissions %}
                 <details
                     class="nav-group"
                     data-nav-group="documentation"
@@ -181,11 +181,22 @@
                             <span>Racks</span>
                         </a>
                         {% endif %}
+
+                        {% if "sites.view" in permissions %}
+                        <a
+                            class="nav-item nav-subitem {% if current_page == 'sites' %}active{% endif %}"
+                            href="/sites"
+                            {% if current_page == 'sites' %}aria-current="page"{% endif %}
+                        >
+                            <span class="nav-icon">⌖</span>
+                            <span>Sites</span>
+                        </a>
+                        {% endif %}
                     </div>
                 </details>
                 {% endif %}
 
-                {% if "devices.create" in permissions or "racks.view" in permissions %}
+                {% if "devices.create" in permissions or "racks.view" in permissions or "sites.manage" in permissions %}
                 <details
                     class="nav-group"
                     data-nav-group="actions"
@@ -212,6 +223,12 @@
                         >
                             <span class="nav-icon">◇</span>
                             <span>Crear rack</span>
+                        </a>
+                        {% endif %}
+                        {% if "sites.manage" in permissions %}
+                        <a class="nav-item nav-subitem" href="/sites/actions/new">
+                            <span class="nav-icon">⌖</span>
+                            <span>Crear site</span>
                         </a>
                         {% endif %}
                     </div>

@@ -64,6 +64,18 @@ PERMISSION_DEFINITIONS = [
         "Infraestructura",
     ),
     (
+        "sites.view",
+        "Ver sites",
+        "Consultar localidades y su información operativa.",
+        "Infraestructura",
+    ),
+    (
+        "sites.manage",
+        "Gestionar sites",
+        "Crear, editar y retirar sites mediante NetBox.",
+        "Infraestructura",
+    ),
+    (
         "users.manage",
         "Gestionar usuarios",
         "Crear, editar, activar y restablecer usuarios.",
@@ -95,6 +107,7 @@ VIEW_PERMISSIONS = {
     "devices.view",
     "connections.view",
     "racks.view",
+    "sites.view",
 }
 
 OPERATOR_PERMISSIONS = VIEW_PERMISSIONS | {
@@ -162,6 +175,7 @@ def identity_from_user(user: User) -> AuthenticatedIdentity:
 
 def seed_access_control(session: Session) -> None:
     permissions_by_code: dict[str, Permission] = {}
+    created_permission_codes: set[str] = set()
 
     for code, name, description, category in PERMISSION_DEFINITIONS:
         permission = session.scalar(
@@ -176,6 +190,7 @@ def seed_access_control(session: Session) -> None:
                 category=category,
             )
             session.add(permission)
+            created_permission_codes.add(code)
         else:
             permission.name = name
             permission.description = description
@@ -230,6 +245,13 @@ def seed_access_control(session: Session) -> None:
                 for item in sorted(codes)
                 if item in permissions_by_code
             ]
+        elif created_permission_codes:
+            existing_codes = permission_codes(role)
+            role.permissions.extend(
+                permissions_by_code[item]
+                for item in sorted(codes & created_permission_codes)
+                if item not in existing_codes
+            )
 
         roles_by_code[code] = role
 

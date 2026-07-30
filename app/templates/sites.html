@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Sites | NetDoc{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', path='css/sites.css') }}">{% endblock %}
+{% block content %}
+<section class="site-hero">
+    <div>
+        <span class="eyebrow">Infraestructura</span>
+        <h2>Organiza el inventario por localidad</h2>
+        <p>Cada site es el nivel superior que agrupa racks, equipos y documentación en NetBox.</p>
+    </div>
+    {% if "sites.manage" in current_permissions %}
+    <a class="button" href="/sites/actions/new">＋ Crear site</a>
+    {% endif %}
+</section>
+
+<form class="site-toolbar" method="get" action="/sites">
+    <label>Buscar<input name="q" value="{{ query }}" placeholder="Nombre, código o dirección"></label>
+    <label>Estado<select name="status">
+        <option value="">Todos</option>
+        {% for item in statuses %}
+        <option value="{{ item.value }}" {% if selected_status == item.value %}selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+    </select></label>
+    <button class="button secondary" type="submit">Filtrar</button>
+</form>
+
+<div class="site-summary"><strong>{{ sites | length }}</strong> sites encontrados</div>
+{% if sites %}
+<section class="site-grid">
+    {% for site in sites %}
+    {% set state = site.get("status") or {} %}
+    <article class="site-card">
+        <header>
+            <span class="site-icon">⌖</span>
+            <div><h3>{{ site.get("name") or "Sin nombre" }}</h3><code>{{ site.get("slug") or "sin-codigo" }}</code></div>
+            <span class="site-status">{{ state.get("label") or state.get("value") or state or "Sin estado" }}</span>
+        </header>
+        <p>{{ site.get("physical_address") or site.get("description") or "Sin dirección documentada." }}</p>
+        <dl>
+            <div><dt>Facilidad</dt><dd>{{ site.get("facility") or "—" }}</dd></div>
+            <div><dt>Racks</dt><dd>{{ site.get("rack_count", 0) }}</dd></div>
+            <div><dt>Equipos</dt><dd>{{ site.get("device_count", 0) }}</dd></div>
+        </dl>
+        <footer>
+            <a href="/racks?site_id={{ site.get('id') }}">Ver racks</a>
+            {% if "sites.manage" in current_permissions %}
+            <a href="/sites/{{ site.get('id') }}/edit">Editar</a>
+            {% endif %}
+        </footer>
+    </article>
+    {% endfor %}
+</section>
+{% else %}
+<section class="site-empty"><strong>No hay sites para mostrar.</strong><span>Ajusta los filtros o crea la primera localidad.</span></section>
+{% endif %}
+{% endblock %}

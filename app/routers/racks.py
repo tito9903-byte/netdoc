@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.services.rack_presentation import (
     nested_label,
     prepare_elevation,
-    prepare_topology,
+    prepare_rack_catalog,
 )
 from app.services.rack_report_detailed_service import (
     RackReportError,
@@ -90,22 +90,17 @@ async def racks_page(
         return redirect
 
     selected_site_id = parse_optional_int(site_id)
-    service = RackService()
 
     try:
-        sites, racks, devices = await asyncio.gather(
-            service.list_sites(),
-            service.list_racks(
-                site_id=selected_site_id,
-                query=q,
-            ),
-            service.list_devices(site_id=selected_site_id),
-        )
-        topology = prepare_topology(
-            sites=sites,
-            racks=racks,
-            devices=devices,
-        )
+        async with RackService() as service:
+            sites, racks = await asyncio.gather(
+                service.list_sites(),
+                service.list_racks(
+                    site_id=selected_site_id,
+                    query=q,
+                ),
+            )
+        catalog = prepare_rack_catalog(racks)
     except RackServiceError as exc:
         return templates.TemplateResponse(
             request=request,
@@ -128,10 +123,10 @@ async def racks_page(
             request,
             page_title="Racks",
             page_subtitle=(
-                "Capacidad física calculada desde posiciones y altura de modelos"
+                "Catálogo rápido; la ocupación física se calcula al abrir cada rack"
             ),
             sites=sites,
-            racks=topology["topology_racks"],
+            racks=catalog,
             selected_site_id=selected_site_id,
             query=q,
         ),
@@ -167,10 +162,11 @@ async def device_type_image(
         return denied
 
     try:
-        content, content_type, digest = await RackService().get_device_type_image(
-            device_type_id,
-            face,
-        )
+        async with RackService() as service:
+            content, content_type, digest = await service.get_device_type_image(
+                device_type_id,
+                face,
+            )
     except RackServiceError as exc:
         return Response(
             status_code=exc.status_code or 503,
@@ -210,12 +206,12 @@ async def rack_inventory_report(
         return redirect
 
     selected_face = "rear" if face == "rear" else "front"
-    service = RackService()
     try:
-        rack, devices = await asyncio.gather(
-            service.get_rack(rack_id),
-            service.list_rack_devices(rack_id),
-        )
+        async with RackService() as service:
+            rack, devices = await asyncio.gather(
+                service.get_rack(rack_id),
+                service.list_rack_devices(rack_id),
+            )
         elevation = prepare_elevation(rack, devices, selected_face)
         pdf, filename = await run_in_threadpool(
             build_rack_report,
@@ -263,13 +259,12 @@ async def rack_detail_page(
     _ = view
     selected_face = face if face in {"front", "rear"} else "front"
     selected_view = "3d"
-    service = RackService()
-
     try:
-        rack, devices = await asyncio.gather(
-            service.get_rack(rack_id),
-            service.list_rack_devices(rack_id),
-        )
+        async with RackService() as service:
+            rack, devices = await asyncio.gather(
+                service.get_rack(rack_id),
+                service.list_rack_devices(rack_id),
+            )
     except RackServiceError as exc:
         status_code = 404 if exc.status_code == 404 else 503
         return templates.TemplateResponse(

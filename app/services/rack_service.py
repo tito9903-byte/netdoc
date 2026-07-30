@@ -32,6 +32,36 @@ class RackService:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.base_url = self.settings.netbox_url.rstrip("/")
+        self._client: httpx.AsyncClient | None = None
+
+    def _build_client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            base_url=f"{self.base_url}/",
+            headers=self._headers(),
+            verify=self.settings.netbox_verify_ssl,
+            timeout=self.settings.netbox_timeout,
+            limits=httpx.Limits(
+                max_connections=20,
+                max_keepalive_connections=10,
+                keepalive_expiry=30.0,
+            ),
+            follow_redirects=True,
+            trust_env=False,
+        )
+
+    async def __aenter__(self) -> RackService:
+        self._client = self._build_client()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: object,
+        exc_value: object,
+        traceback: object,
+    ) -> None:
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     def _headers(self, *, accept: str = "application/json") -> dict[str, str]:
         token_type = self.settings.netbox_token_type.strip().lower()
@@ -43,7 +73,7 @@ class RackService:
         return {
             "Authorization": authorization,
             "Accept": accept,
-            "User-Agent": "NetDoc/0.10.1",
+            "User-Agent": f"NetDoc/{self.settings.app_version}",
         }
 
     @staticmethod
@@ -79,7 +109,6 @@ class RackService:
         endpoint: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
         clean_params = {
             key: value
             for key, value in (params or {}).items()
@@ -87,13 +116,19 @@ class RackService:
         }
 
         try:
-            async with httpx.AsyncClient(
-                headers=self._headers(),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(url, params=clean_params)
+            if self._client is not None:
+                response = await self._client.get(
+                    endpoint.lstrip("/"),
+                    params=clean_params,
+                    headers={"Accept": "application/json"},
+                )
+            else:
+                async with self._build_client() as client:
+                    response = await client.get(
+                        endpoint.lstrip("/"),
+                        params=clean_params,
+                        headers={"Accept": "application/json"},
+                    )
         except httpx.ConnectError as exc:
             raise RackServiceError(
                 f"No fue posible conectar con NetBox en {self.base_url}."
@@ -342,13 +377,17 @@ class RackService:
         )
 
         try:
-            async with httpx.AsyncClient(
-                headers=self._headers(accept="image/*"),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(image_url)
+            if self._client is not None:
+                response = await self._client.get(
+                    image_url,
+                    headers={"Accept": "image/*"},
+                )
+            else:
+                async with self._build_client() as client:
+                    response = await client.get(
+                        image_url,
+                        headers={"Accept": "image/*"},
+                    )
         except httpx.ConnectError as exc:
             raise RackServiceError(
                 "No fue posible descargar la imagen desde NetBox."

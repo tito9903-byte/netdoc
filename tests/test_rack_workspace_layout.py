@@ -42,6 +42,27 @@ class RackWorkspaceLayoutTests(unittest.TestCase):
         self.assertIn("visible", javascript)
         self.assertIn("normalize(\"NFD\")", javascript)
 
+    def test_detail_scale_control_updates_the_rack_and_persists_selection(self):
+        javascript = (
+            ROOT / "app/static/js/topology.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('querySelectorAll("[data-topology-scale]")', javascript)
+        self.assertIn("const applyScale = (scale) =>", javascript)
+        self.assertIn("root.dataset.scale = selected", javascript)
+        self.assertIn("scaleButtons.forEach((button) =>", javascript)
+        self.assertIn("applyScale(button.dataset.topologyScale", javascript)
+        self.assertIn('localStorage.setItem("netdocRack3dScale"', javascript)
+        self.assertIn('localStorage.getItem("netdocRack3dScale")', javascript)
+
+        template = (
+            ROOT / "app/templates/rack_detail.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "js/topology.js') }}?v=20260730-rack-scale-1",
+            template,
+        )
+
     def test_documentation_covers_workspace_and_mobile_cards(self):
         documentation = (
             ROOT / "docs/RACKS_AND_DEVICE_IMAGES.md"

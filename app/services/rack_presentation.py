@@ -272,6 +272,33 @@ def prepare_elevation(
     }
 
 
+def prepare_rack_catalog(
+    racks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    prepared: list[dict[str, Any]] = []
+
+    for raw_rack in racks:
+        rack = dict(raw_rack)
+        device_count = rack.get("device_count")
+        rack.update({
+            "_site_label": nested_label(rack.get("site"), "Sin sitio"),
+            "_location_label": nested_label(rack.get("location")),
+            "_status_label": nested_label(rack.get("status")),
+            "_u_height": max(
+                1,
+                int(decimal_value(rack.get("u_height"), Decimal("42"))),
+            ),
+            "_device_count": (
+                int(device_count)
+                if isinstance(device_count, int)
+                else None
+            ),
+        })
+        prepared.append(rack)
+
+    return prepared
+
+
 def prepare_topology(
     *,
     sites: list[dict[str, Any]],

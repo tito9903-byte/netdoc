@@ -14,7 +14,7 @@
         <h2>Abre rápidamente el rack que necesitas revisar</h2>
         <p>
             El catálogo carga solo la información general. La ocupación, las imágenes,
-            los conflictos y las vistas 2D/3D se calculan al abrir un rack específico.
+            los conflictos y la vista 3D se calculan al abrir un rack específico.
         </p>
     </div>
     <div class="workflow-intro-actions">
@@ -55,7 +55,7 @@
         <h2>Inventario de racks</h2>
         <p>{{ racks | length }} bastidores disponibles</p>
     </div>
-    <span class="rack-result-badge">Detalle 2D, 3D y reporte al abrir</span>
+    <span class="rack-result-badge">Detalle 3D y reporte al abrir</span>
 </section>
 
 {% if racks %}
@@ -77,7 +77,16 @@
 
         <div class="rack-card-metrics">
             <div><span>Altura</span><strong>{{ rack.get("_u_height") }}U</strong></div>
-            <div><span>Equipos</span><strong>{{ rack.get("_device_count") }}</strong></div>
+            <div>
+                <span>Equipos</span>
+                <strong>
+                    {% if rack.get("_device_count") is not none %}
+                        {{ rack.get("_device_count") }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </strong>
+            </div>
             <div>
                 <span>Ancho</span>
                 <strong>

@@ -1,4 +1,4 @@
-# Racks, vistas 2D/3D e imágenes de modelos
+# Racks, vista 3D e imágenes de modelos
 
 ## Objetivo
 
@@ -14,7 +14,7 @@ La asociación se realiza mediante el identificador numérico `device_type_id` d
 4. Crear las plantillas de interfaces y puertos en **Plantillas de puertos**.
 5. Crear el dispositivo usando el modelo.
 6. Seleccionar sitio, rack, posición U y cara.
-7. Revisar el rack alternando entre vista 2D y vista 3D.
+7. Revisar el rack alternando perspectiva, cara y escala en la vista 3D.
 
 ## Separación de responsabilidades
 
@@ -145,6 +145,23 @@ El botón **Descargar reporte PDF** genera en memoria una sola página con el
 resumen del rack, la elevación 3D con fotografías y el inventario. El archivo no
 se almacena en el servidor.
 
+Los controles **Rack completo** y **Detalle ampliado** cambian la escala de la
+elevación sin modificar posiciones ni alturas. La preferencia queda guardada en
+el navegador y se vuelve a aplicar al abrir otro detalle de rack.
+
+## Catálogo y rendimiento
+
+La ruta `/racks` consulta en paralelo únicamente el catálogo de sites y el de
+racks. No descarga todo el inventario de dispositivos ni consulta cada modelo
+para construir las tarjetas. El conteo de equipos se toma del resumen solo
+cuando NetBox lo incluye en cada rack; si ese dato no está disponible, se
+muestra como desconocido en lugar de iniciar una consulta global costosa.
+
+Los dispositivos, dimensiones, fotografías, ocupación y conflictos se cargan
+solo al abrir `/racks/{id}`. Las consultas necesarias para una misma página
+reutilizan un cliente HTTP y su pool de conexiones hacia NetBox; el cliente se
+cierra al terminar la solicitud.
+
 ## Alturas y ocupación
 
 NetDoc utiliza la altura documentada en el modelo:
@@ -186,6 +203,7 @@ No se registra el contenido binario ni el token de NetBox.
 Antes de fusionar:
 
 ```bash
+scripts/netdoc-test-isolated tests.test_rack_catalog_performance tests.test_rack_workspace_layout
 scripts/netdoc-test-isolated
 python -m compileall -q app tests migrations
 python -c 'from app.main import app; print(app.title, len(app.routes))'

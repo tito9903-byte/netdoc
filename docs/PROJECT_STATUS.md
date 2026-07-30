@@ -3,11 +3,11 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-30.
-- **Versión documental:** 2.8.
+- **Versión documental:** 2.9.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; documentación actual
-  `docs/netdoc-master`.
+- **Ramas:** producción `main`; integración `develop`; corrección actual
+  `fix/rack-detail-performance`.
 
 ## Resumen ejecutivo
 
@@ -25,6 +25,16 @@ El PR #15 restauró el detalle profesional del rack sobre la base actual, sin
 retirar Sites ni la navegación por módulos. Fue integrado en `develop` en
 `a251b5d296896c8672531512f61589b54a8480df`, desplegado con la suite completa
 superada y validado funcionalmente por el propietario en desarrollo.
+
+El PR #16 integró `NETDOC.md` y las reglas persistentes de continuidad en
+`develop`, que ahora parte de
+`6e0d1dbe3ca8cb8237aacc2e1a5f03de0cb32351`.
+
+La rama `fix/rack-detail-performance` corrige dos regresiones detectadas por el
+propietario: el control **Detalle ampliado** no ejecutaba ninguna acción y el
+catálogo de racks cargaba todo el inventario de dispositivos y modelos. La
+corrección está en prueba y documentación; todavía no se ha integrado,
+desplegado ni validado funcionalmente en desarrollo.
 
 ## Entornos y servicios
 
@@ -125,6 +135,10 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - estructura, contenido y búsqueda del inventario del rack;
 - generación y descarga autenticada del reporte PDF;
 - fotografías del rack a `width: 100%`, `height: 100%` y `object-fit: fill`.
+- cambio real y persistencia local de la escala **Rack completo / Detalle ampliado**;
+- catálogo de racks sin carga global de dispositivos ni consultas de modelos;
+- reutilización de un mismo cliente HTTP y su pool por solicitud del módulo de
+  racks.
 
 ## Requiere verificación en desarrollo
 
@@ -141,6 +155,12 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - confirmar que no aparece `Acciones rápidas`;
 - comprobar que crear equipos, racks y sites sigue disponible dentro de cada
   módulo y que ninguna ruta de creación fue eliminada.
+- medir la apertura del catálogo de racks con el inventario real y confirmar
+  que ya no se bloquea mientras carga todos los dispositivos;
+- alternar **Rack completo** y **Detalle ampliado**, recargar la página y
+  confirmar que la escala seleccionada se conserva;
+- comprobar frente, trasera, vista isométrica, inventario y reporte PDF después
+  de la corrección.
 
 ## Riesgos y deuda
 
@@ -154,9 +174,10 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Completar la revisión funcional de Sites. La imagen representativa del site
-queda diferida hasta definir almacenamiento, respaldo y asociación sin duplicar
-el inventario oficial.
+Integrar y validar en desarrollo la corrección de escala y rendimiento del rack.
+Después, completar la revisión funcional de Sites. La imagen representativa del
+site queda diferida hasta definir almacenamiento, respaldo y asociación sin
+duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
 

@@ -106,6 +106,16 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La arquitectura del futuro chat separa interpretación, resolución, planificación, políticas, confirmación y ejecución.
 - La versión de aplicación por defecto avanza a `0.10.1`.
 
+### Fixed
+
+- El control **Detalle ampliado** vuelve a cambiar la escala real de la vista 3D
+  y conserva la preferencia en el navegador.
+- El catálogo de racks deja de descargar todos los dispositivos y consultar
+  cada modelo; carga únicamente sites y racks, y reserva ocupación, imágenes y
+  conflictos para el detalle seleccionado.
+- Las consultas de una misma página del módulo de racks reutilizan el cliente
+  HTTP hacia NetBox y cierran el pool al terminar.
+
 ### Security
 
 - Reglas explícitas para secretos, mínimo privilegio, separación de entornos y verificación previa.

@@ -61,6 +61,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- `AGENTS.md` formaliza el flujo persistente para futuros chats: inspección
+  previa, pruebas completas, commits creados por el agente, publicación con SHA
+  remoto verificado, PR hacia `develop`, despliegue aislado en 8101 y
+  producción únicamente con autorización explícita.
 - README, roadmap, estado y documentación alineados al flujo `feature/*` → `develop` → `main`.
 - Git, pip y Python de los despliegues se ejecutan como `sshtelenord`; systemd permanece bajo root.
 - La autenticación usa cuentas persistentes y recarga identidad y permisos antes de cada solicitud protegida.

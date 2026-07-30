@@ -3,7 +3,7 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-30.
-- **Versión documental:** 2.3.
+- **Versión documental:** 2.4.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/site-management`.
@@ -134,5 +134,11 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 Validar el módulo Sites en desarrollo y confirmar que los racks existentes filtran correctamente por el site creado. La imagen representativa queda diferida hasta definir almacenamiento, respaldo y asociación sin duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
+
+`AGENTS.md` contiene las instrucciones persistentes que debe seguir todo agente
+en un chat nuevo. El flujo oficial es modificar, probar, crear el commit,
+publicar la rama, verificar el SHA remoto, abrir PR hacia `develop`, desplegar
+únicamente desarrollo con autorización, realizar la revisión y tocar producción
+solo después de una autorización explícita.
 
 Actualizar este documento en todo PR que modifique funcionalidad, arquitectura, seguridad, despliegue, dependencias, pruebas, riesgos o prioridades. Estados permitidos: **Completado**, **En progreso**, **Planificado**, **Bloqueado**, **Diferido** y **Requiere verificación**.

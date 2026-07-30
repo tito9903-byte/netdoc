@@ -37,6 +37,8 @@ flowchart TB
 - `app/models/access.py`: entidades de usuario, rol, permiso y evento de auditoría.
 - `app/services/access_service.py`: reglas de negocio del control de acceso y protección de login.
 - `app/routers/admin.py`: pantallas y acciones administrativas.
+- `app/routers/sites.py`: catálogo y operaciones controladas sobre Sites.
+- `app/services/site_service.py`: validación e integración de Sites con NetBox.
 - `app/routers/profile.py`: perfil y cambio de contraseña propios.
 - `app/services/netbox_client.py` y servicios especializados: integración con NetBox.
 - `app/services/search_service.py`: búsqueda concurrente y normalización de resultados.
@@ -64,6 +66,10 @@ Roles iniciales:
 - **Administrador:** todos los permisos y gestión completa.
 - **Operador:** consulta y operaciones guiadas de dispositivos y conexiones.
 - **Consulta:** acceso de solo lectura a dashboard, búsqueda global, dispositivos, conexiones y racks.
+
+Los permisos `sites.view` y `sites.manage` separan consulta y modificación. El
+Administrador recibe ambos; Operador y Consulta reciben solo `sites.view` por
+defecto.
 
 ## Protección de inicio de sesión
 

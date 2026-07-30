@@ -2,17 +2,17 @@
 
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
-- **Última actualización:** 2026-07-25.
-- **Versión documental:** 2.2.
+- **Última actualización:** 2026-07-30.
+- **Versión documental:** 2.5.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/local-device-type-images`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/site-management`.
 
 ## Resumen ejecutivo
 
 La versión `0.10.0` fue promovida a `main` y reúne autenticación, roles, auditoría, búsqueda, Sistema, IPAM, fabricantes, modelos, plantillas, conexiones, racks 2D/3D y la base segura para el futuro asistente.
 
-La rama `feature/local-device-type-images` prepara `0.10.1` para resolver una limitación detectada al subir imágenes mediante NetBox 4.4.2: el proceso de NetBox no podía escribir en su directorio multimedia. La solución no cambia permisos del servidor NetBox. NetDoc guarda las nuevas imágenes frontal y trasera en su propia base, vinculadas al `device_type_id` real de NetBox.
+La rama `feature/site-management` incorpora Sites como nivel superior de organización para racks y equipos. NetBox conserva el inventario oficial; NetDoc añade catálogo, filtros y formularios controlados para crear, editar y retirar sites.
 
 ## Entornos y servicios
 
@@ -50,7 +50,17 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Creación de modelos con imágenes opcionales.
 - Planes seguros, lista cerrada de capacidades y vista previa de cables.
 
-## En progreso en `feature/local-device-type-images`
+## En progreso en `feature/site-management`
+
+### Gestión de Sites
+
+- Catálogo con búsqueda y filtro por estado.
+- Creación y edición de nombre, código, estado, facilidad, direcciones, coordenadas y descripción.
+- Retiro mediante cambio de estado; no se eliminan sites.
+- Validación de nombre o código duplicado antes de escribir.
+- Permisos `sites.view` y `sites.manage`; la gestión queda reservada al Administrador por defecto.
+- CSRF, modo de escritura, auditoría y errores controlados.
+- NetBox continúa como fuente oficial; no se duplica el objeto Site en la base local.
 
 ### Persistencia local de imágenes
 
@@ -93,6 +103,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - carga multipart autenticada y entrega de la imagen;
 - importación de la aplicación y análisis de plantillas;
 - suite aislada sobre una base temporal.
+- permisos, validaciones y rutas del módulo Sites.
 
 ## Requiere verificación en desarrollo
 
@@ -104,6 +115,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - sustituirla y comprobar el cambio de `ETag`;
 - revisar el evento de auditoría;
 - confirmar que NetBox no recibió un `PATCH` de imagen.
+- crear, editar y retirar un site de prueba en desarrollo;
+- confirmar permisos de Administrador, Operador y Consulta;
+- revisar los eventos `SITE_CREATE`, `SITE_UPDATE` y `SITE_DEACTIVATE`.
 
 ## Riesgos y deuda
 
@@ -117,8 +131,16 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Validar `0.10.1` en desarrollo. Después de confirmar migración, carga y visualización en racks, abrir la promoción `develop → main`. La siguiente etapa funcional continuará con componentes de modelos y conexiones físicas guiadas.
+Validar el módulo Sites en desarrollo y confirmar que los racks existentes filtran correctamente por el site creado. La imagen representativa queda diferida hasta definir almacenamiento, respaldo y asociación sin duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
+
+`AGENTS.md` contiene las instrucciones persistentes que debe seguir todo agente
+en un chat nuevo. El flujo oficial es modificar, probar, crear el commit,
+publicar la rama, verificar el SHA remoto, abrir PR hacia `develop`, desplegar
+únicamente desarrollo con autorización, realizar la revisión y tocar producción
+solo después de una autorización explícita. Las pruebas específicas y completas
+se ejecutan mediante `scripts/netdoc-test-isolated`; los servidores solo
+descargan commits remotos verificados y no reconstruyen ni publican historial.
 
 Actualizar este documento en todo PR que modifique funcionalidad, arquitectura, seguridad, despliegue, dependencias, pruebas, riesgos o prioridades. Estados permitidos: **Completado**, **En progreso**, **Planificado**, **Bloqueado**, **Diferido** y **Requiere verificación**.

@@ -340,6 +340,17 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         if path.startswith("/admin/audit"):
             return "audit.view"
 
+        if path.startswith("/sites/actions/"):
+            return "sites.manage"
+
+        if path.startswith("/sites/") and (
+            path.endswith("/edit") or path.endswith("/deactivate")
+        ):
+            return "sites.manage"
+
+        if path.startswith("/sites"):
+            return "sites.view"
+
         if path.startswith("/devices/actions/new"):
             return "devices.create"
 

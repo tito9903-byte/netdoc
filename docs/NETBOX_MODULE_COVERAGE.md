@@ -17,7 +17,7 @@ Estados:
 | Objeto o proceso | Estado | Experiencia objetivo | Reglas principales |
 |---|---|---|---|
 | Regiones y grupos de sitios | Planificado | Árbol territorial reutilizable | No crear duplicados por nombre/slug |
-| Sitios | Fundamento | Catálogo, ficha y asistente de alta | Validar región, tenant, estado y slug |
+| Sitios | En revisión | Catálogo, alta, edición y retiro | Nombre/slug únicos, permisos, CSRF y sin eliminación |
 | Localidades | Fundamento | Administrar dentro del sitio | Exigir sitio y jerarquía correcta |
 | Racks | En revisión | Listado, ficha, alta, 2D y 3D | Altura, numeración, cara y conflictos |
 | Reservas de rack | Planificado | Calendario de unidades reservadas | No permitir solapamientos |

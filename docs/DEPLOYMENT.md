@@ -2,11 +2,22 @@
 
 ## Objetivo y política
 
-`git push` solo publica cambios en GitHub; no actualiza servidores. El comando de desarrollo descarga `origin/develop` en 8101; el de producción requiere promoción a `main` y descarga `origin/main` en 8100. No modifique producción manualmente ni despliegue automáticamente desde un PR.
+`git push` solo publica cambios en GitHub; no actualiza servidores. El comando
+de desarrollo descarga `origin/develop` en 8101; el de producción requiere
+promoción a `main` y descarga `origin/main` en 8100. No modifique producción
+manualmente ni despliegue automáticamente desde un PR.
+
+El servidor es únicamente un destino de despliegue. Los commits se crean,
+prueban y publican antes de llegar a él. No reconstruya historial en
+`/opt/netdoc-dev` o `/opt/netdoc-prod` mediante `git am`, archivos de parche o
+bloques Base64, y no publique con `git push` desde esos checkouts. El servidor
+solo debe descargar una referencia remota cuyo SHA ya fue verificado.
 
 ```mermaid
 flowchart LR
- F[feature/*] --> D[develop] --> B[respaldo de base] --> DEV[despliegue 8101] --> T[pruebas] --> M[PR a main] --> BP[respaldo producción] --> P[despliegue 8100]
+ F[feature/*] --> T[pruebas aisladas] --> G[GitHub y PR] --> D[develop]
+ D --> B[respaldo de base] --> DEV[despliegue 8101]
+ DEV --> M[revisión y PR a main] --> BP[respaldo producción] --> P[despliegue 8100]
 ```
 
 ## Entornos
@@ -95,6 +106,38 @@ Antes de una migración confirme además:
 - desarrollo conserva `NETBOX_WRITE_ENABLED=false` para escrituras hacia NetBox;
 - la base es escribible por `sshtelenord`;
 - no hay otro proceso de migración o respaldo en ejecución.
+
+## Pruebas previas sin tocar datos reales
+
+Toda prueba automatizada, incluida una selección pequeña, debe usar el ejecutor
+aislado:
+
+```bash
+scripts/netdoc-test-isolated tests.test_sites tests.test_access_control
+scripts/netdoc-test-isolated
+```
+
+No invoque `python -m unittest` directamente dentro de un checkout que tenga
+`.env`. Al importar `app.main`, esa ejecución puede resolver el
+`DATABASE_URL` del entorno, abrir la base real y escribir inicialización o
+eventos de auditoría. El ejecutor aislado establece una base temporal, usa
+credenciales desechables y mantiene `NETBOX_WRITE_ENABLED=false`.
+
+## Rama en revisión
+
+La vía normal es publicar `feature/*`, verificar su SHA, abrir el PR hacia
+`develop`, integrarlo con autorización y ejecutar `netdoc-deploy-dev`. Si el
+propietario autoriza excepcionalmente una vista previa de la rama antes de
+integrarla, el procedimiento debe:
+
+- confirmar que la rama ya existe en `origin` y coincide con el SHA esperado;
+- hacer `fetch` y desplegar exactamente esa referencia remota;
+- conservar el checkout y el estado anterior para rollback;
+- ejecutar solo pruebas aisladas;
+- reiniciar únicamente `netdoc-dev` y validar exclusivamente el puerto 8101;
+- detenerse ante cualquier fallo sin publicar desde el servidor.
+
+El script estándar `netdoc-deploy-dev` continúa limitado a `origin/develop`.
 
 ## Actualización, migración y validación
 

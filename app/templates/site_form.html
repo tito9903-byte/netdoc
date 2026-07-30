@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if site_id else "Crear" }} site | NetDoc{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_create.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/sites.css') }}">
+{% endblock %}
+{% block content %}
+<div class="create-device-navigation"><a href="/sites">← Volver a sites</a></div>
+{% if errors %}<section class="create-alert create-alert-error"><strong>No se pudo guardar el site.</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></section>{% endif %}
+{% if not write_enabled %}<div class="read-only-callout"><span>◌</span><div><strong>Este entorno está en modo de solo lectura.</strong><span>Puedes revisar el formulario, pero no se enviará a NetBox.</span></div></div>{% endif %}
+<form class="create-device-form" method="post" action="{{ '/sites/' ~ site_id ~ '/edit' if site_id else '/sites/actions/new' }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <section class="create-form-panel">
+        <div class="create-form-panel-header"><div class="step-number">1</div><div><h2>Identidad y operación</h2><p>Nombre visible, código único y estado del site.</p></div></div>
+        <div class="create-form-grid">
+            <div class="create-field create-field-wide"><label for="site-name">Nombre <span>*</span></label><input id="site-name" name="name" value="{{ form_data.name }}" required autofocus placeholder="Ejemplo: San Francisco de Macorís"></div>
+            <div class="create-field"><label for="site-slug">Código <span>*</span></label><input id="site-slug" name="slug" value="{{ form_data.slug }}" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="sfm-core"><small>Minúsculas, números y guiones. Debe ser único.</small></div>
+            <div class="create-field"><label for="site-status">Estado <span>*</span></label><select id="site-status" name="status" required>{% for item in statuses %}<option value="{{ item.value }}" {% if form_data.status == item.value %}selected{% endif %}>{{ item.label }}</option>{% endfor %}</select></div>
+            <div class="create-field"><label for="site-facility">ID de facilidad</label><input id="site-facility" name="facility" value="{{ form_data.facility }}" placeholder="Ejemplo: TEL-SFM-01"></div>
+        </div>
+    </section>
+    <section class="create-form-panel">
+        <div class="create-form-panel-header"><div class="step-number">2</div><div><h2>Ubicación</h2><p>Dirección operativa y coordenadas verificables.</p></div></div>
+        <div class="create-form-grid">
+            <div class="create-field create-field-wide"><label for="physical-address">Dirección física</label><textarea id="physical-address" name="physical_address">{{ form_data.physical_address }}</textarea></div>
+            <div class="create-field"><label for="shipping-address">Dirección de envío</label><textarea id="shipping-address" name="shipping_address">{{ form_data.shipping_address }}</textarea></div>
+            <div class="create-field"><label for="latitude">Latitud</label><input id="latitude" name="latitude" inputmode="decimal" value="{{ form_data.latitude }}" placeholder="19.300000"></div>
+            <div class="create-field"><label for="longitude">Longitud</label><input id="longitude" name="longitude" inputmode="decimal" value="{{ form_data.longitude }}" placeholder="-70.250000"></div>
+            <div class="create-field create-field-full"><label for="description">Descripción</label><textarea id="description" name="description">{{ form_data.description }}</textarea></div>
+        </div>
+    </section>
+    <div class="create-submit-bar"><div><strong>{{ "Actualizar site" if site_id else "Crear site" }}</strong><span>NetBox validará y conservará el inventario oficial.</span></div><div class="site-form-actions"><a class="button secondary" href="/sites">Cancelar</a><button class="button" type="submit">{{ "Guardar cambios" if site_id else "Crear site" }}</button></div></div>
+</form>
+{% if site_id %}
+<form class="site-danger-zone" method="post" action="/sites/{{ site_id }}/deactivate"><input type="hidden" name="csrf" value="{{ csrf_token }}"><div><strong>Retirar site</strong><span>No elimina el inventario; cambia su estado a Retirado.</span></div><button type="submit">Marcar como retirado</button></form>
+{% endif %}
+{% endblock %}

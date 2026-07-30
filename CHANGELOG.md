@@ -6,6 +6,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Added
 
+- Módulo de Sites con catálogo, filtros, alta, edición y retiro controlado sobre NetBox.
+- Permisos separados `sites.view` y `sites.manage`, validación de duplicados, CSRF y auditoría.
 - Dashboard conectado a NetBox.
 - Consulta y detalle de dispositivos.
 - Creación guiada de equipos.
@@ -59,6 +61,16 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- `AGENTS.md` formaliza el flujo persistente para futuros chats: inspección
+  previa, pruebas completas, commits creados por el agente, publicación con SHA
+  remoto verificado, PR hacia `develop`, despliegue aislado en 8101 y
+  producción únicamente con autorización explícita.
+- Las pruebas selectivas ahora se ejecutan mediante
+  `scripts/netdoc-test-isolated <módulos>` con base y credenciales desechables.
+- GitHub Actions utiliza y valida el mismo ejecutor aislado que el flujo local.
+- El flujo de agentes y despliegue prohíbe reconstruir o publicar commits desde
+  el servidor; desarrollo y producción solo consumen referencias remotas
+  verificadas y se detienen ante cualquier validación fallida.
 - README, roadmap, estado y documentación alineados al flujo `feature/*` → `develop` → `main`.
 - Git, pip y Python de los despliegues se ejecutan como `sshtelenord`; systemd permanece bajo root.
 - La autenticación usa cuentas persistentes y recarga identidad y permisos antes de cada solicitud protegida.

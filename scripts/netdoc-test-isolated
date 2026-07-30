@@ -40,6 +40,12 @@ cd "$APP_DIR"
 printf 'Base temporal: %s\n' "$TEST_DIR/netdoc.db"
 "$PYTHON_BIN" -m compileall -q app tests migrations
 "$PYTHON_BIN" -m alembic heads
-"$PYTHON_BIN" -m unittest discover -s tests -v
+
+if (( $# > 0 )); then
+  printf 'Pruebas seleccionadas: %s\n' "$*"
+  "$PYTHON_BIN" -m unittest -v "$@"
+else
+  "$PYTHON_BIN" -m unittest discover -s tests -v
+fi
 
 printf 'Pruebas completadas; la base temporal será eliminada.\n'

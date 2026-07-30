@@ -3,10 +3,10 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-30.
-- **Versión documental:** 2.6.
+- **Versión documental:** 2.7.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual `refactor/module-scoped-creation`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/restore-rack-workspace`.
 
 ## Resumen ejecutivo
 
@@ -17,9 +17,14 @@ en el commit `b85553346b5580ed37353d035168c0efec30befc`; el servicio terminó ac
 `/login` respondió HTTP 200. La revisión funcional completa del módulo sigue
 pendiente.
 
-La rama `refactor/module-scoped-creation` elimina el bloque redundante
-`Acciones rápidas`. La navegación principal abre módulos y cada operación de
-alta permanece dentro del catálogo o detalle correspondiente.
+El PR #14 eliminó el bloque redundante `Acciones rápidas` y fue integrado en
+`develop` en `5e7d6cf4bf3529a40d909644067d67605acb666e`.
+
+La rama `feature/restore-rack-workspace` corrige una regresión de integración:
+las mejoras del detalle del rack se habían probado desde una rama que nunca se
+fusionó a `develop`, por lo que el despliegue posterior de `develop` sustituyó
+esa vista por una versión anterior. La rama restaura esas funciones sobre la
+base actual sin retirar Sites ni la navegación por módulos.
 
 ## Entornos y servicios
 
@@ -33,6 +38,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 ## Arquitectura vigente
 
 - FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware y Uvicorn.
+- Pillow procesa las fotografías y ReportLab genera los reportes PDF del rack.
 - NetBox conserva dispositivos, tipos, componentes, racks, sitios, cables, IPAM y demás inventario.
 - SQLAlchemy conserva usuarios, roles, permisos, auditoría e imágenes de modelos propias de NetDoc.
 - Alembic mantiene el esquema local; la cabeza de esta rama es `20260725_0002`.
@@ -47,7 +53,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Dashboard, dispositivos, interfaces, filtros y paginación.
 - Creación guiada de equipos.
 - Consulta y creación de conexiones y cables.
-- Racks con listado, detalle, elevación 2D y vista 3D.
+- Racks con catálogo, detalle profesional y vista 3D.
 - Ocupación física mediante posición, cara y `u_height`.
 - Autenticación multiusuario, roles, permisos, perfil y auditoría.
 - Protección temporal de inicio de sesión.
@@ -57,6 +63,10 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Creación de modelos con imágenes opcionales.
 - Planes seguros, lista cerrada de capacidades y vista previa de cables.
 - Sites con catálogo, filtros y operaciones controladas.
+- Inventario del rack con dispositivo, modelo, posición/cara, serial, IP
+  principal, estado, búsqueda y acceso a la ficha.
+- Reporte PDF descargable del rack en una sola página, con elevación 3D,
+  fotografías e inventario.
 
 ## Integrado en `develop`
 
@@ -112,6 +122,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - importación de la aplicación y análisis de plantillas;
 - suite aislada sobre una base temporal.
 - permisos, validaciones y rutas del módulo Sites.
+- estructura, contenido y búsqueda del inventario del rack;
+- generación y descarga autenticada del reporte PDF;
+- fotografías del rack a `width: 100%`, `height: 100%` y `object-fit: fill`.
 
 ## Requiere verificación en desarrollo
 
@@ -128,6 +141,11 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - tras integrar la rama actual, confirmar que no aparece `Acciones rápidas`;
 - comprobar que crear equipos, racks y sites sigue disponible dentro de cada
   módulo y que ninguna ruta de creación fue eliminada.
+- confirmar en el detalle del rack el inventario completo, su buscador y el
+  botón **Abrir**;
+- descargar el reporte PDF y verificar que permanece en una sola página con
+  elevación, fotografías e inventario;
+- confirmar que las posiciones y alturas U no cambiaron.
 
 ## Riesgos y deuda
 
@@ -141,10 +159,10 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Integrar y validar la navegación con creación contextual, y completar la
-revisión funcional de Sites en desarrollo. La imagen representativa del site
-queda diferida hasta definir almacenamiento, respaldo y asociación sin duplicar
-el inventario oficial.
+Integrar y validar la restauración del detalle profesional del rack sobre
+`develop`, y completar la revisión funcional de Sites. La imagen representativa
+del site queda diferida hasta definir almacenamiento, respaldo y asociación sin
+duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
 

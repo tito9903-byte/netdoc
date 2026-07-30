@@ -44,15 +44,16 @@ publicado.
 - `main`: producción 0.10.0 en
   `bb8a63af37dfdadeba8f40910de50212d0b09774`.
 - `develop`: integración 0.10.1 en
-  `b85553346b5580ed37353d035168c0efec30befc`.
-- El PR #13 de Sites fue integrado en `develop`.
+  `5e7d6cf4bf3529a40d909644067d67605acb666e`.
+- Los PR #13 de Sites y #14 de navegación contextual fueron integrados en
+  `develop`.
 - Desarrollo fue desplegado en ese SHA; `netdoc-dev` terminó activo y
   `/login` respondió HTTP 200.
 - La validación funcional completa de Sites sigue pendiente.
-- Trabajo iniciado desde esa base:
-  `refactor/module-scoped-creation`.
-- Objetivo actual: eliminar `Acciones rápidas` de la barra lateral y conservar
-  cada operación de alta dentro de su módulo.
+- Trabajo actual: `feature/restore-rack-workspace`.
+- Objetivo actual: restaurar sobre `develop` el detalle profesional del rack,
+  el inventario y el reporte PDF que se habían probado desde una rama no
+  integrada, sin retirar Sites ni la navegación actual.
 
 Estos datos son un punto de partida, no una autorización para asumir que siguen
 vigentes. Verifica GitHub y el checkout antes de continuar.
@@ -270,8 +271,12 @@ después de la revisión de desarrollo.
 - Confirmar permisos `sites.view` y `sites.manage` con los tres roles.
 - Validar creación, edición, retiro y eventos de auditoría de Sites.
 - Confirmar filtros de racks por site.
-- Validar en desarrollo la navegación sin `Acciones rápidas` cuando el cambio
-  sea integrado.
+- Validar en desarrollo la navegación sin `Acciones rápidas`.
+- Confirmar que el detalle del rack muestra dispositivo, modelo,
+  posición/cara, serial, IP principal, estado, búsqueda y acceso a la ficha.
+- Descargar el reporte PDF del rack y verificar elevación, fotografías,
+  inventario y composición en una sola página.
+- Confirmar que la restauración no modifica posiciones ni alturas U.
 - Definir almacenamiento y respaldo para una imagen representativa de cada
   site antes de implementarla.
 - Mantener en seguimiento respaldo/restauración, retención de auditoría,

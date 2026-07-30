@@ -6,6 +6,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Added
 
+- Inventario profesional debajo de la elevación del rack con dispositivo,
+  modelo, posición/cara, serial, IP principal, estado, búsqueda y acceso a la
+  ficha.
+- Reporte PDF descargable del rack en una sola página con elevación 3D,
+  fotografías e inventario.
 - Módulo de Sites con catálogo, filtros, alta, edición y retiro controlado sobre NetBox.
 - Permisos separados `sites.view` y `sites.manage`, validación de duplicados, CSRF y auditoría.
 - Dashboard conectado a NetBox.
@@ -61,6 +66,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- Se restaura la línea completa de mejoras del rack sobre el `develop` actual
+  para conservar Sites y la navegación por módulos.
+- Pillow y ReportLab quedan declarados y bloqueados como dependencias del
+  reporte PDF.
+- Las fotografías de equipos ocupan exactamente el área física asignada con
+  `width: 100%`, `height: 100%` y `object-fit: fill`, sin reglas posteriores
+  `contain` o `cover`.
 - `AGENTS.md` formaliza el flujo persistente para futuros chats: inspección
   previa, pruebas completas, commits creados por el agente, publicación con SHA
   remoto verificado, PR hacia `develop`, despliegue aislado en 8101 y

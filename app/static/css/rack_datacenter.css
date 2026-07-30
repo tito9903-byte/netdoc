@@ -1,0 +1,392 @@
+.rack-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rack-report-button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    border: 1px solid rgba(32, 200, 210, 0.35);
+    border-radius: 9px;
+    color: var(--text);
+    background: rgba(32, 200, 210, 0.08);
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.rack-report-button:hover,
+.rack-report-button:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(32, 200, 210, 0.13);
+}
+
+.rack-single-topology {
+    --rack-unit-count: 42;
+    --rack-fit-unit-height: 17px;
+    --rack-detail-unit-height: 30px;
+
+    position: relative;
+    isolation: isolate;
+    min-height: 780px;
+    background:
+        radial-gradient(circle at 50% 24%, rgba(71, 117, 139, 0.27), transparent 35%),
+        linear-gradient(180deg, #101b23 0%, #0a1218 58%, #05090d 100%);
+}
+
+.rack-single-topology::before {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    height: 42%;
+    background:
+        linear-gradient(rgba(57, 82, 96, 0.28) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(57, 82, 96, 0.28) 1px, transparent 1px);
+    background-size: 36px 22px;
+    content: "";
+    opacity: 0.42;
+    transform: perspective(420px) rotateX(58deg) scale(1.35);
+    transform-origin: bottom center;
+}
+
+.rack-single-topology::after {
+    position: absolute;
+    top: 42px;
+    right: 46px;
+    left: 46px;
+    z-index: -1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(113, 198, 211, 0.35), transparent);
+    box-shadow: 0 1px 32px rgba(32, 200, 210, 0.22);
+    content: "";
+}
+
+.rack-single-topology-scene {
+    position: relative;
+    width: min(100%, 780px);
+    min-height: 700px;
+    align-content: center;
+    padding: 26px 26px 52px;
+}
+
+.rack-single-topology .topology-rack-card {
+    width: min(100%, 560px);
+}
+
+.rack-single-topology .topology-rack-heading {
+    border-color: rgba(116, 145, 161, 0.34);
+    background: rgba(8, 17, 24, 0.90);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.30);
+    backdrop-filter: blur(8px);
+}
+
+.rack-single-topology .topology-rack-perspective {
+    position: relative;
+    padding: 30px 54px 26px;
+    filter: drop-shadow(0 34px 28px rgba(0, 0, 0, 0.52));
+}
+
+.rack-single-topology .topology-rack-perspective::before {
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    width: 72%;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.64);
+    content: "";
+    filter: blur(12px);
+    transform: translateX(-50%);
+}
+
+.rack-single-topology[data-scale="fit"] .topology-rack-frame {
+    width: 350px;
+    height: calc(var(--rack-unit-count) * var(--rack-fit-unit-height) + 49px);
+    max-height: 780px;
+}
+
+.rack-single-topology[data-scale="detail"] {
+    min-height: 760px;
+    max-height: calc(100vh - 205px);
+    align-items: start;
+    overflow: auto;
+    scrollbar-gutter: stable both-edges;
+}
+
+.rack-single-topology[data-scale="detail"] .rack-single-topology-scene {
+    min-height: calc(var(--rack-unit-count) * var(--rack-detail-unit-height) + 260px);
+    align-content: start;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-card {
+    width: min(100%, 680px);
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-frame {
+    width: 500px;
+    height: calc(var(--rack-unit-count) * var(--rack-detail-unit-height) + 49px);
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-perspective {
+    padding-top: 24px;
+}
+
+.rack-single-topology::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.rack-single-topology::-webkit-scrollbar-thumb {
+    border: 3px solid #091118;
+    border-radius: 999px;
+    background: #3a5668;
+}
+
+.rack-single-topology::-webkit-scrollbar-track {
+    background: #091118;
+}
+
+.rack-single-topology .topology-rack-frame {
+    border: 14px solid transparent;
+    border-top-width: 25px;
+    border-bottom-width: 24px;
+    border-radius: 8px 8px 5px 5px;
+    background:
+        linear-gradient(#04080b, #04080b) padding-box,
+        linear-gradient(90deg, #182732 0%, #526673 11%, #263a47 23%, #14232d 50%, #4c606c 84%, #16242e 100%) border-box;
+    box-shadow:
+        inset 0 0 0 2px #0b1217,
+        inset 0 0 28px rgba(0, 0, 0, 0.92),
+        0 0 0 1px rgba(139, 164, 177, 0.24);
+    transition: width 180ms ease, height 220ms ease;
+}
+
+.rack-single-topology .topology-rack-frame::before {
+    position: absolute;
+    top: -19px;
+    right: 38px;
+    left: 38px;
+    height: 7px;
+    border-radius: 999px;
+    background: repeating-linear-gradient(90deg, #071016 0 8px, #566b77 8px 10px);
+    content: "";
+    opacity: 0.8;
+}
+
+.rack-single-topology .topology-rack-frame::after {
+    right: -43px;
+    width: 31px;
+    height: calc(100% + 42px);
+    border-color: #556975;
+    border-radius: 0 5px 5px 0;
+    background:
+        linear-gradient(90deg, #223744, #0c171f 72%),
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(158, 181, 193, 0.08) 23px 24px);
+    box-shadow: inset 7px 0 13px rgba(0, 0, 0, 0.52);
+    transform: skewY(-33deg);
+}
+
+.rack-single-topology[data-view="front"] .topology-rack-frame::after {
+    opacity: 0;
+}
+
+.rack-single-topology .topology-rack-units {
+    inset: 5px;
+    border-right: 3px solid #273a45;
+    border-left: 3px solid #273a45;
+    opacity: 0.78;
+}
+
+.rack-single-topology .topology-rack-units::before,
+.rack-single-topology .topology-rack-units::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    background: repeating-linear-gradient(180deg, #0d171d 0 7px, #73828a 7px 8px, #0d171d 8px 14px);
+    content: "";
+    opacity: 0.72;
+}
+
+.rack-single-topology .topology-rack-units::before {
+    left: 5px;
+}
+
+.rack-single-topology .topology-rack-units::after {
+    right: 5px;
+}
+
+.rack-single-topology .topology-rack-units span {
+    border-bottom-color: rgba(81, 105, 118, 0.35);
+}
+
+.rack-single-topology .topology-device {
+    right: 13px;
+    left: 13px;
+    min-height: 5px;
+    border-color: rgba(87, 210, 220, 0.58);
+    border-radius: 2px;
+    background:
+        linear-gradient(180deg, rgba(34, 57, 68, 0.98), rgba(9, 19, 25, 0.98));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+        0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.rack-single-topology .topology-device::before {
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    z-index: 3;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #48e59a;
+    box-shadow: 0 0 5px rgba(72, 229, 154, 0.75);
+    content: "";
+    transform: translateY(-50%);
+}
+
+.rack-single-topology .topology-device::after {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    bottom: 2px;
+    z-index: 2;
+    width: 10%;
+    background: repeating-linear-gradient(90deg, rgba(127, 150, 161, 0.30) 0 1px, transparent 1px 3px);
+    content: "";
+    opacity: 0.38;
+    pointer-events: none;
+}
+
+.rack-single-topology .topology-device:hover,
+.rack-single-topology .topology-device:focus-visible {
+    border-color: #8af9ff;
+    filter: brightness(1.22) saturate(1.05);
+}
+
+.rack-single-topology .topology-device.conflict {
+    border-color: #ff7d86;
+    background: linear-gradient(180deg, #6f2932, #2d1116);
+}
+
+.rack-single-topology .topology-device img {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    box-sizing: border-box;
+    object-fit: fill;
+    object-position: center;
+    background: rgba(2, 6, 8, 0.98);
+    opacity: 1;
+    filter: contrast(1.08) saturate(1.02) brightness(1.03);
+}
+
+.rack-single-topology[data-scale="detail"] .topology-device img {
+    inset: 0;
+    width: 100%;
+    max-width: 100%;
+}
+
+.rack-single-topology .topology-device-label {
+    right: 22px;
+    bottom: 3px;
+    left: 22px;
+    z-index: 4;
+    padding: 2px 5px;
+    background: rgba(1, 6, 9, 0.82);
+    font-size: 8px;
+}
+
+.rack-single-topology .topology-device[data-device-units="0.5"] .topology-device-label,
+.rack-single-topology .topology-device[data-device-units="1.0"] .topology-device-label,
+.rack-single-topology .topology-device[data-device-units="1"] .topology-device-label {
+    display: none;
+}
+
+.rack-single-topology .topology-rack-footer {
+    position: relative;
+    z-index: 2;
+    padding: 9px 12px;
+    border: 1px solid rgba(89, 115, 128, 0.28);
+    border-radius: 999px;
+    background: rgba(5, 13, 18, 0.76);
+    backdrop-filter: blur(7px);
+}
+
+.rack-three-dimensional-panel .rack-panel-header {
+    border-bottom-color: rgba(75, 101, 114, 0.30);
+    background: linear-gradient(180deg, rgba(16, 28, 36, 0.98), rgba(10, 19, 25, 0.96));
+}
+
+.rack-view-controls-3d {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+@media (max-width: 980px) {
+    .rack-detail-actions {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .rack-report-button,
+    .rack-display-mode {
+        width: 100%;
+    }
+
+    .rack-report-button {
+        justify-content: center;
+    }
+
+    .rack-single-topology[data-scale="fit"] .topology-rack-frame {
+        width: 300px;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 420px;
+    }
+}
+
+@media (max-width: 640px) {
+    .rack-single-topology {
+        --rack-fit-unit-height: 14px;
+        --rack-detail-unit-height: 23px;
+        min-height: 680px;
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    .rack-single-topology-scene {
+        padding-right: 4px;
+        padding-left: 4px;
+    }
+
+    .rack-single-topology .topology-rack-perspective {
+        padding-right: 26px;
+        padding-left: 26px;
+    }
+
+    .rack-single-topology[data-scale="fit"] .topology-rack-frame {
+        width: 245px;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 320px;
+    }
+}

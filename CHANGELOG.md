@@ -6,6 +6,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Added
 
+- Creación por lote de hasta 50 conexiones entre dos equipos, con una fila por
+  pareja de interfaces y etiqueta individual.
 - Inventario profesional debajo de la elevación del rack con dispositivo,
   modelo, posición/cara, serial, IP principal, estado, búsqueda y acceso a la
   ficha.
@@ -66,6 +68,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- La pantalla de Conexiones se muestra sin esperar respuestas de NetBox; carga
+  sites y opciones en segundo plano y consulta el historial después del
+  formulario.
+- Las consultas de cada operación de Conexiones reutilizan un cliente HTTP y su
+  pool, y la creación múltiple envía un único POST masivo a NetBox.
 - El documento maestro de continuidad pasa a llamarse `NETDOC.md`, queda en la
   raíz y registra únicamente como terminados los cambios confirmados por el
   propietario en desarrollo.

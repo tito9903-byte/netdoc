@@ -3,11 +3,11 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-30.
-- **Versión documental:** 2.9.
+- **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; corrección actual
-  `fix/rack-detail-performance`.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual
+  `feature/bulk-connections-performance`.
 
 ## Resumen ejecutivo
 
@@ -30,11 +30,15 @@ El PR #16 integró `NETDOC.md` y las reglas persistentes de continuidad en
 `develop`, que ahora parte de
 `6e0d1dbe3ca8cb8237aacc2e1a5f03de0cb32351`.
 
-La rama `fix/rack-detail-performance` corrige dos regresiones detectadas por el
-propietario: el control **Detalle ampliado** no ejecutaba ninguna acción y el
-catálogo de racks cargaba todo el inventario de dispositivos y modelos. La
-corrección está en prueba y documentación; todavía no se ha integrado,
-desplegado ni validado funcionalmente en desarrollo.
+El PR #17 corrigió las regresiones del control **Detalle ampliado** y del
+catálogo de racks. Fue integrado en `develop` en
+`fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`, desplegado en desarrollo y
+validado funcionalmente por el propietario.
+
+La rama `feature/bulk-connections-performance` prepara la creación de varias
+conexiones entre dos equipos en una sola operación y evita que la consulta de
+cables recientes bloquee la apertura inicial de la pantalla. Todavía requiere
+PR, integración y validación funcional en desarrollo.
 
 ## Entornos y servicios
 
@@ -139,6 +143,11 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - catálogo de racks sin carga global de dispositivos ni consultas de modelos;
 - reutilización de un mismo cliente HTTP y su pool por solicitud del módulo de
   racks.
+- apertura de Conexiones sin esperar sites, opciones ni cables recientes;
+- carga diferida del historial y carga paralela de los datos iniciales;
+- creación por lote de hasta 50 pares de interfaces entre dos equipos;
+- rechazo de interfaces repetidas dentro del lote y un único POST masivo hacia
+  NetBox.
 
 ## Requiere verificación en desarrollo
 
@@ -161,6 +170,11 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
   confirmar que la escala seleccionada se conserva;
 - comprobar frente, trasera, vista isométrica, inventario y reporte PDF después
   de la corrección.
+- medir la apertura de Conexiones con el inventario real;
+- crear varias filas entre dos equipos y comprobar etiquetas individuales;
+- confirmar que una interfaz usada desaparece de las demás filas;
+- validar que un lote real crea exactamente todos los cables solicitados y
+  genera auditoría controlada.
 
 ## Riesgos y deuda
 
@@ -174,10 +188,10 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Integrar y validar en desarrollo la corrección de escala y rendimiento del rack.
-Después, completar la revisión funcional de Sites. La imagen representativa del
-site queda diferida hasta definir almacenamiento, respaldo y asociación sin
-duplicar el inventario oficial.
+Integrar y validar en desarrollo la creación múltiple y la carga rápida de
+Conexiones. Después, completar la revisión funcional de Sites. La imagen
+representativa del site queda diferida hasta definir almacenamiento, respaldo y
+asociación sin duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
 

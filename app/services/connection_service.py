@@ -76,6 +76,36 @@ class ConnectionService:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.base_url = self.settings.netbox_url.rstrip("/")
+        self._client: httpx.AsyncClient | None = None
+
+    def _build_client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            base_url=f"{self.base_url}/",
+            headers=self._headers(),
+            verify=self.settings.netbox_verify_ssl,
+            timeout=self.settings.netbox_timeout,
+            limits=httpx.Limits(
+                max_connections=20,
+                max_keepalive_connections=10,
+                keepalive_expiry=30.0,
+            ),
+            follow_redirects=True,
+            trust_env=False,
+        )
+
+    async def __aenter__(self) -> ConnectionService:
+        self._client = self._build_client()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: object,
+        exc_value: object,
+        traceback: object,
+    ) -> None:
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     def _headers(self) -> dict[str, str]:
         token_type = self.settings.netbox_token_type.strip().lower()
@@ -88,7 +118,7 @@ class ConnectionService:
         return {
             "Authorization": authorization,
             "Accept": "application/json",
-            "User-Agent": "NetDoc/0.10.0",
+            "User-Agent": f"NetDoc/{self.settings.app_version}",
         }
 
     @staticmethod
@@ -101,6 +131,34 @@ class ConnectionService:
             return (
                 f"NetBox respondió con HTTP {response.status_code}.",
                 {},
+            )
+
+        if isinstance(payload, list):
+            messages: list[str] = []
+
+            for index, item in enumerate(payload, start=1):
+                if not isinstance(item, dict):
+                    continue
+
+                item_messages: list[str] = []
+                for field, value in item.items():
+                    text = (
+                        ", ".join(str(part) for part in value)
+                        if isinstance(value, list)
+                        else str(value)
+                    )
+                    item_messages.append(f"{field}: {text}")
+
+                if item_messages:
+                    messages.append(
+                        f"Conexión {index}: "
+                        + " | ".join(item_messages)
+                    )
+
+            return (
+                " || ".join(messages)
+                or f"NetBox respondió con HTTP {response.status_code}.",
+                {"items": payload},
             )
 
         if not isinstance(payload, dict):
@@ -130,15 +188,14 @@ class ConnectionService:
             payload,
         )
 
-    async def request(
+    async def _request_json(
         self,
         method: str,
         endpoint: str,
         *,
         params: dict[str, Any] | None = None,
-        json_body: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        json_body: Any = None,
+    ) -> Any:
         clean_params = {
             key: value
             for key, value in (params or {}).items()
@@ -146,18 +203,21 @@ class ConnectionService:
         }
 
         try:
-            async with httpx.AsyncClient(
-                headers=self._headers(),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.request(
+            if self._client is not None:
+                response = await self._client.request(
                     method=method,
-                    url=url,
+                    url=endpoint.lstrip("/"),
                     params=clean_params,
                     json=json_body,
                 )
+            else:
+                async with self._build_client() as client:
+                    response = await client.request(
+                        method=method,
+                        url=endpoint.lstrip("/"),
+                        params=clean_params,
+                        json=json_body,
+                    )
 
         except httpx.ConnectError as exc:
             raise ConnectionServiceError(
@@ -184,9 +244,48 @@ class ConnectionService:
                 "NetBox no devolvió una respuesta JSON válida."
             ) from exc
 
+        return payload
+
+    async def request(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json_body: Any = None,
+    ) -> dict[str, Any]:
+        payload = await self._request_json(
+            method,
+            endpoint,
+            params=params,
+            json_body=json_body,
+        )
+
         if not isinstance(payload, dict):
             raise ConnectionServiceError(
                 "NetBox devolvió un formato de respuesta inesperado."
+            )
+
+        return payload
+
+    async def request_many(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        json_body: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        payload = await self._request_json(
+            method,
+            endpoint,
+            json_body=json_body,
+        )
+
+        if not isinstance(payload, list) or not all(
+            isinstance(item, dict) for item in payload
+        ):
+            raise ConnectionServiceError(
+                "NetBox no devolvió el listado esperado para el lote."
             )
 
         return payload
@@ -271,19 +370,11 @@ class ConnectionService:
     async def get_cable_choices(
         self,
     ) -> dict[str, list[dict[str, str]]]:
-        url = f"{self.base_url}/api/dcim/cables/"
-
         try:
-            async with httpx.AsyncClient(
-                headers=self._headers(),
-                verify=self.settings.netbox_verify_ssl,
-                timeout=self.settings.netbox_timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.options(url)
-
-            response.raise_for_status()
-            payload = response.json()
+            payload = await self.request(
+                "OPTIONS",
+                "/api/dcim/cables/",
+            )
             fields = payload.get("actions", {}).get("POST", {})
 
             def choices(
@@ -320,7 +411,11 @@ class ConnectionService:
                 "length_units": choices("length_unit", self.UNIT_LABELS),
             }
 
-        except (httpx.HTTPError, ValueError, AttributeError):
+        except (
+            ConnectionServiceError,
+            ValueError,
+            AttributeError,
+        ):
             return {
                 "types": [
                     {"value": "cat6", "label": "Cobre CAT6"},
@@ -536,7 +631,15 @@ class ConnectionService:
             for side in ("a_terminations", "b_terminations"):
                 terminations = cable.get(side) or []
                 if isinstance(terminations, list) and terminations:
-                    key = self._termination_key(terminations[0])
+                    termination = terminations[0]
+                    nested = (
+                        termination.get("object")
+                        if isinstance(termination, dict)
+                        else None
+                    )
+                    if self._object_label(nested):
+                        continue
+                    key = self._termination_key(termination)
                     if key:
                         keys.add(key)
 
@@ -632,6 +735,78 @@ class ConnectionService:
         description: str,
         username: str,
     ) -> dict[str, Any]:
+        created = await self.create_interface_cables(
+            connections=[
+                {
+                    "interface_a_id": interface_a_id,
+                    "interface_b_id": interface_b_id,
+                    "label": label,
+                }
+            ],
+            cable_type=cable_type,
+            status=status,
+            color=color,
+            length=length,
+            length_unit=length_unit,
+            description=description,
+            username=username,
+        )
+
+        if len(created) != 1:
+            raise ConnectionServiceError(
+                "NetBox no confirmó la creación de la conexión."
+            )
+
+        return created[0]
+
+    async def create_interface_cables(
+        self,
+        *,
+        connections: list[dict[str, Any]],
+        cable_type: str,
+        status: str,
+        color: str,
+        length: Decimal | None,
+        length_unit: str,
+        description: str,
+        username: str,
+    ) -> list[dict[str, Any]]:
+        payloads = [
+            self._cable_payload(
+                interface_a_id=int(item["interface_a_id"]),
+                interface_b_id=int(item["interface_b_id"]),
+                cable_type=cable_type,
+                status=status,
+                label=str(item.get("label") or ""),
+                color=color,
+                length=length,
+                length_unit=length_unit,
+                description=description,
+                username=username,
+            )
+            for item in connections
+        ]
+
+        return await self.request_many(
+            "POST",
+            "/api/dcim/cables/",
+            json_body=payloads,
+        )
+
+    @staticmethod
+    def _cable_payload(
+        *,
+        interface_a_id: int,
+        interface_b_id: int,
+        cable_type: str,
+        status: str,
+        label: str,
+        color: str,
+        length: Decimal | None,
+        length_unit: str,
+        description: str,
+        username: str,
+    ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "a_terminations": [
                 {
@@ -668,8 +843,4 @@ class ConnectionService:
         if description.strip():
             payload["description"] = description.strip()
 
-        return await self.request(
-            "POST",
-            "/api/dcim/cables/",
-            json_body=payload,
-        )
+        return payload

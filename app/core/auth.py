@@ -260,6 +260,10 @@ class PermissionMiddleware(BaseHTTPMiddleware):
                 "CONNECTION_CREATE_SUBMIT",
                 "connection",
             ),
+            ("POST", "/api/connections/bulk"): (
+                "CONNECTION_BATCH_CREATE_SUBMIT",
+                "connection",
+            ),
         }.get((request.method.upper(), request.url.path))
 
         if mutation is None:
@@ -356,6 +360,12 @@ class PermissionMiddleware(BaseHTTPMiddleware):
 
         if path.startswith("/devices"):
             return "devices.view"
+
+        if (
+            path == "/api/connections/bulk"
+            and method.upper() == "POST"
+        ):
+            return "connections.create"
 
         if path.startswith("/api/connections"):
             return "connections.view"

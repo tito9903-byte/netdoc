@@ -6,8 +6,8 @@
 - **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual
-  `feature/bulk-connections-performance`.
+- **Ramas:** producción `main`; integración `develop`; validación actual de
+  creación múltiple y rendimiento de Conexiones.
 
 ## Resumen ejecutivo
 
@@ -30,15 +30,17 @@ El PR #16 integró `NETDOC.md` y las reglas persistentes de continuidad en
 `develop`, que ahora parte de
 `6e0d1dbe3ca8cb8237aacc2e1a5f03de0cb32351`.
 
-El PR #17 corrigió las regresiones del control **Detalle ampliado** y del
-catálogo de racks. Fue integrado en `develop` en
-`fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`, desplegado en desarrollo y
-validado funcionalmente por el propietario.
+El PR #17 corrigió dos regresiones detectadas por el propietario: el control
+**Detalle ampliado** no ejecutaba ninguna acción y el catálogo de racks cargaba
+todo el inventario de dispositivos y modelos. Fue integrado en `develop` en
+`fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`, desplegado únicamente en
+desarrollo en el puerto 8101 y validado funcionalmente por el propietario. El
+catálogo abre con agilidad, el detalle del rack carga y el selector **Rack
+completo / Detalle ampliado** funciona. Producción permanece sin cambios.
 
-La rama `feature/bulk-connections-performance` prepara la creación de varias
-conexiones entre dos equipos en una sola operación y evita que la consulta de
-cables recientes bloquee la apertura inicial de la pantalla. Todavía requiere
-PR, integración y validación funcional en desarrollo.
+El PR #19 contiene la creación de varias conexiones entre dos equipos en una
+sola operación y evita que la consulta de cables recientes bloquee la apertura
+inicial de la pantalla. Su validación funcional en desarrollo sigue pendiente.
 
 ## Entornos y servicios
 
@@ -164,12 +166,6 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - confirmar que no aparece `Acciones rápidas`;
 - comprobar que crear equipos, racks y sites sigue disponible dentro de cada
   módulo y que ninguna ruta de creación fue eliminada.
-- medir la apertura del catálogo de racks con el inventario real y confirmar
-  que ya no se bloquea mientras carga todos los dispositivos;
-- alternar **Rack completo** y **Detalle ampliado**, recargar la página y
-  confirmar que la escala seleccionada se conserva;
-- comprobar frente, trasera, vista isométrica, inventario y reporte PDF después
-  de la corrección.
 - medir la apertura de Conexiones con el inventario real;
 - crear varias filas entre dos equipos y comprobar etiquetas individuales;
 - confirmar que una interfaz usada desaparece de las demás filas;
@@ -188,7 +184,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Integrar y validar en desarrollo la creación múltiple y la carga rápida de
+Desplegar y validar en desarrollo la creación múltiple y la carga rápida de
 Conexiones. Después, completar la revisión funcional de Sites. La imagen
 representativa del site queda diferida hasta definir almacenamiento, respaldo y
 asociación sin duplicar el inventario oficial.

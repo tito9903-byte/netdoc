@@ -55,16 +55,25 @@ publicado.
 - `main`: producción 0.10.0 en
   `bb8a63af37dfdadeba8f40910de50212d0b09774`.
 - `develop`: integración 0.10.1 en
-  `a251b5d296896c8672531512f61589b54a8480df`.
+  `fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`.
 - PR #13: Sites, integrado en `develop`.
 - PR #14: navegación contextual sin `Acciones rápidas`, integrado en
   `develop`.
 - PR #15: restauración del detalle profesional del rack, integrado en
   `develop`.
+- PR #16: documento maestro `NETDOC.md` y reglas persistentes de continuidad,
+  integrado en `develop`.
+- PR #17: funcionamiento de **Detalle ampliado** y optimización del catálogo de
+  racks, integrado en `develop`.
 - Desarrollo está desplegado en
-  `a251b5d296896c8672531512f61589b54a8480df`; `netdoc-dev` quedó activo,
-  cambió de proceso y `/login` respondió HTTP 200.
-- La suite completa ejecutada durante ese despliegue superó 101/101 pruebas.
+  `fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`; el despliegue terminó en el
+  puerto 8101 y `/login` respondió HTTP 200 después del arranque.
+- La corrección del PR #17 superó 16/16 pruebas específicas de racks, 104/104
+  pruebas en la suite aislada completa y `NetDoc CI`; el comportamiento
+  JavaScript también se comprobó con Node.
+- El propietario confirmó en desarrollo que el catálogo de Racks carga con
+  agilidad, que el rack abre y que el selector **Rack completo / Detalle
+  ampliado** funciona.
 - El propietario confirmó que la restauración del rack funciona en desarrollo:
   inventario, búsqueda, acceso a la ficha y reporte PDF.
 - Las posiciones y alturas U se conservaron; las fotografías usan

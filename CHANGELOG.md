@@ -65,6 +65,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
   previa, pruebas completas, commits creados por el agente, publicación con SHA
   remoto verificado, PR hacia `develop`, despliegue aislado en 8101 y
   producción únicamente con autorización explícita.
+- La navegación principal queda limitada a módulos; cada alta se inicia desde
+  el catálogo o detalle correspondiente y se elimina el bloque redundante de
+  `Acciones rápidas`.
 - Las pruebas selectivas ahora se ejecutan mediante
   `scripts/netdoc-test-isolated <módulos>` con base y credenciales desechables.
 - GitHub Actions utiliza y valida el mismo ejecutor aislado que el flujo local.
@@ -76,9 +79,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La autenticación usa cuentas persistentes y recarga identidad y permisos antes de cada solicitud protegida.
 - La inicialización del esquema utiliza Alembic y rechaza esquemas parciales.
 - Las bases heredadas completas se marcan en `20260724_0001` y luego reciben migraciones posteriores, en vez de marcarse directamente en `head`.
-- La navegación se organiza alrededor de General, Documentación, Acciones rápidas y Administración.
+- La navegación se organiza alrededor de General, Documentación y Administración.
 - Fabricantes, modelos y plantillas se administran desde apartados propios.
-- Crear modelo deja de ocupar una opción de Acciones rápidas y se inicia desde el catálogo de modelos.
+- Crear modelo se inicia desde el catálogo de modelos.
 - Topología 3D deja de ocupar una opción independiente y se selecciona dentro de cada rack.
 - El dashboard funciona como centro de inicio para IPAM, hardware, racks y conexiones.
 - El formulario de creación del modelo reúne dimensiones e imágenes físicas.

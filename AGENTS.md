@@ -18,6 +18,15 @@ Antes de cambiar archivos, lea `docs/PROJECT_STATUS.md`,
 - GitHub es la fuente oficial del código compartido. Un commit que existe solo
   en un checkout local todavía no está publicado.
 
+## Principios de producto y navegación
+
+- La navegación principal lleva a módulos, no duplica operaciones.
+- Toda acción de crear, editar o retirar comienza dentro del catálogo o detalle
+  del módulo correspondiente.
+- No agregue un bloque global de `Acciones rápidas` ni enlaces de creación
+  paralelos en la barra lateral. Dispositivos, modelos, racks, sites y los
+  módulos futuros deben conservar su propia entrada contextual.
+
 ## Flujo de trabajo obligatorio
 
 1. Antes de actuar, compruebe la ruta del repositorio, la rama, `git status`,

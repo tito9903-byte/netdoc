@@ -38,7 +38,6 @@
     {% set is_manufacturers_page = request.url.path.startswith("/manufacturers") %}
     {% set general_pages = ["dashboard", "search", "profile"] %}
     {% set documentation_pages = ["devices", "device_types", "interface_templates", "ipam", "connections", "racks", "sites"] %}
-    {% set action_pages = ["rack_create", "sites"] %}
     {% set administration_pages = ["users", "roles", "audit", "system"] %}
 
     <div class="app-shell">
@@ -190,45 +189,6 @@
                         >
                             <span class="nav-icon">⌖</span>
                             <span>Sites</span>
-                        </a>
-                        {% endif %}
-                    </div>
-                </details>
-                {% endif %}
-
-                {% if "devices.create" in permissions or "racks.view" in permissions or "sites.manage" in permissions %}
-                <details
-                    class="nav-group"
-                    data-nav-group="actions"
-                    data-active="{{ 'true' if current_page in action_pages else 'false' }}"
-                    {% if current_page in action_pages %}open{% endif %}
-                >
-                    <summary class="nav-group-summary">
-                        <span class="nav-group-icon">＋</span>
-                        <span>Acciones rápidas</span>
-                        <span class="nav-group-chevron">⌄</span>
-                    </summary>
-                    <div class="nav-group-items">
-                        {% if "devices.create" in permissions %}
-                        <a class="nav-item nav-subitem" href="/devices/actions/new">
-                            <span class="nav-icon">＋</span>
-                            <span>Crear equipo</span>
-                        </a>
-                        {% endif %}
-                        {% if "racks.view" in permissions %}
-                        <a
-                            class="nav-item nav-subitem {% if current_page == 'rack_create' %}active{% endif %}"
-                            href="/racks/actions/new"
-                            {% if current_page == 'rack_create' %}aria-current="page"{% endif %}
-                        >
-                            <span class="nav-icon">◇</span>
-                            <span>Crear rack</span>
-                        </a>
-                        {% endif %}
-                        {% if "sites.manage" in permissions %}
-                        <a class="nav-item nav-subitem" href="/sites/actions/new">
-                            <span class="nav-icon">⌖</span>
-                            <span>Crear site</span>
                         </a>
                         {% endif %}
                     </div>

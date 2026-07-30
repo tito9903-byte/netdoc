@@ -1,8 +1,19 @@
-# Prompt maestro de continuidad de NetDoc
+# NetDoc: documento maestro de continuidad
 
-Copia este documento completo en una conversación nueva. El agente debe usarlo
-como orientación inicial, pero antes de actuar tiene que comprobar el estado
-real del repositorio y leer las fuentes versionadas indicadas más adelante.
+Este es el punto de entrada obligatorio para continuar NetDoc en cualquier
+chat. El agente debe leerlo completo junto con `AGENTS.md`, pero antes de actuar
+tiene que comprobar el estado real del repositorio y de GitHub.
+
+## Regla de actualización
+
+`NETDOC.md` se actualiza después de que el propietario confirme que el cambio
+funciona en desarrollo. Debe registrar el resultado realmente validado, PR,
+SHA, pruebas, estado de desarrollo, estado de producción y pendientes. Una
+implementación, un CI correcto o un HTTP 200 no sustituyen esa validación
+funcional y no autorizan a describir el cambio como terminado.
+
+La actualización de este documento sigue el mismo flujo de revisión por rama y
+PR. Producción solo se actualiza con una autorización explícita y separada.
 
 ## Contexto general
 
@@ -39,21 +50,28 @@ estado y las prioridades. Los ADR conservan decisiones de arquitectura. GitHub
 es la fuente del código compartido; un commit exclusivamente local no está
 publicado.
 
-## Estado verificado al 2026-07-30
+## Estado validado al 2026-07-30
 
 - `main`: producción 0.10.0 en
   `bb8a63af37dfdadeba8f40910de50212d0b09774`.
 - `develop`: integración 0.10.1 en
-  `5e7d6cf4bf3529a40d909644067d67605acb666e`.
-- Los PR #13 de Sites y #14 de navegación contextual fueron integrados en
+  `a251b5d296896c8672531512f61589b54a8480df`.
+- PR #13: Sites, integrado en `develop`.
+- PR #14: navegación contextual sin `Acciones rápidas`, integrado en
   `develop`.
-- Desarrollo fue desplegado en ese SHA; `netdoc-dev` terminó activo y
-  `/login` respondió HTTP 200.
-- La validación funcional completa de Sites sigue pendiente.
-- Trabajo actual: `feature/restore-rack-workspace`.
-- Objetivo actual: restaurar sobre `develop` el detalle profesional del rack,
-  el inventario y el reporte PDF que se habían probado desde una rama no
-  integrada, sin retirar Sites ni la navegación actual.
+- PR #15: restauración del detalle profesional del rack, integrado en
+  `develop`.
+- Desarrollo está desplegado en
+  `a251b5d296896c8672531512f61589b54a8480df`; `netdoc-dev` quedó activo,
+  cambió de proceso y `/login` respondió HTTP 200.
+- La suite completa ejecutada durante ese despliegue superó 101/101 pruebas.
+- El propietario confirmó que la restauración del rack funciona en desarrollo:
+  inventario, búsqueda, acceso a la ficha y reporte PDF.
+- Las posiciones y alturas U se conservaron; las fotografías usan
+  `width: 100%`, `height: 100%` y `object-fit: fill`.
+- Producción no contiene estos cambios y permanece sin modificar.
+- Sigue pendiente completar la validación funcional de Sites y de los permisos
+  por rol.
 
 Estos datos son un punto de partida, no una autorización para asumir que siguen
 vigentes. Verifica GitHub y el checkout antes de continuar.
@@ -271,12 +289,6 @@ después de la revisión de desarrollo.
 - Confirmar permisos `sites.view` y `sites.manage` con los tres roles.
 - Validar creación, edición, retiro y eventos de auditoría de Sites.
 - Confirmar filtros de racks por site.
-- Validar en desarrollo la navegación sin `Acciones rápidas`.
-- Confirmar que el detalle del rack muestra dispositivo, modelo,
-  posición/cara, serial, IP principal, estado, búsqueda y acceso a la ficha.
-- Descargar el reporte PDF del rack y verificar elevación, fotografías,
-  inventario y composición en una sola página.
-- Confirmar que la restauración no modifica posiciones ni alturas U.
 - Definir almacenamiento y respaldo para una imagen representativa de cada
   site antes de implementarla.
 - Mantener en seguimiento respaldo/restauración, retención de auditoría,
@@ -298,3 +310,12 @@ Al terminar informa:
 
 Responde en español, directo y con evidencia. No ocultes errores ni afirmes
 éxito sin verificación.
+
+## Instrucción breve para un chat nuevo
+
+El propietario puede iniciar la continuidad con:
+
+> Ve al repositorio `tito9903-byte/netdoc` en GitHub. Lee completamente
+> `NETDOC.md` y `AGENTS.md`, verifica el estado real del repositorio y explícame
+> dónde quedó el proyecto. No modifiques, fusiones ni despliegues nada hasta que
+> te autorice el siguiente cambio.

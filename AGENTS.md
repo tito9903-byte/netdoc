@@ -6,7 +6,7 @@ el estado real del repositorio y use la documentación versionada.
 
 ## Fuentes de verdad
 
-Antes de cambiar archivos, lea `docs/PROJECT_STATUS.md`,
+Antes de cambiar archivos, lea `NETDOC.md`, `docs/PROJECT_STATUS.md`,
 `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/TESTING.md`,
 `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, `CONTRIBUTING.md`,
 `CHANGELOG.md` y los ADR vigentes.
@@ -17,6 +17,12 @@ Antes de cambiar archivos, lea `docs/PROJECT_STATUS.md`,
 - NetBox es la fuente oficial del inventario técnico.
 - GitHub es la fuente oficial del código compartido. Un commit que existe solo
   en un checkout local todavía no está publicado.
+
+`NETDOC.md` es el documento maestro de continuidad para chats nuevos. Después
+de que el propietario confirme que un cambio funciona en desarrollo, actualice
+allí el resultado validado, PR, SHA, pruebas, estado de los entornos y
+pendientes. No registre como terminado un cambio que solo pasó pruebas o un
+health check.
 
 ## Principios de producto y navegación
 

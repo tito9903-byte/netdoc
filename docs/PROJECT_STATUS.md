@@ -3,10 +3,11 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-30.
-- **Versión documental:** 2.7.
+- **Versión documental:** 2.8.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/restore-rack-workspace`.
+- **Ramas:** producción `main`; integración `develop`; documentación actual
+  `docs/netdoc-master`.
 
 ## Resumen ejecutivo
 
@@ -20,11 +21,10 @@ pendiente.
 El PR #14 eliminó el bloque redundante `Acciones rápidas` y fue integrado en
 `develop` en `5e7d6cf4bf3529a40d909644067d67605acb666e`.
 
-La rama `feature/restore-rack-workspace` corrige una regresión de integración:
-las mejoras del detalle del rack se habían probado desde una rama que nunca se
-fusionó a `develop`, por lo que el despliegue posterior de `develop` sustituyó
-esa vista por una versión anterior. La rama restaura esas funciones sobre la
-base actual sin retirar Sites ni la navegación por módulos.
+El PR #15 restauró el detalle profesional del rack sobre la base actual, sin
+retirar Sites ni la navegación por módulos. Fue integrado en `develop` en
+`a251b5d296896c8672531512f61589b54a8480df`, desplegado con la suite completa
+superada y validado funcionalmente por el propietario en desarrollo.
 
 ## Entornos y servicios
 
@@ -138,14 +138,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - crear, editar y retirar un site de prueba en desarrollo;
 - confirmar permisos de Administrador, Operador y Consulta;
 - revisar los eventos `SITE_CREATE`, `SITE_UPDATE` y `SITE_DEACTIVATE`.
-- tras integrar la rama actual, confirmar que no aparece `Acciones rápidas`;
+- confirmar que no aparece `Acciones rápidas`;
 - comprobar que crear equipos, racks y sites sigue disponible dentro de cada
   módulo y que ninguna ruta de creación fue eliminada.
-- confirmar en el detalle del rack el inventario completo, su buscador y el
-  botón **Abrir**;
-- descargar el reporte PDF y verificar que permanece en una sola página con
-  elevación, fotografías e inventario;
-- confirmar que las posiciones y alturas U no cambiaron.
 
 ## Riesgos y deuda
 
@@ -159,21 +154,22 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Integrar y validar la restauración del detalle profesional del rack sobre
-`develop`, y completar la revisión funcional de Sites. La imagen representativa
-del site queda diferida hasta definir almacenamiento, respaldo y asociación sin
-duplicar el inventario oficial.
+Completar la revisión funcional de Sites. La imagen representativa del site
+queda diferida hasta definir almacenamiento, respaldo y asociación sin duplicar
+el inventario oficial.
 
 ## Reglas de mantenimiento
 
-`AGENTS.md` contiene las instrucciones persistentes que debe seguir todo agente
-en un chat nuevo. El flujo oficial es modificar, probar, crear el commit,
+`NETDOC.md` es el punto de entrada para todo chat nuevo y `AGENTS.md` contiene
+las instrucciones persistentes. El flujo oficial es modificar, probar, crear el commit,
 publicar la rama, verificar el SHA remoto, abrir PR hacia `develop`, desplegar
 únicamente desarrollo con autorización, realizar la revisión y tocar producción
 solo después de una autorización explícita. Las pruebas específicas y completas
 se ejecutan mediante `scripts/netdoc-test-isolated`; los servidores solo
 descargan commits remotos verificados y no reconstruyen ni publican historial.
 La navegación principal no debe duplicar acciones: cada creación comienza
-dentro del módulo responsable.
+dentro del módulo responsable. Después de la confirmación funcional del
+propietario, el agente actualiza `NETDOC.md` mediante PR con el resultado real,
+SHA, pruebas, estado de los entornos y pendientes.
 
 Actualizar este documento en todo PR que modifique funcionalidad, arquitectura, seguridad, despliegue, dependencias, pruebas, riesgos o prioridades. Estados permitidos: **Completado**, **En progreso**, **Planificado**, **Bloqueado**, **Diferido** y **Requiere verificación**.

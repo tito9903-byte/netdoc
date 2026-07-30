@@ -88,3 +88,186 @@
         height: 450px;
     }
 }
+
+/*
+ * El gabinete conserva una medida estándar aunque aumente el ancho de la
+ * ventana. Solo la altura cambia al seleccionar Detalle ampliado.
+ */
+.rack-single-topology-scene {
+    width: 620px !important;
+    max-width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.rack-single-topology .topology-rack-frame {
+    box-sizing: border-box;
+    transition: height 220ms ease !important;
+}
+
+.rack-single-topology[data-scale="fit"] .topology-rack-frame {
+    width: 310px !important;
+    min-width: 310px !important;
+    max-width: 310px !important;
+    flex: 0 0 310px !important;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-frame {
+    width: 400px !important;
+    min-width: 400px !important;
+    max-width: 400px !important;
+    flex: 0 0 400px !important;
+}
+
+.rack-single-topology .topology-rack-card {
+    width: 540px !important;
+    min-width: 540px;
+    max-width: 540px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.rack-single-topology[data-scale="detail"] .topology-rack-card {
+    width: 580px !important;
+    min-width: 580px;
+    max-width: 580px;
+}
+
+/*
+ * Fotografías: cuando existe imagen, la cara del equipo ocupa todo el bloque.
+ * El nombre permanece disponible en el tooltip y en el inspector lateral, pero
+ * ya no tapa los puertos ni el frontal del dispositivo.
+ */
+.rack-device-block.has-image {
+    padding: 0 !important;
+    background: #020608 !important;
+}
+
+.rack-device-block.has-image .rack-device-image {
+    inset: 0 !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    object-fit: fill !important;
+    object-position: center !important;
+    background: transparent !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+.rack-device-block.has-image::before,
+.rack-device-block.has-image::after {
+    display: none !important;
+}
+
+.rack-device-block.has-image .rack-device-name,
+.rack-device-block.has-image .rack-device-position {
+    display: none !important;
+}
+
+.rack-single-topology .topology-device:has(img:not([hidden])) {
+    background: #020608 !important;
+}
+
+.rack-single-topology .topology-device img {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+    object-fit: fill !important;
+    object-position: center !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    backface-visibility: hidden;
+}
+
+.rack-single-topology .topology-device:has(img:not([hidden]))::before,
+.rack-single-topology .topology-device:has(img:not([hidden]))::after {
+    display: none !important;
+}
+
+.rack-single-topology .topology-device:has(img:not([hidden])) .topology-device-label {
+    display: none !important;
+}
+
+/*
+ * La vista isométrica conserva profundidad mediante el costado del gabinete,
+ * pero no rota ni rasteriza el frontal completo. Esto evita que fotografías y
+ * líneas del rack se vean borrosas al cambiar de perspectiva.
+ */
+.rack-single-topology[data-view="isometric"] .topology-rack-perspective {
+    transform: translateX(-7px) !important;
+    filter: none !important;
+}
+
+.rack-single-topology[data-view="front"] .topology-rack-perspective {
+    transform: none !important;
+}
+
+.rack-single-topology .topology-rack-frame,
+.rack-single-topology .topology-device,
+.rack-single-topology .topology-device img {
+    image-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+}
+
+.rack-single-topology .topology-device:hover,
+.rack-single-topology .topology-device:focus-visible {
+    filter: brightness(1.08) !important;
+    transform: translateX(3px) !important;
+}
+
+@media (max-width: 700px) {
+    .rack-single-topology-scene,
+    .rack-single-topology .topology-rack-card,
+    .rack-single-topology[data-scale="detail"] .topology-rack-card {
+        width: 100% !important;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .rack-view-controls,
+    .rack-view-controls-3d {
+        display: flex;
+        width: 100%;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .topology-toggle-group {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .topology-toggle {
+        min-height: 44px;
+        white-space: nowrap;
+    }
+
+    .rack-single-topology[data-scale="fit"] .topology-rack-frame {
+        width: 245px !important;
+        min-width: 245px !important;
+        max-width: 245px !important;
+        flex-basis: 245px !important;
+    }
+
+    .rack-single-topology[data-scale="detail"] .topology-rack-frame {
+        width: 320px !important;
+        min-width: 320px !important;
+        max-width: 320px !important;
+        flex-basis: 320px !important;
+    }
+
+    .rack-single-topology[data-view="isometric"] .topology-rack-perspective {
+        transform: translateX(-4px) !important;
+    }
+}

@@ -5,9 +5,11 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/racks.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/rack_detail.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}?v=20260729-image-fill-1">
 <link rel="stylesheet" href="{{ url_for('static', path='css/topology.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='css/rack_view_modes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_view_modes.css') }}?v=20260729-image-fill-1">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_datacenter.css') }}?v=20260729-image-fill-1">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_workspace.css') }}?v=20260726-workspace-1">
 {% endblock %}
 
 {% block content %}
@@ -19,17 +21,16 @@
 
 <div class="rack-detail-navigation">
     <a href="/racks">← Volver a racks</a>
-    <div class="rack-display-mode" aria-label="Vista del rack">
+    <div class="rack-detail-actions">
         <a
-            href="/racks/{{ rack.get('id') }}?view=2d&face={{ selected_face }}"
-            class="{% if selected_view == '2d' %}active{% endif %}"
-            {% if selected_view == '2d' %}aria-current="page"{% endif %}
-        >Vista 2D</a>
-        <a
-            href="/racks/{{ rack.get('id') }}?view=3d&face={{ selected_face }}"
-            class="{% if selected_view == '3d' %}active{% endif %}"
-            {% if selected_view == '3d' %}aria-current="page"{% endif %}
-        >Vista 3D</a>
+            class="rack-report-button"
+            href="/racks/{{ rack.get('id') }}/report.pdf?face={{ selected_face }}"
+            title="Descargar elevación e inventario en PDF"
+            download
+        >
+            <span>⇩</span>
+            Descargar reporte PDF
+        </a>
     </div>
 </div>
 
@@ -66,11 +67,16 @@
         <strong>{{ free_units_label }}U</strong>
         <small>Capacidad vertical disponible</small>
     </article>
+    <article>
+        <span>Equipos</span>
+        <strong>{{ devices | length }}</strong>
+        <small>{{ positioned_devices | length }} con posición válida</small>
+    </article>
     <article class="{% if has_conflicts %}rack-metric-warning{% endif %}">
         <span>Utilización</span>
         <strong>{{ utilization }}%</strong>
         <small>
-            {% if has_conflicts %}{{ overlap_count }} posiciones con conflicto{% else %}{{ positioned_devices | length }} equipos posicionados{% endif %}
+            {% if has_conflicts %}{{ overlap_count }} posiciones con conflicto{% else %}Ocupación física del rack{% endif %}
         </small>
     </article>
 </section>
@@ -88,25 +94,28 @@
 </div>
 {% endif %}
 
-<section class="rack-detail-grid">
-    {% if selected_view == "3d" %}
-    <article class="rack-elevation-panel rack-three-dimensional-panel">
+<section class="rack-workspace-grid">
+    <article class="rack-elevation-panel rack-three-dimensional-panel rack-workspace-visual">
         <div class="rack-panel-header rack-elevation-header">
             <div>
+                <span class="rack-workspace-eyebrow">Representación física</span>
                 <h3>Vista 3D del rack</h3>
                 <p>
-                    Los equipos conservan su posición y altura real. La imagen frontal
-                    o trasera proviene del modelo documentado en NetBox.
+                    Cambia perspectiva, cara o escala sin alterar las proporciones del gabinete.
                 </p>
             </div>
-            <div class="rack-view-controls">
+            <div class="rack-view-controls rack-view-controls-3d">
                 <div class="topology-toggle-group" aria-label="Perspectiva">
-                    <button class="topology-toggle active" type="button" data-topology-view="isometric">3D</button>
+                    <button class="topology-toggle active" type="button" data-topology-view="isometric">Isométrica</button>
                     <button class="topology-toggle" type="button" data-topology-view="front">Frontal</button>
                 </div>
                 <div class="topology-toggle-group" aria-label="Cara del rack">
                     <button class="topology-toggle" type="button" data-topology-face="front">Frente</button>
                     <button class="topology-toggle" type="button" data-topology-face="rear">Trasera</button>
+                </div>
+                <div class="topology-toggle-group" aria-label="Escala del rack">
+                    <button class="topology-toggle active" type="button" data-topology-scale="fit">Rack completo</button>
+                    <button class="topology-toggle" type="button" data-topology-scale="detail">Detalle ampliado</button>
                 </div>
             </div>
         </div>
@@ -116,6 +125,8 @@
             data-topology-root
             data-view="isometric"
             data-face="{{ selected_face }}"
+            data-scale="fit"
+            style="--rack-unit-count: {{ rack_height }};"
         >
             <div class="rack-single-topology-scene">
                 <article
@@ -125,9 +136,7 @@
                 >
                     <div class="topology-rack-heading">
                         <div>
-                            <a href="/racks/{{ rack.get('id') }}?view=3d">
-                                {{ rack.get("name") or rack.get("display") or "Rack" }}
-                            </a>
+                            <strong>{{ rack.get("name") or rack.get("display") or "Rack" }}</strong>
                             <span>{{ rack_site_label }} · {{ location.get("display") or location.get("name") or "Sin ubicación" }}</span>
                         </div>
                         <span>{{ used_units_label }} / {{ rack_height }}U</span>
@@ -147,7 +156,14 @@
                                 href="/devices/{{ device.get('id') }}"
                                 style="top: {{ device.get('_top_percent') }}%; height: {{ device.get('_height_percent') }}%;"
                                 data-topology-device
+                                data-rack-inspector-device
+                                data-device-name="{{ device.get('name') or device.get('display') or 'Sin nombre' }}"
+                                data-device-model="{{ device.get('_model') }}"
+                                data-device-status="{{ device.get('_status') }}"
                                 data-device-face="{{ device.get('_face') }}"
+                                data-device-position="{{ device.get('_position_label') }}"
+                                data-device-height="{{ device.get('_u_height_label') }}"
+                                data-device-units="{{ device.get('_u_height') }}"
                                 data-full-depth="{{ 'true' if device.get('_full_depth') else 'false' }}"
                                 data-front-image="{{ device.get('_front_image') }}"
                                 data-rear-image="{{ device.get('_rear_image') }}"
@@ -158,6 +174,7 @@
                                     src="{{ device.get('_front_image') or device.get('_rear_image') }}"
                                     alt="Imagen del modelo {{ device.get('_model') }}"
                                     loading="lazy"
+                                    decoding="async"
                                     data-topology-device-image
                                 >
                                 {% endif %}
@@ -178,161 +195,188 @@
             </div>
         </div>
     </article>
-    {% else %}
-    <article class="rack-elevation-panel">
-        <div class="rack-panel-header rack-elevation-header">
-            <div>
-                <h3>Elevación 2D del rack</h3>
-                <p>
-                    Las imágenes provienen del modelo del equipo en NetBox.
-                    Haz clic sobre un equipo para abrir su ficha.
-                </p>
-            </div>
-            <div class="rack-view-controls">
-                <div class="rack-zoom-controls">
-                    <button type="button" class="rack-zoom-button" data-rack-zoom="compact">Compacto</button>
-                    <button type="button" class="rack-zoom-button active" data-rack-zoom="normal">Normal</button>
-                    <button type="button" class="rack-zoom-button" data-rack-zoom="detailed">Detallado</button>
+
+    <div class="rack-workspace-side">
+        <aside class="rack-information-panel rack-information-panel-compact">
+            <div class="rack-panel-header rack-information-compact-header">
+                <div>
+                    <span class="rack-workspace-eyebrow">Datos físicos</span>
+                    <h3>Información del rack</h3>
+                    <p>Resumen registrado en NetBox</p>
                 </div>
-                <div class="rack-face-tabs">
-                    <a href="/racks/{{ rack.get('id') }}?view=2d&face=front" class="{% if selected_face == 'front' %}active{% endif %}">Frente</a>
-                    <a href="/racks/{{ rack.get('id') }}?view=2d&face=rear" class="{% if selected_face == 'rear' %}active{% endif %}">Parte trasera</a>
+                <span class="rack-information-id">ID {{ rack.get("id") }}</span>
+            </div>
+
+            <dl class="rack-information-list rack-information-list-compact">
+                <div><dt>Sitio</dt><dd>{{ rack_site_label }}</dd></div>
+                <div><dt>Ubicación</dt><dd>{{ location.get("display") or location.get("name") or "Sin asignar" }}</dd></div>
+                <div>
+                    <dt>Ancho</dt>
+                    <dd>
+                        {% if rack_width is mapping %}
+                            {{ rack_width.get("label") or rack_width.get("value") or "Sin asignar" }}
+                        {% elif rack_width %}
+                            {{ rack_width }} pulgadas
+                        {% else %}Sin asignar{% endif %}
+                    </dd>
                 </div>
-            </div>
-        </div>
-
-        <div class="rack-visual-scroll" id="rackVisualScroll">
-            <div class="rack-visual" id="rackVisual" data-zoom="normal" style="--rack-slots: {{ rack_slots }};">
-                <div class="rack-unit-labels">
-                    {% for unit in unit_labels %}
-                    <div class="rack-unit-label" style="grid-row: {{ unit.grid_start }} / span {{ unit.span }};">
-                        {{ unit.label }}
-                    </div>
-                    {% endfor %}
-                </div>
-
-                <div class="rack-grid">
-                    {% for slot in range(1, rack_slots + 1) %}
-                    <div class="rack-grid-row" style="grid-row: {{ slot }};"></div>
-                    {% endfor %}
-
-                    {% for device in visible_devices %}
-                    <a
-                        class="rack-device-block {% if device.get('_has_conflict') %}conflict{% endif %} {% if device.get('_selected_image') %}has-image{% endif %}"
-                        href="/devices/{{ device.get('id') }}"
-                        style="grid-row: {{ device.get('_grid_start') }} / span {{ device.get('_span') }};"
-                        data-device-name="{{ device.get('name') or device.get('display') or 'Sin nombre' }}"
-                        data-device-model="{{ device.get('_model') }}"
-                        data-device-status="{{ device.get('_status') }}"
-                        data-device-face="{{ device.get('_face') }}"
-                        data-device-position="{{ device.get('_position_label') }}"
-                        data-device-height="{{ device.get('_u_height_label') }}"
-                        tabindex="0"
-                        title="{{ device.get('name') or device.get('display') }} · {{ device.get('_position_label') }} · {{ device.get('_u_height_label') }}"
-                    >
-                        {% if device.get("_selected_image") %}
-                        <img
-                            class="rack-device-image"
-                            src="{{ device.get('_selected_image') }}"
-                            alt="{{ selected_face | capitalize }} del modelo {{ device.get('_model') }}"
-                            loading="lazy"
-                        >
-                        {% endif %}
-                        <span class="rack-device-name">{{ device.get("name") or device.get("display") or "Sin nombre" }}</span>
-                        <span class="rack-device-position">{{ device.get("_u_height_label") }}</span>
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </article>
-    {% endif %}
-
-    <aside class="rack-information-panel">
-        <div class="rack-panel-header">
-            <div>
-                <h3>Información del rack</h3>
-                <p>Datos físicos registrados en NetBox</p>
-            </div>
-        </div>
-
-        <dl class="rack-information-list">
-            <div><dt>Sitio</dt><dd>{{ rack_site_label }}</dd></div>
-            <div><dt>Ubicación</dt><dd>{{ location.get("display") or location.get("name") or "—" }}</dd></div>
-            <div>
-                <dt>Ancho</dt>
-                <dd>
-                    {% if rack_width is mapping %}
-                        {{ rack_width.get("label") or rack_width.get("value") or "—" }}
-                    {% elif rack_width %}
-                        {{ rack_width }} pulgadas
-                    {% else %}—{% endif %}
-                </dd>
-            </div>
-            <div><dt>Altura</dt><dd>{{ rack_height }}U</dd></div>
-            <div><dt>Numeración</dt><dd>{% if descending_units %}Descendente{% else %}Ascendente{% endif %}, inicia en U{{ starting_unit }}</dd></div>
-            <div><dt>Tipo</dt><dd>{{ rack_type.get("label") or rack_type.get("value") or "—" }}</dd></div>
-            <div><dt>Serial</dt><dd>{{ rack.get("serial") or "—" }}</dd></div>
-            <div><dt>Etiqueta de activo</dt><dd>{{ rack.get("asset_tag") or "—" }}</dd></div>
-        </dl>
-
-        <section class="rack-device-inspector" id="rackDeviceInspector">
-            <span class="rack-inspector-label">Equipo seleccionado</span>
-            <h4 id="inspectorDeviceName">Pasa el cursor sobre un equipo</h4>
-            <dl>
-                <div><dt>Modelo</dt><dd id="inspectorDeviceModel">—</dd></div>
-                <div><dt>Posición</dt><dd id="inspectorDevicePosition">—</dd></div>
-                <div><dt>Altura</dt><dd id="inspectorDeviceHeight">—</dd></div>
-                <div><dt>Cara</dt><dd id="inspectorDeviceFace">—</dd></div>
-                <div><dt>Estado</dt><dd id="inspectorDeviceStatus">—</dd></div>
+                <div><dt>Altura</dt><dd>{{ rack_height }}U</dd></div>
+                <div><dt>Numeración</dt><dd>{% if descending_units %}Descendente{% else %}Ascendente{% endif %}, desde U{{ starting_unit }}</dd></div>
+                <div><dt>Tipo</dt><dd>{{ rack_type.get("label") or rack_type.get("value") or "Sin asignar" }}</dd></div>
+                <div><dt>Serial</dt><dd>{{ rack.get("serial") or "Sin asignar" }}</dd></div>
+                <div><dt>Activo</dt><dd>{{ rack.get("asset_tag") or "Sin asignar" }}</dd></div>
             </dl>
+
+            <section class="rack-device-inspector rack-device-inspector-compact" id="rackDeviceInspector">
+                <div class="rack-inspector-heading">
+                    <span class="rack-inspector-label">Equipo seleccionado</span>
+                    <h4 id="inspectorDeviceName">Pasa el cursor sobre un equipo</h4>
+                </div>
+                <dl>
+                    <div><dt>Modelo</dt><dd id="inspectorDeviceModel">—</dd></div>
+                    <div><dt>Posición</dt><dd id="inspectorDevicePosition">—</dd></div>
+                    <div><dt>Altura</dt><dd id="inspectorDeviceHeight">—</dd></div>
+                    <div><dt>Cara</dt><dd id="inspectorDeviceFace">—</dd></div>
+                    <div><dt>Estado</dt><dd id="inspectorDeviceStatus">—</dd></div>
+                </dl>
+            </section>
+
+            {% if zero_u_devices or unpositioned_devices %}
+            <div class="rack-exception-summary">
+                {% if zero_u_devices %}
+                <details>
+                    <summary>{{ zero_u_devices | length }} equipos de 0U</summary>
+                    <div class="rack-unpositioned-list">
+                        {% for device in zero_u_devices %}
+                        <a href="/devices/{{ device.get('id') }}">
+                            <strong>{{ device.get("name") or device.get("display") }}</strong>
+                            <span>{{ device.get("_model") }} · 0U</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+
+                {% if unpositioned_devices %}
+                <details>
+                    <summary>{{ unpositioned_devices | length }} sin posición válida</summary>
+                    <div class="rack-unpositioned-list">
+                        {% for device in unpositioned_devices %}
+                        <a href="/devices/{{ device.get('id') }}">
+                            <strong>{{ device.get("name") or device.get("display") }}</strong>
+                            <span>
+                                {{ device.get("_model") }}
+                                {% if device.get("_position_error") %} · {{ device.get("_position_error") }}{% endif %}
+                            </span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+            {% endif %}
+        </aside>
+
+        <section class="rack-inventory-panel rack-inventory-panel-embedded" id="rackInventory" data-rack-inventory>
+            <div class="rack-inventory-header rack-inventory-header-professional">
+                <div>
+                    <span>Inventario operativo</span>
+                    <h3>Equipos instalados</h3>
+                    <p>
+                        La IPv4 principal tiene prioridad; si no existe, se muestra la IPv6 principal.
+                    </p>
+                </div>
+                <strong data-rack-inventory-count>{{ devices | length }} equipos</strong>
+            </div>
+
+            {% if devices %}
+            <div class="rack-inventory-toolbar">
+                <label for="rackInventorySearch">Buscar en este rack</label>
+                <div class="rack-inventory-search-control">
+                    <span aria-hidden="true">⌕</span>
+                    <input
+                        id="rackInventorySearch"
+                        type="search"
+                        placeholder="Nombre, modelo, IP o serial..."
+                        autocomplete="off"
+                        data-rack-inventory-search
+                    >
+                </div>
+            </div>
+
+            <div class="rack-inventory-table-wrapper rack-inventory-scroll-region">
+                <table class="rack-inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Dispositivo</th>
+                            <th>Modelo</th>
+                            <th>Posición</th>
+                            <th>Número de serie</th>
+                            <th>IP principal</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for device in devices %}
+                        {% set device_type = device.get("device_type") or {} %}
+                        {% set device_status = device.get("status") or {} %}
+                        {% set primary_ip = device.get("primary_ip4") or device.get("primary_ip6") or device.get("primary_ip") or {} %}
+                        {% set face = device.get("face") or {} %}
+                        {% set device_name = device.get("name") or device.get("display") or "Sin nombre" %}
+                        {% set model_label = device_type.get("display") or device_type.get("model") or "Sin asignar" %}
+                        {% set serial_label = device.get("serial") or "Sin asignar" %}
+                        {% set ip_label = primary_ip.get("display") or primary_ip.get("address") or "Sin asignar" %}
+                        {% set status_label = device_status.get("label") or device_status.get("value") or "Sin estado" %}
+                        <tr
+                            data-rack-inventory-row
+                            data-search-text="{{ device_name }} {{ model_label }} {{ serial_label }} {{ ip_label }} {{ status_label }} {% if device.get('position') is not none %}U{{ device.get('position') }}{% endif %}"
+                        >
+                            <td data-label="Dispositivo">
+                                <a class="rack-inventory-device" href="/devices/{{ device.get('id') }}">
+                                    <span class="rack-inventory-device-avatar">{{ device_name[0] | upper }}</span>
+                                    <span>
+                                        <strong>{{ device_name }}</strong>
+                                        <small>ID {{ device.get("id") }}</small>
+                                    </span>
+                                </a>
+                            </td>
+                            <td data-label="Modelo">{{ model_label }}</td>
+                            <td data-label="Posición">
+                                {% if device.get("position") is not none %}
+                                    U{{ device.get("position") }} · {{ face.get("label") or face.get("value") or "Sin cara" }}
+                                {% else %}
+                                    Sin asignar
+                                {% endif %}
+                            </td>
+                            <td class="rack-inventory-mono" data-label="Número de serie">{{ serial_label }}</td>
+                            <td class="rack-inventory-mono rack-inventory-primary-ip" data-label="IP principal">{{ ip_label }}</td>
+                            <td data-label="Estado">
+                                <span class="rack-inventory-status status-{{ device_status.get('value', '') }}">{{ status_label }}</span>
+                            </td>
+                            <td data-label="Acción">
+                                <a class="rack-inventory-open" href="/devices/{{ device.get('id') }}">Abrir</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="rack-inventory-no-results" data-rack-inventory-empty hidden>
+                No hay equipos que coincidan con la búsqueda.
+            </div>
+            {% else %}
+            <div class="rack-inventory-empty">
+                Este rack todavía no tiene dispositivos asociados.
+            </div>
+            {% endif %}
         </section>
-
-        {% if zero_u_devices %}
-        <div class="rack-unpositioned rack-zero-u">
-            <h4>Equipos de 0U</h4>
-            <p>
-                Pertenecen al rack, pero su modelo no consume espacio vertical.
-                Normalmente son PDU verticales u otros elementos laterales.
-            </p>
-            <div class="rack-unpositioned-list">
-                {% for device in zero_u_devices %}
-                <a href="/devices/{{ device.get('id') }}">
-                    <strong>{{ device.get("name") or device.get("display") }}</strong>
-                    <span>{{ device.get("_model") }} · 0U</span>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if unpositioned_devices %}
-        <div class="rack-unpositioned">
-            <h4>Equipos sin posición válida</h4>
-            <p>
-                Estos dispositivos están asociados al rack, pero no tienen posición U
-                o la posición no cabe con la altura del modelo.
-            </p>
-            <div class="rack-unpositioned-list">
-                {% for device in unpositioned_devices %}
-                <a href="/devices/{{ device.get('id') }}">
-                    <strong>{{ device.get("name") or device.get("display") }}</strong>
-                    <span>
-                        {{ device.get("_model") }}
-                        {% if device.get("_position_error") %} · {{ device.get("_position_error") }}{% endif %}
-                    </span>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-    </aside>
+    </div>
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', path='js/rack_detail.js') }}"></script>
-{% if selected_view == "3d" %}
 <script src="{{ url_for('static', path='js/topology.js') }}"></script>
-{% endif %}
+<script src="{{ url_for('static', path='js/rack_inventory.js') }}?v=20260726-workspace-1"></script>
 {% endblock %}

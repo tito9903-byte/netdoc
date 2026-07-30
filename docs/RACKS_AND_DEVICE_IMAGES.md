@@ -132,6 +132,19 @@ La elevación selecciona la imagen según la cara activa:
 
 La imagen se ajusta al espacio físico del dispositivo; no modifica la cantidad de unidades ocupadas. La ocupación proviene de `u_height` del modelo y de la posición del dispositivo.
 
+## Espacio de trabajo del rack
+
+El detalle organiza la elevación 3D y el inventario en un mismo espacio de
+trabajo. El panel lateral permite buscar por nombre, modelo, dirección IP,
+serial, posición o estado sin volver a consultar NetBox.
+
+Cada fila muestra dispositivo, modelo, posición y cara, número de serie, IP
+principal, estado y acceso a la ficha. En pantallas pequeñas, la tabla se transforma en tarjetas por dispositivo para conservar las etiquetas y evitar desplazamiento horizontal.
+
+El botón **Descargar reporte PDF** genera en memoria una sola página con el
+resumen del rack, la elevación 3D con fotografías y el inventario. El archivo no
+se almacena en el servidor.
+
 ## Alturas y ocupación
 
 NetDoc utiliza la altura documentada en el modelo:

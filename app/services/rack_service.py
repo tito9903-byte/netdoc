@@ -48,10 +48,7 @@ class RackService:
 
     @staticmethod
     def _local_error(exc: DeviceTypeServiceError) -> RackServiceError:
-        return RackServiceError(
-            exc.message,
-            exc.status_code or 503,
-        )
+        return RackServiceError(exc.message, exc.status_code or 503)
 
     @staticmethod
     def _error_message(response: httpx.Response) -> str:
@@ -75,11 +72,7 @@ class RackService:
                 else str(value)
             )
             messages.append(f"{field}: {rendered}")
-
-        return (
-            " | ".join(messages)
-            or f"NetBox respondió con HTTP {response.status_code}."
-        )
+        return " | ".join(messages) or f"NetBox respondió con HTTP {response.status_code}."
 
     async def request(
         self,
@@ -127,7 +120,6 @@ class RackService:
             raise RackServiceError(
                 "NetBox devolvió un formato de respuesta inesperado."
             )
-
         return payload
 
     async def get_all(
@@ -152,9 +144,7 @@ class RackService:
             )
             page_results = payload.get("results")
             if not isinstance(page_results, list):
-                raise RackServiceError(
-                    "NetBox no devolvió un listado válido."
-                )
+                raise RackServiceError("NetBox no devolvió un listado válido.")
             results.extend(
                 item for item in page_results if isinstance(item, dict)
             )
@@ -181,10 +171,7 @@ class RackService:
             params["site_id"] = site_id
         if query.strip():
             params["q"] = query.strip()
-        return await self.get_all(
-            "/api/dcim/racks/",
-            params=params,
-        )
+        return await self.get_all("/api/dcim/racks/", params=params)
 
     async def get_rack(self, rack_id: int) -> dict[str, Any]:
         return await self.request(f"/api/dcim/racks/{rack_id}/")

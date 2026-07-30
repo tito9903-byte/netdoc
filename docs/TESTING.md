@@ -21,13 +21,24 @@ El repositorio incluye pruebas de servicios de acceso, rutas administrativas, b�
 ## Comandos
 
 ```bash
-python -m compileall app tests migrations
-alembic heads
-python -m unittest discover -s tests -v
+scripts/netdoc-test-isolated tests.test_sites tests.test_access_control
+scripts/netdoc-test-isolated
 python -c 'from app.main import app; print(app.title, len(app.routes))'
 bash -n scripts/netdoc-deploy-dev
 bash -n scripts/netdoc-deploy-prod
 ```
+
+El primer comando ejecuta una selección dentro de un entorno desechable; el
+segundo ejecuta toda la suite. El script establece un `DATABASE_URL` temporal,
+valores de prueba y escritura hacia NetBox deshabilitada antes de importar la
+aplicación.
+
+No ejecute `python -m unittest` directamente desde un checkout que contenga el
+`.env` de desarrollo o producción. Las configuraciones de FastAPI se resuelven
+al importar la aplicación y una ejecución directa puede abrir la base real,
+crear eventos de auditoría o autenticar contra usuarios reales. Una prueba
+selectiva debe pasar sus módulos como argumentos a
+`scripts/netdoc-test-isolated`.
 
 ## Resultados de la rama `feature/access-control-audit`
 

@@ -31,9 +31,13 @@ Antes de cambiar archivos, lea `docs/PROJECT_STATUS.md`,
 4. Cuando el usuario autorice una implementación, el agente debe editar los
    archivos, ejecutar las pruebas y crear el commit. No se limite a entregar
    fragmentos para copiar salvo que el usuario lo pida o exista un bloqueo real.
-5. Revise el diff completo, ejecute la prueba específica y después la suite
-   aislada completa con `scripts/netdoc-test-isolated`. Ejecute además las
-   validaciones aplicables de compilación, Alembic, plantillas y sintaxis Bash.
+5. Revise el diff completo, ejecute la prueba específica mediante
+   `scripts/netdoc-test-isolated <módulos>` y después la suite aislada completa
+   con `scripts/netdoc-test-isolated`. Nunca ejecute `python -m unittest`
+   directamente desde un checkout que contenga `.env`: puede cargar la base y
+   los secretos del entorno en lugar de los valores desechables de prueba.
+   Ejecute además las validaciones aplicables de compilación, Alembic,
+   plantillas y sintaxis Bash.
 6. Actualice `docs/PROJECT_STATUS.md`, `CHANGELOG.md` y la documentación
    afectada. Cree un ADR si cambia una decisión arquitectónica.
 7. Use Conventional Commits y confirme únicamente los archivos de la tarea.
@@ -44,20 +48,27 @@ Antes de cambiar archivos, lea `docs/PROJECT_STATUS.md`,
    su ausencia no impide por sí sola crear commits ni necesariamente hacer
    `git push`. Si la publicación falla, informe el error y la credencial o
    permiso exacto que falta; no invente el bloqueo.
-9. Después de publicar, verifique que la rama remota apunta al SHA esperado y
-   abra o actualice un pull request hacia `develop`. No fusione
-   automáticamente.
-10. Solo despliegue desarrollo tras autorización del usuario y después de
+9. El servidor de despliegue consume código publicado; no es una estación de
+   desarrollo ni el origen de GitHub. No reconstruya commits allí mediante
+   `git am`, parches o bloques Base64 y no ejecute `git push` desde el servidor.
+   Debe obtener mediante `git fetch` una rama remota y un SHA ya verificados.
+10. Después de publicar, verifique que la rama remota apunta al SHA esperado y
+    abra o actualice un pull request hacia `develop`. No fusione
+    automáticamente.
+11. Solo despliegue desarrollo tras autorización del usuario y después de
     verificar el SHA remoto. Valide únicamente `/opt/netdoc-dev`, el servicio
     `netdoc-dev` y el puerto `8101`; luego solicite revisión funcional o visual.
-11. Producción requiere autorización explícita posterior a la validación en
+12. Si una prueba, migración, reinicio o health check falla, detenga el flujo,
+    restaure el checkout y el servicio anterior cuando corresponda y reporte la
+    causa exacta. Un fallo en desarrollo nunca autoriza continuar a producción.
+13. Producción requiere autorización explícita posterior a la validación en
     desarrollo y el flujo `develop` hacia `main`. Nunca modifique
     `/opt/netdoc-prod`, `netdoc-prod`, el puerto `8100` ni `main` por
     implicación.
 
 Flujo resumido:
 
-`modificar → probar → commit → publicar rama → verificar SHA remoto → PR a develop → desplegar desarrollo → revisión → producción solo con autorización`
+`modificar → probar aislado → commit → publicar rama → verificar SHA remoto → PR a develop → desplegar desde remoto en desarrollo → revisión → producción solo con autorización`
 
 ## Seguridad y veracidad
 

@@ -3,7 +3,7 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-07-30.
-- **Versión documental:** 2.4.
+- **Versión documental:** 2.5.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo actual `feature/site-management`.
@@ -139,6 +139,8 @@ Validar el módulo Sites en desarrollo y confirmar que los racks existentes filt
 en un chat nuevo. El flujo oficial es modificar, probar, crear el commit,
 publicar la rama, verificar el SHA remoto, abrir PR hacia `develop`, desplegar
 únicamente desarrollo con autorización, realizar la revisión y tocar producción
-solo después de una autorización explícita.
+solo después de una autorización explícita. Las pruebas específicas y completas
+se ejecutan mediante `scripts/netdoc-test-isolated`; los servidores solo
+descargan commits remotos verificados y no reconstruyen ni publican historial.
 
 Actualizar este documento en todo PR que modifique funcionalidad, arquitectura, seguridad, despliegue, dependencias, pruebas, riesgos o prioridades. Estados permitidos: **Completado**, **En progreso**, **Planificado**, **Bloqueado**, **Diferido** y **Requiere verificación**.

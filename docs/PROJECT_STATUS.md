@@ -38,6 +38,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 ## Arquitectura vigente
 
 - FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware y Uvicorn.
+- Pillow procesa las fotografías y ReportLab genera los reportes PDF del rack.
 - NetBox conserva dispositivos, tipos, componentes, racks, sitios, cables, IPAM y demás inventario.
 - SQLAlchemy conserva usuarios, roles, permisos, auditoría e imágenes de modelos propias de NetDoc.
 - Alembic mantiene el esquema local; la cabeza de esta rama es `20260725_0002`.

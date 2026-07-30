@@ -68,6 +68,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 - Se restaura la línea completa de mejoras del rack sobre el `develop` actual
   para conservar Sites y la navegación por módulos.
+- Pillow y ReportLab quedan declarados y bloqueados como dependencias del
+  reporte PDF.
 - Las fotografías de equipos ocupan exactamente el área física asignada con
   `width: 100%`, `height: 100%` y `object-fit: fill`, sin reglas posteriores
   `contain` o `cover`.

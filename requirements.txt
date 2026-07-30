@@ -3,7 +3,9 @@ fastapi
 httpx
 itsdangerous
 jinja2
+Pillow
 pydantic-settings
 python-multipart
+reportlab
 SQLAlchemy
 uvicorn[standard]

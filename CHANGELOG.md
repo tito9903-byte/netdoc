@@ -66,6 +66,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- El documento maestro de continuidad pasa a llamarse `NETDOC.md`, queda en la
+  raíz y registra únicamente como terminados los cambios confirmados por el
+  propietario en desarrollo.
 - Se restaura la línea completa de mejoras del rack sobre el `develop` actual
   para conservar Sites y la navegación por módulos.
 - Pillow y ReportLab quedan declarados y bloqueados como dependencias del

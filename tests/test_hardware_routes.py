@@ -41,6 +41,9 @@ INTERFACE = {
     "label": "Uplink",
     "mgmt_only": False,
 }
+INTERFACE_TYPES = [
+    {"value": "10gbase-x-sfpp", "label": "SFP+ (10G)"},
+]
 DEVICE = {
     "id": 200,
     "name": "OLT-SMN-01",
@@ -85,6 +88,11 @@ class HardwareRouteTests(unittest.TestCase):
         self.assertIn("Crear fabricante", response.text)
 
     @patch(
+        "app.routers.hardware.DeviceTypeService.interface_type_choices",
+        new_callable=AsyncMock,
+        return_value=INTERFACE_TYPES,
+    )
+    @patch(
         "app.routers.hardware.DeviceTypeService.list_manufacturers",
         new_callable=AsyncMock,
         return_value=[MANUFACTURER],
@@ -116,14 +124,21 @@ class HardwareRouteTests(unittest.TestCase):
         self,
         _detail,
         _manufacturers,
+        _interface_types,
     ):
         response = self.client.get("/device-types/10")
         self.assertEqual(response.status_code, 200)
         self.assertIn("Ficha del modelo", response.text)
         self.assertIn("Información general", response.text)
         self.assertIn("Imágenes del modelo", response.text)
-        self.assertIn("Plantillas de interfaces", response.text)
+        self.assertIn("Crear interfaces del modelo", response.text)
+        self.assertIn("Interfaces existentes", response.text)
         self.assertIn("OLT-SMN-01", response.text)
+        self.assertIn(
+            'action="/device-types/actions/interfaces/bulk"',
+            response.text,
+        )
+        self.assertNotIn('href="/interface-templates', response.text)
 
     @patch(
         "app.routers.hardware.HardwareService.update_device_type",

@@ -56,7 +56,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - Creación guiada de racks con sitio, ubicación, capacidad, ancho, numeración, estado y rol.
 - Apartado independiente de fabricantes con catálogo, creación, ficha y edición controlada.
 - Ficha completa por modelo con edición, imágenes, resumen de componentes, interfaces y equipos asociados.
-- Navegación separada para Fabricantes, Modelos de equipos y Plantillas de puertos.
+- Navegación separada para Fabricantes y Modelos de equipos.
 - `ChangePlan` con pasos, dependencias, advertencias, huella SHA-256 y confirmación ligada al plan.
 - Redacción recursiva de tokens, secretos y contraseñas antes de mostrar o registrar planes.
 - Lista cerrada de capacidades REST conocidas y rechazo inicial de operaciones `DELETE`.
@@ -68,6 +68,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- La gestión de interfaces deja de ser un módulo independiente: el generador
+  masivo y el inventario se concentran en la ficha de cada modelo, y las rutas
+  antiguas redirigen a la sección de puertos del modelo correspondiente.
 - La pantalla de Conexiones se muestra sin esperar respuestas de NetBox; carga
   sites y opciones en segundo plano y consulta el historial después del
   formulario.
@@ -102,7 +105,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La inicialización del esquema utiliza Alembic y rechaza esquemas parciales.
 - Las bases heredadas completas se marcan en `20260724_0001` y luego reciben migraciones posteriores, en vez de marcarse directamente en `head`.
 - La navegación se organiza alrededor de General, Documentación y Administración.
-- Fabricantes, modelos y plantillas se administran desde apartados propios.
+- Fabricantes y modelos conservan apartados propios; las interfaces se gestionan dentro de la ficha del modelo responsable.
 - Crear modelo se inicia desde el catálogo de modelos.
 - Topología 3D deja de ocupar una opción independiente y se selecciona dentro de cada rack.
 - El dashboard funciona como centro de inicio para IPAM, hardware, racks y conexiones.

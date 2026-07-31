@@ -31,21 +31,6 @@ DEVICE_TYPES = [
     },
 ]
 
-INTERFACE_TYPES = [
-    {"value": "1000base-t", "label": "1GBASE-T"},
-]
-
-INTERFACES = [
-    {
-        "id": 100,
-        "name": "GigabitEthernet0/1",
-        "type": {"value": "1000base-t", "label": "1GBASE-T"},
-        "_type_label": "1GBASE-T",
-        "label": "Uplink",
-        "mgmt_only": False,
-    },
-]
-
 
 class DocumentationRouteTests(unittest.TestCase):
     def setUp(self):
@@ -75,7 +60,7 @@ class DocumentationRouteTests(unittest.TestCase):
         new_callable=AsyncMock,
         return_value=MANUFACTURERS,
     )
-    def test_model_catalog_renders_without_loading_interface_choices(
+    def test_model_catalog_keeps_port_management_inside_models(
         self,
         _manufacturers,
         _device_types,
@@ -85,7 +70,11 @@ class DocumentationRouteTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn("Modelos de equipos", response.text)
         self.assertIn("C600", response.text)
-        self.assertIn("Plantillas de puertos", response.text)
+        self.assertNotIn('href="/interface-templates', response.text)
+        self.assertIn(
+            'href="/device-types/10#interfaces"',
+            response.text,
+        )
 
     @patch(
         "app.routers.documentation.DeviceTypeService.list_manufacturers",
@@ -154,41 +143,29 @@ class DocumentationRouteTests(unittest.TestCase):
         )
         self.assertNotIn("Acciones rápidas", response.text)
 
-    @patch(
-        "app.routers.documentation.DeviceTypeService.list_interface_templates",
-        new_callable=AsyncMock,
-        return_value=INTERFACES,
-    )
-    @patch(
-        "app.routers.documentation.DeviceTypeService.interface_type_choices",
-        new_callable=AsyncMock,
-        return_value=INTERFACE_TYPES,
-    )
-    @patch(
-        "app.routers.documentation.DeviceTypeService.list_device_types",
-        new_callable=AsyncMock,
-        return_value=DEVICE_TYPES,
-    )
-    @patch(
-        "app.routers.documentation.DeviceTypeService.list_manufacturers",
-        new_callable=AsyncMock,
-        return_value=MANUFACTURERS,
-    )
-    def test_interface_template_workspace_renders(
-        self,
-        _manufacturers,
-        _device_types,
-        _interface_types,
-        _interfaces,
-    ):
+    def test_legacy_interface_workspace_redirects_to_model_detail(self):
         response = self.client.get(
-            "/interface-templates?device_type_id=10"
+            "/interface-templates?device_type_id=10",
+            follow_redirects=False,
         )
 
-        self.assertEqual(200, response.status_code)
-        self.assertIn("Plantillas de interfaces y puertos", response.text)
-        self.assertIn("GigabitEthernet0/1", response.text)
-        self.assertIn("Generador rápido", response.text)
+        self.assertEqual(303, response.status_code)
+        self.assertEqual(
+            "/device-types/10#interfaces",
+            response.headers["location"],
+        )
+
+    def test_legacy_interface_workspace_without_model_opens_catalog(self):
+        response = self.client.get(
+            "/interface-templates",
+            follow_redirects=False,
+        )
+
+        self.assertEqual(303, response.status_code)
+        self.assertEqual(
+            "/device-types",
+            response.headers["location"],
+        )
 
     def test_interface_preview_returns_generated_names(self):
         response = self.client.get(

@@ -11,13 +11,17 @@ from app.core.auth import (
     access_redirect,
     common_session_context,
     csrf_token,
+    has_permission,
     request_client_data,
     verify_csrf,
 )
 from app.core.config import get_settings
 from app.core.database import session_scope
 from app.services.access_service import record_audit
-from app.services.device_type_service import DeviceTypeService
+from app.services.device_type_service import (
+    DeviceTypeService,
+    DeviceTypeServiceError,
+)
 from app.services.hardware_service import (
     HardwareService,
     HardwareServiceError,
@@ -36,6 +40,10 @@ def context(request: Request, **extra: object) -> dict[str, object]:
         "netbox_connected": True,
         "netbox_url": settings.netbox_url,
         "write_enabled": settings.netbox_write_enabled,
+        "can_manage_device_types": has_permission(
+            request,
+            "devices.create",
+        ),
         **extra,
     }
 
@@ -188,14 +196,21 @@ async def device_type_detail_page(
         return redirect
 
     try:
-        detail, manufacturers = await asyncio.gather(
+        detail, manufacturers, interface_types = await asyncio.gather(
             HardwareService().model_detail(device_type_id),
             DeviceTypeService().list_manufacturers(),
+            DeviceTypeService().interface_type_choices(),
         )
     except HardwareServiceError as exc:
         return error_page(
             request,
             exc,
+            title="Modelo no disponible",
+        )
+    except DeviceTypeServiceError as exc:
+        return error_page(
+            request,
+            HardwareServiceError(exc.message, exc.status_code),
             title="Modelo no disponible",
         )
     except Exception as exc:
@@ -213,6 +228,7 @@ async def device_type_detail_page(
             page_title=str(detail["device_type"].get("_model_label")),
             page_subtitle="Ficha física, imágenes, componentes y equipos asociados",
             manufacturers=manufacturers,
+            interface_types=interface_types,
             csrf_token=csrf_token(request),
             notice=notice,
             error=error,

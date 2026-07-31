@@ -91,6 +91,39 @@ def redirect_with_message(
     return RedirectResponse(url=url, status_code=303)
 
 
+def model_interfaces_url(
+    device_type_id: int,
+    *,
+    notice: str = "",
+    error: str = "",
+) -> str:
+    query = {
+        key: value
+        for key, value in {"notice": notice, "error": error}.items()
+        if value
+    }
+    target = f"/device-types/{device_type_id}"
+    if query:
+        target = f"{target}?{urlencode(query)}"
+    return f"{target}#interfaces"
+
+
+def redirect_to_model_interfaces(
+    device_type_id: int,
+    *,
+    notice: str = "",
+    error: str = "",
+) -> RedirectResponse:
+    return RedirectResponse(
+        model_interfaces_url(
+            device_type_id,
+            notice=notice,
+            error=error,
+        ),
+        status_code=303,
+    )
+
+
 def audit_event(
     request: Request,
     *,
@@ -349,86 +382,27 @@ async def new_device_type_page(
     )
 
 
-@router.get("/interface-templates", response_class=HTMLResponse)
-async def interface_templates_page(
+@router.get("/interface-templates")
+async def interface_templates_redirect(
     request: Request,
-    q: str = "",
-    manufacturer_id: str = "",
     device_type_id: str = "",
     notice: str = "",
     error: str = "",
 ):
-    """Gestiona únicamente las plantillas de interfaces de un modelo."""
+    """Conserva enlaces antiguos y lleva la gestión a la ficha del modelo."""
 
     redirect = access_redirect(request, "devices.view")
     if redirect:
         return redirect
 
-    selected_manufacturer_id = parse_optional_int(manufacturer_id)
     selected_device_type_id = parse_optional_int(device_type_id)
-    service = DeviceTypeService()
+    if selected_device_type_id is None:
+        return RedirectResponse("/device-types", status_code=303)
 
-    try:
-        manufacturers, device_types, interface_types = await asyncio.gather(
-            service.list_manufacturers(),
-            service.list_device_types(
-                query=q,
-                manufacturer_id=selected_manufacturer_id,
-            ),
-            service.interface_type_choices(),
-        )
-    except DeviceTypeServiceError as exc:
-        return templates.TemplateResponse(
-            request=request,
-            name="error.html",
-            status_code=503,
-            context=context(
-                request,
-                current_page="interface_templates",
-                page_title="Plantillas de puertos",
-                page_subtitle="No fue posible consultar NetBox",
-                error_title="No se pudieron cargar las plantillas",
-                error_message=exc.message,
-                netbox_connected=False,
-            ),
-        )
-
-    selected_device_type, selected_device_type_id = select_device_type(
-        device_types,
+    return redirect_to_model_interfaces(
         selected_device_type_id,
-    )
-    interfaces: list[dict[str, object]] = []
-
-    if selected_device_type_id:
-        try:
-            interfaces = await service.list_interface_templates(
-                selected_device_type_id
-            )
-        except DeviceTypeServiceError as exc:
-            error = exc.message
-
-    return templates.TemplateResponse(
-        request=request,
-        name="interface_templates.html",
-        context=context(
-            request,
-            current_page="interface_templates",
-            page_title="Plantillas de puertos",
-            page_subtitle=(
-                "Genera y revisa interfaces que heredarán los equipos nuevos"
-            ),
-            query=q,
-            manufacturers=manufacturers,
-            selected_manufacturer_id=selected_manufacturer_id,
-            device_types=device_types,
-            selected_device_type=selected_device_type,
-            selected_device_type_id=selected_device_type_id,
-            interface_templates=interfaces,
-            interface_types=interface_types,
-            csrf_token=csrf_token(request),
-            notice=notice,
-            error=error,
-        ),
+        notice=notice,
+        error=error,
     )
 
 
@@ -472,13 +446,10 @@ async def legacy_interface_templates_redirect(
     request: Request,
     device_type_id: str = "",
 ):
-    query = urlencode({
-        "device_type_id": device_type_id,
-    }) if device_type_id else ""
-    target = "/interface-templates"
-    if query:
-        target = f"{target}?{query}"
-    return RedirectResponse(target, status_code=303)
+    return await interface_templates_redirect(
+        request,
+        device_type_id=device_type_id,
+    )
 
 
 @router.post("/device-types/actions/create")
@@ -591,10 +562,9 @@ async def bulk_interface_templates_action(
             success=False,
             object_id=str(device_type_id),
         )
-        return redirect_with_message(
-            "/interface-templates",
+        return redirect_to_model_interfaces(
+            device_type_id,
             error="La sesión del formulario expiró. Recarga la página.",
-            device_type_id=device_type_id,
         )
 
     if not settings.netbox_write_enabled:
@@ -606,10 +576,9 @@ async def bulk_interface_templates_action(
             success=False,
             object_id=str(device_type_id),
         )
-        return redirect_with_message(
-            "/interface-templates",
+        return redirect_to_model_interfaces(
+            device_type_id,
             error="La escritura en NetBox está deshabilitada.",
-            device_type_id=device_type_id,
         )
 
     try:
@@ -635,10 +604,9 @@ async def bulk_interface_templates_action(
             success=False,
             object_id=str(device_type_id),
         )
-        return redirect_with_message(
-            "/interface-templates",
+        return redirect_to_model_interfaces(
+            device_type_id,
             error=exc.message,
-            device_type_id=device_type_id,
         )
 
     audit_event(
@@ -652,8 +620,7 @@ async def bulk_interface_templates_action(
         success=True,
         object_id=str(device_type_id),
     )
-    return redirect_with_message(
-        "/interface-templates",
+    return redirect_to_model_interfaces(
+        device_type_id,
         notice=f"Se crearon {len(created)} interfaces correctamente.",
-        device_type_id=device_type_id,
     )

@@ -5,6 +5,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/hardware.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/device_images.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_library.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -23,7 +24,6 @@
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/device-types/{{ device_type.get('id') }}/images">Imágenes</a>
-        <a class="button secondary" href="/interface-templates?device_type_id={{ device_type.get('id') }}">Plantillas de puertos</a>
         <a class="button primary" href="/devices/actions/new">Crear equipo</a>
     </div>
 </section>
@@ -89,11 +89,117 @@
     <div class="hardware-component-note"><strong>Siguiente etapa:</strong><span>cada tipo de componente tendrá su propio generador y editor, siguiendo el mismo patrón seguro de las interfaces.</span></div>
 </section>
 
-<section class="panel hardware-table-panel" id="interfaces">
-    <div class="panel-header compact-panel-header"><div><h2>Plantillas de interfaces</h2><p>Puertos que heredará cada equipo nuevo.</p></div><a class="button primary" href="/interface-templates?device_type_id={{ device_type.get('id') }}">Administrar puertos</a></div>
+<section class="panel template-builder-panel" id="interfaces">
+    <div class="panel-header compact-panel-header">
+        <div>
+            <h2>Crear interfaces del modelo</h2>
+            <p>Genera hasta 256 puertos que heredará cada equipo nuevo.</p>
+        </div>
+        {% if write_enabled and can_manage_device_types %}
+        <span class="status-pill healthy">Escritura habilitada</span>
+        {% else %}
+        <span class="status-pill neutral">Vista previa</span>
+        {% endif %}
+    </div>
+
+    {% if not write_enabled %}
+    <div class="read-only-callout compact-callout">
+        <span>◌</span>
+        <div>
+            <strong>Solo lectura</strong>
+            <span>Puedes preparar y revisar el patrón; la creación está bloqueada.</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <form class="template-builder-form" method="post" action="/device-types/actions/interfaces/bulk">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <input type="hidden" name="device_type_id" value="{{ device_type.get('id') }}">
+
+        <div class="template-builder-grid">
+            <div class="field template-pattern-field">
+                <label for="interface-pattern">Patrón de nombre</label>
+                <input
+                    id="interface-pattern"
+                    name="name_pattern"
+                    type="text"
+                    value="GigabitEthernet0/{n}"
+                    placeholder="Ejemplo: Gi1/0/{n:02}"
+                    data-preview-pattern
+                    required
+                >
+                <small>Usa <code>{n}</code> o formatos como <code>{n:02}</code>.</small>
+            </div>
+            <div class="field">
+                <label for="interface-start">Inicio</label>
+                <input id="interface-start" name="start" type="number" min="0" value="1" data-preview-start required>
+            </div>
+            <div class="field">
+                <label for="interface-count">Cantidad</label>
+                <input id="interface-count" name="count" type="number" min="1" max="256" value="24" data-preview-count required>
+            </div>
+            <div class="field template-type-field">
+                <label for="interface-type">Tipo de interfaz</label>
+                <select id="interface-type" name="interface_type" required>
+                    {% for item in interface_types %}
+                    <option value="{{ item.value }}">{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="label-pattern">Patrón de etiqueta</label>
+                <input id="label-pattern" name="label_pattern" type="text" placeholder="Opcional: Puerto {n}">
+            </div>
+            <div class="field">
+                <label for="interface-description">Descripción común</label>
+                <input id="interface-description" name="description" type="text" placeholder="Opcional">
+            </div>
+            <label class="checkbox-field template-management-field">
+                <input type="checkbox" name="management_only" value="true">
+                <span>
+                    <strong>Solo administración</strong>
+                    <small>Marca todo el lote como interfaces de gestión.</small>
+                </span>
+            </label>
+        </div>
+
+        <div class="interface-preview compact-interface-preview">
+            <div class="interface-preview-header">
+                <div>
+                    <strong>Vista previa</strong>
+                    <span data-preview-count-label>24 nombres generados</span>
+                </div>
+                <small>Primeros 24</small>
+            </div>
+            <div class="interface-chip-list" data-interface-preview>
+                {% for number in range(1, 25) %}
+                <span>GigabitEthernet0/{{ number }}</span>
+                {% endfor %}
+            </div>
+            <p class="preview-error" data-preview-error></p>
+        </div>
+
+        <div class="template-builder-actions">
+            <div>
+                <strong>Revisa el patrón antes de guardar.</strong>
+                <span>NetBox validará el lote completo.</span>
+            </div>
+            <button
+                class="button primary"
+                type="submit"
+                {% if not write_enabled or not can_manage_device_types %}disabled{% endif %}
+            >
+                Crear interfaces
+            </button>
+        </div>
+    </form>
+</section>
+
+<section class="panel hardware-table-panel">
+    <div class="panel-header compact-panel-header"><div><h2>Interfaces existentes</h2><p>Puertos que heredará cada equipo nuevo.</p></div><span class="panel-badge">{{ interfaces | length }}</span></div>
     {% if interfaces %}
     <div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Tipo</th><th>Etiqueta</th><th>Gestión</th></tr></thead><tbody>{% for interface in interfaces[:100] %}<tr><td><strong>{{ interface.get("name") }}</strong></td><td>{{ interface.get("_type_label") }}</td><td>{{ interface.get("label") or "—" }}</td><td>{% if interface.get("mgmt_only") %}<span class="status-pill accent">Solo gestión</span>{% else %}<span class="muted">Normal</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
-    {% else %}<div class="empty-state compact-empty-state"><div class="empty-icon">⇆</div><h3>El modelo no tiene interfaces</h3><p>Usa el generador de plantillas para crearlas en lote.</p></div>{% endif %}
+    {% else %}<div class="empty-state compact-empty-state"><div class="empty-icon">⇆</div><h3>El modelo no tiene interfaces</h3><p>Usa el generador de esta ficha para crearlas en lote.</p></div>{% endif %}
 </section>
 
 <section class="panel hardware-table-panel" id="devices">
@@ -102,4 +208,8 @@
     <div class="hardware-device-list">{% for device in devices %}{% set site = device.get("site") or {} %}{% set rack = device.get("rack") or {} %}<a href="/devices/{{ device.get('id') }}"><span><strong>{{ device.get("name") or device.get("display") }}</strong><small>{{ site.get("display") or site.get("name") or "Sin sitio" }}{% if rack %} · {{ rack.get("display") or rack.get("name") }}{% endif %}</small></span><span class="status-pill neutral">{{ (device.get("status") or {}).get("label") or "Sin estado" }}</span></a>{% endfor %}</div>
     {% else %}<div class="empty-state compact-empty-state"><div class="empty-icon">▣</div><h3>Todavía no hay equipos asociados</h3><p>Cuando crees un dispositivo con este modelo aparecerá aquí.</p></div>{% endif %}
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/device_types.js') }}"></script>
 {% endblock %}

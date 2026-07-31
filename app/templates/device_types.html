@@ -26,8 +26,7 @@
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/manufacturers">Fabricantes</a>
-        {% if can_manage_device_types %}<a class="button secondary" href="/device-types/new">Nuevo modelo</a>{% endif %}
-        <a class="button primary" href="/interface-templates{% if selected_device_type_id %}?device_type_id={{ selected_device_type_id }}{% endif %}">Plantillas de puertos</a>
+        {% if can_manage_device_types %}<a class="button primary" href="/device-types/new">Nuevo modelo</a>{% endif %}
     </div>
 </section>
 
@@ -114,7 +113,7 @@
 
         <section class="panel model-next-step-panel">
             <div><span class="eyebrow">Administración</span><h2>Abre la ficha completa</h2><p>Edita datos, imágenes y componentes sin mezclar modelos diferentes.</p></div>
-            <div class="model-next-actions"><a class="button primary" href="/device-types/{{ selected_device_type_id }}">Abrir modelo</a><a class="button secondary" href="/interface-templates?device_type_id={{ selected_device_type_id }}">Puertos</a></div>
+            <div class="model-next-actions"><a class="button primary" href="/device-types/{{ selected_device_type_id }}">Abrir modelo</a><a class="button secondary" href="/device-types/{{ selected_device_type_id }}#interfaces">Administrar puertos</a></div>
         </section>
         {% else %}
         <section class="panel model-empty-detail"><div class="empty-icon">▣</div><h2>No hay un modelo visible</h2><p>Cambia los filtros o registra el primer modelo.</p></section>

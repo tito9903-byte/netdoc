@@ -6,8 +6,8 @@
 - **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; validación actual de
-  creación múltiple y rendimiento de Conexiones.
+- **Ramas:** producción `main`; integración `develop`; revisión actual del flujo
+  contextual de interfaces dentro de Modelos de equipos.
 
 ## Resumen ejecutivo
 
@@ -42,6 +42,13 @@ El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
 inicial de la pantalla. Su validación funcional en desarrollo sigue pendiente.
 
+La rama `refactor/model-scoped-interfaces` elimina el módulo independiente
+**Plantillas de puertos** de la navegación y concentra el generador masivo y el
+inventario de interfaces dentro de la ficha del modelo correspondiente. Las
+rutas antiguas se conservan como redirecciones compatibles. Esta modificación
+está en revisión y no debe considerarse validada hasta completar CI y la
+revisión funcional en desarrollo.
+
 ## Entornos y servicios
 
 | Entorno | Ruta | Rama esperada | Servicio | Puerto | Base local |
@@ -75,7 +82,8 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Protección temporal de inicio de sesión.
 - Búsqueda global y módulo Sistema.
 - Direccionamiento IP con pools, localidad, VRF y ocupación.
-- Fabricantes, modelos, ficha completa y plantillas de puertos.
+- Fabricantes, modelos, ficha completa y componentes reutilizables.
+- Generación masiva de interfaces dentro de la ficha del modelo responsable.
 - Creación de modelos con imágenes opcionales.
 - Planes seguros, lista cerrada de capacidades y vista previa de cables.
 - Sites con catálogo, filtros y operaciones controladas.
@@ -150,6 +158,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - creación por lote de hasta 50 pares de interfaces entre dos equipos;
 - rechazo de interfaces repetidas dentro del lote y un único POST masivo hacia
   NetBox.
+- ausencia del acceso independiente **Plantillas de puertos** en la navegación;
+- redirección de enlaces antiguos hacia la sección de interfaces del modelo;
+- generador masivo e inventario de puertos renderizados en la ficha del modelo.
 
 ## Requiere verificación en desarrollo
 
@@ -171,6 +182,11 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - confirmar que una interfaz usada desaparece de las demás filas;
 - validar que un lote real crea exactamente todos los cables solicitados y
   genera auditoría controlada.
+- confirmar que **Plantillas de puertos** no aparece como módulo independiente;
+- abrir un modelo y validar generación, vista previa e inventario de interfaces
+  dentro de la misma ficha;
+- comprobar que un enlace antiguo `/interface-templates?device_type_id=<id>`
+  redirige a `/device-types/<id>#interfaces`.
 
 ## Riesgos y deuda
 
@@ -184,10 +200,12 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Desplegar y validar en desarrollo la creación múltiple y la carga rápida de
-Conexiones. Después, completar la revisión funcional de Sites. La imagen
-representativa del site queda diferida hasta definir almacenamiento, respaldo y
-asociación sin duplicar el inventario oficial.
+Completar CI y validar en desarrollo que la gestión de interfaces quedó dentro
+de la ficha del modelo sin perder generación masiva ni compatibilidad de rutas.
+Después, desplegar y validar la creación múltiple y la carga rápida de
+Conexiones, y completar la revisión funcional de Sites. La imagen representativa
+del site queda diferida hasta definir almacenamiento, respaldo y asociación sin
+duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
 

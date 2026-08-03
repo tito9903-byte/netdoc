@@ -100,7 +100,9 @@ Estos resultados no validan systemd, el puerto 8101, una base persistente real d
 15. Verificar filtros por fecha/recurso y exportar un CSV de Auditoría.
 16. Probar Búsqueda con dispositivos, interfaces, racks, sitios y cables reales.
 17. Revisar CPU, RAM, disco, red y uptime en Sistema sin acciones de escritura.
-18. Confirmar que desarrollo sigue sin escritura hacia NetBox.
+18. Confirmar que `NETBOX_WRITE_ENABLED` coincide con el estado expresamente
+    autorizado. Si está habilitado, probar solo planes revisados con un token de
+    mínimo privilegio y comprobar NetBox y Auditoría después de cada escritura.
 19. Revisar logs, permisos del archivo de base y que Git lo ignore.
 
 ## Estrategia siguiente

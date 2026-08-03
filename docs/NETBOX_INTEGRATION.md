@@ -9,7 +9,10 @@ validación e integridad técnica final.
 La URL, token, tipo de token, verificación SSL y timeout se obtienen de `.env`.
 `NETBOX_VERIFY_SSL` y `NETBOX_TIMEOUT` son configurables. Nunca versionar o
 mostrar token. `NETBOX_WRITE_ENABLED` controla las rutas de escritura; en
-desarrollo debe ser `false`.
+todos los entornos su valor predeterminado debe ser `false`. Puede habilitarse
+por entorno únicamente con autorización expresa y sin omitir permisos, CSRF,
+validación, confirmación ni auditoría. Desarrollo tiene esa excepción desde
+2026-08-03 para pruebas funcionales controladas; producción no fue modificada.
 
 Use tokens con permisos mínimos por operación, evite permisos amplios y rótelos
 periódicamente y tras una exposición. Mantenga tokens y `.env` distintos por

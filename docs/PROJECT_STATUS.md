@@ -3,11 +3,11 @@
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
 - **Última actualización:** 2026-08-03.
-- **Versión documental:** 3.0.
+- **Versión documental:** 3.1.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo actual en
-  `feature/ipam-pool-workspace`.
+  `docs/development-write-validation`.
 
 ## Resumen ejecutivo
 
@@ -38,18 +38,25 @@ desarrollo en el puerto 8101 y validado funcionalmente por el propietario. El
 catálogo abre con agilidad, el detalle del rack carga y el selector **Rack
 completo / Detalle ampliado** funciona. Producción permanece sin cambios.
 
-El PR #19 contiene la creación de varias conexiones entre dos equipos en una
-sola operación y evita que la consulta de cables recientes bloquee la apertura
-inicial de la pantalla. Su validación funcional en desarrollo sigue pendiente.
+El PR #19 fue integrado en `develop` en
+`8a9b7733362c248cc714ade31914e01c8bc4b9e2`. Incorpora la creación de varias
+conexiones entre dos equipos en una sola operación y evita que la consulta de
+cables recientes bloquee la apertura inicial de la pantalla. Su validación
+funcional en desarrollo sigue pendiente.
 
-La rama `feature/ipam-pool-workspace` habilita la creación humana de pools
-desde Direccionamiento mediante un plan revisable. Valida CIDR canónico,
+El PR #21 fue integrado en `develop` en
+`36bde61297375441d11cc5c74b5c8aa8bb7bf80b`. Habilita la creación humana de
+pools desde Direccionamiento mediante un plan revisable: valida CIDR canónico,
 duplicados dentro de la VRF, jerarquía, prefijo padre, bloques contenidos,
 relaciones visibles y el contrato `OPTIONS` de NetBox antes del único `POST`.
-También separa la apertura del catálogo del cálculo completo de ocupación:
-prefijos y filtros aparecen primero, mientras direcciones y rangos se procesan
-en segundo plano. Esta función todavía no ha sido integrada ni validada en
-desarrollo.
+También separa la apertura del catálogo del cálculo completo de ocupación.
+
+Ese SHA quedó desplegado en desarrollo el 2026-08-03. El servicio respondió
+HTTP 200 en 8101, `alembic current` y `alembic heads` coincidieron en
+`20260725_0002`, y `NETBOX_WRITE_ENABLED` fue verificado en `true` por
+autorización expresa del propietario. Producción permaneció sin cambios en
+`bb8a63af37dfdadeba8f40910de50212d0b09774`. Falta la prueba funcional creando
+un pool real y comprobando NetBox y Auditoría.
 
 El PR #20 integró en `develop`, en
 `6843a353e74f0a9ee9300be6cb3e76865458fb42`, la eliminación del módulo
@@ -60,10 +67,10 @@ funcional en desarrollo sigue pendiente.
 
 ## Entornos y servicios
 
-| Entorno | Ruta | Rama esperada | Servicio | Puerto | Base local |
-|---|---|---|---|---:|---|
-| Producción | `/opt/netdoc-prod` | `main` | `netdoc-prod` | 8100 | independiente |
-| Desarrollo | `/opt/netdoc-dev` | rama en revisión o `develop` | `netdoc-dev` | 8101 | independiente |
+| Entorno | Ruta | Rama esperada | Servicio | Puerto | Base local | Escritura NetBox |
+|---|---|---|---|---:|---|---|
+| Producción | `/opt/netdoc-prod` | `main` | `netdoc-prod` | 8100 | independiente | configuración no modificada |
+| Desarrollo | `/opt/netdoc-dev` | rama en revisión o `develop` | `netdoc-dev` | 8101 | independiente | habilitada por autorización expresa |
 
 Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión documentada 4.4.2.
 
@@ -91,7 +98,7 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Protección temporal de inicio de sesión.
 - Búsqueda global y módulo Sistema.
 - Direccionamiento IP con pools, localidad, VRF y ocupación.
-- En la rama actual, alta protegida de pools con vista previa, confirmación
+- En `develop`, alta protegida de pools con vista previa, confirmación
   ligada al plan, auditoría y revalidación inmediata antes de escribir.
 - Fabricantes, modelos, ficha completa y componentes reutilizables.
 - Generación masiva de interfaces dentro de la ficha del modelo responsable.
@@ -219,14 +226,18 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - El `device_type_id` es una referencia externa: una futura eliminación de modelos necesitará limpieza controlada de imágenes huérfanas.
 - La creación del modelo en NetBox y el guardado local de imágenes no forman una única transacción.
 - El rollback de código no revierte migraciones ni restaura la base.
+- Mientras desarrollo tenga escritura habilitada, una prueba mal seleccionada
+  puede modificar el inventario oficial. Deben mantenerse token de mínimo
+  privilegio, permisos, CSRF, vista previa, confirmación y auditoría, y evitar
+  pruebas automatizadas contra el `.env` real.
 - Aún faltan editores propios para bahías de módulos, energía, consola y patch panels.
 - El asistente conversacional todavía no tiene interfaz ni ejecutor habilitado.
 
 ## Próximo objetivo
 
-Completar pruebas y revisión del PR de Direccionamiento, integrarlo con
-autorización y validar la carga rápida y la creación protegida de un pool en
-desarrollo. Continúan pendientes la validación funcional del PR #20 para la
+Validar en desarrollo la carga rápida y la creación protegida de un pool real,
+incluido el reflejo en NetBox y el evento `IPAM_POOL_CREATE`. Continúan
+pendientes la validación funcional del PR #20 para la
 gestión contextual de interfaces, la validación del PR #19 de Conexiones y la
 revisión completa de Sites. La imagen representativa del site queda diferida
 hasta definir almacenamiento, respaldo y asociación sin duplicar el inventario

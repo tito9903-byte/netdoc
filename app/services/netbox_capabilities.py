@@ -96,7 +96,10 @@ _CAPABILITIES: tuple[NetBoxCapability, ...] = (
         methods=frozenset({"POST", "PATCH"}),
         required_permission="devices.create",
         ai_execution_allowed=False,
-        notes="Planificado; requiere validar VRF, solapamiento y jerarquía.",
+        notes=(
+            "El alta humana de pools valida VRF, duplicados, solapamiento, "
+            "jerarquía y confirmación; la ejecución por IA permanece bloqueada."
+        ),
     ),
     NetBoxCapability(
         key="ipam.ip_address.create_or_update",

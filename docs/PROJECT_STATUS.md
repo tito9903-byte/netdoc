@@ -2,12 +2,12 @@
 
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
-- **Última actualización:** 2026-07-30.
+- **Última actualización:** 2026-08-03.
 - **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; revisión actual del flujo
-  contextual de interfaces dentro de Modelos de equipos.
+- **Ramas:** producción `main`; integración `develop`; trabajo actual en
+  `feature/ipam-pool-workspace`.
 
 ## Resumen ejecutivo
 
@@ -42,12 +42,21 @@ El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
 inicial de la pantalla. Su validación funcional en desarrollo sigue pendiente.
 
-La rama `refactor/model-scoped-interfaces` elimina el módulo independiente
-**Plantillas de puertos** de la navegación y concentra el generador masivo y el
+La rama `feature/ipam-pool-workspace` habilita la creación humana de pools
+desde Direccionamiento mediante un plan revisable. Valida CIDR canónico,
+duplicados dentro de la VRF, jerarquía, prefijo padre, bloques contenidos,
+relaciones visibles y el contrato `OPTIONS` de NetBox antes del único `POST`.
+También separa la apertura del catálogo del cálculo completo de ocupación:
+prefijos y filtros aparecen primero, mientras direcciones y rangos se procesan
+en segundo plano. Esta función todavía no ha sido integrada ni validada en
+desarrollo.
+
+El PR #20 integró en `develop`, en
+`6843a353e74f0a9ee9300be6cb3e76865458fb42`, la eliminación del módulo
+independiente **Plantillas de puertos** y concentró el generador masivo y el
 inventario de interfaces dentro de la ficha del modelo correspondiente. Las
-rutas antiguas se conservan como redirecciones compatibles. Esta modificación
-está en revisión y no debe considerarse validada hasta completar CI y la
-revisión funcional en desarrollo.
+rutas antiguas se conservan como redirecciones compatibles. La revisión
+funcional en desarrollo sigue pendiente.
 
 ## Entornos y servicios
 
@@ -82,6 +91,8 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - Protección temporal de inicio de sesión.
 - Búsqueda global y módulo Sistema.
 - Direccionamiento IP con pools, localidad, VRF y ocupación.
+- En la rama actual, alta protegida de pools con vista previa, confirmación
+  ligada al plan, auditoría y revalidación inmediata antes de escribir.
 - Fabricantes, modelos, ficha completa y componentes reutilizables.
 - Generación masiva de interfaces dentro de la ficha del modelo responsable.
 - Creación de modelos con imágenes opcionales.
@@ -158,6 +169,12 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - creación por lote de hasta 50 pares de interfaces entre dos equipos;
 - rechazo de interfaces repetidas dentro del lote y un único POST masivo hacia
   NetBox.
+- apertura de Direccionamiento sin descargar primero todas las direcciones y
+  rangos IP;
+- cálculo diferido de ocupación con actualización de la tabla y los KPI;
+- CIDR canónico, duplicado por VRF, padre, hijos y solapamientos de pools;
+- contrato `OPTIONS`, capacidad registrada, CSRF, permiso, modo de escritura,
+  confirmación inmutable y un solo POST al crear un pool.
 - ausencia del acceso independiente **Plantillas de puertos** en la navegación;
 - redirección de enlaces antiguos hacia la sección de interfaces del modelo;
 - generador masivo e inventario de puertos renderizados en la ficha del modelo.
@@ -182,6 +199,13 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - confirmar que una interfaz usada desaparece de las demás filas;
 - validar que un lote real crea exactamente todos los cables solicitados y
   genera auditoría controlada.
+- medir la apertura de Direccionamiento con el inventario IPAM real;
+- revisar que los KPI y cada fila se completen después de la carga inicial;
+- validar un pool nuevo primero en vista previa y confirmar VRF, localidad,
+  rol, padre, hijos y advertencias;
+- comprobar con un token limitado que un duplicado exacto no escribe y que un
+  pool válido crea un solo prefijo con `is_pool=true`;
+- revisar el cambio en NetBox y el evento `IPAM_POOL_CREATE` en Auditoría.
 - confirmar que **Plantillas de puertos** no aparece como módulo independiente;
 - abrir un modelo y validar generación, vista previa e inventario de interfaces
   dentro de la misma ficha;
@@ -200,12 +224,13 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Completar CI y validar en desarrollo que la gestión de interfaces quedó dentro
-de la ficha del modelo sin perder generación masiva ni compatibilidad de rutas.
-Después, desplegar y validar la creación múltiple y la carga rápida de
-Conexiones, y completar la revisión funcional de Sites. La imagen representativa
-del site queda diferida hasta definir almacenamiento, respaldo y asociación sin
-duplicar el inventario oficial.
+Completar pruebas y revisión del PR de Direccionamiento, integrarlo con
+autorización y validar la carga rápida y la creación protegida de un pool en
+desarrollo. Continúan pendientes la validación funcional del PR #20 para la
+gestión contextual de interfaces, la validación del PR #19 de Conexiones y la
+revisión completa de Sites. La imagen representativa del site queda diferida
+hasta definir almacenamiento, respaldo y asociación sin duplicar el inventario
+oficial.
 
 ## Reglas de mantenimiento
 

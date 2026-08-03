@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, Request
@@ -19,12 +20,19 @@ from app.core.auth import (
 from app.core.config import get_settings
 from app.core.database import session_scope
 from app.services.access_service import record_audit
+from app.services.change_plan import ChangePlanError, require_confirmation
 from app.services.device_type_service import (
     DeviceTypeService,
     DeviceTypeServiceError,
     build_interface_names,
 )
 from app.services.ipam_presentation import prepare_ipam_view
+from app.services.ipam_pool_service import (
+    IPAMPoolService,
+    IPAMPoolServiceError,
+    default_pool_form,
+    parse_positive_int,
+)
 from app.services.ipam_service import IPAMService, IPAMServiceError
 
 
@@ -53,6 +61,10 @@ def context(
         "netbox_url": settings.netbox_url,
         "write_enabled": settings.netbox_write_enabled,
         "can_manage_device_types": has_permission(
+            request,
+            "devices.create",
+        ),
+        "can_manage_ipam": has_permission(
             request,
             "devices.create",
         ),
@@ -180,8 +192,10 @@ async def ipam_page(
     role_id: str = "",
     scope: str = "",
     health: str = "",
-    order: str = "utilization_desc",
+    order: str = "scope",
     page: str = "1",
+    notice: str = "",
+    error: str = "",
 ):
     redirect = access_redirect(request, "search.view")
     if redirect:
@@ -192,14 +206,20 @@ async def ipam_page(
         selected_family = None
     selected_role_id = parse_optional_int(role_id)
     selected_page = parse_optional_int(page) or 1
+    inventory_required = bool(health.strip()) or order.strip() in {
+        "utilization_desc",
+        "availability_desc",
+    }
 
     try:
-        raw_data = await IPAMService().overview(
-            query=q,
-            status=status,
-            family=selected_family,
-            role_id=selected_role_id,
-        )
+        async with IPAMService() as service:
+            raw_data = await service.overview(
+                query=q,
+                status=status,
+                family=selected_family,
+                role_id=selected_role_id,
+                include_inventory=inventory_required,
+            )
         data = prepare_ipam_view(
             raw_data,
             scope=scope,
@@ -238,6 +258,8 @@ async def ipam_page(
             selected_family=selected_family,
             selected_role_id=selected_role_id,
             prefix_statuses=PREFIX_STATUSES,
+            notice=notice,
+            error=error,
             **data,
         ),
     )
@@ -250,7 +272,8 @@ async def ipam_pools_api(request: Request):
         return denied
 
     try:
-        data = await IPAMService().overview()
+        async with IPAMService() as service:
+            data = await service.overview(include_inventory=True)
     except IPAMServiceError as exc:
         return JSONResponse(
             status_code=503,
@@ -263,6 +286,342 @@ async def ipam_pools_api(request: Request):
             "summary": data["summary"],
             "pools": data["pools"],
         }
+    )
+
+
+@router.get("/api/ipam/pools/availability", response_class=JSONResponse)
+async def ipam_pool_availability_api(
+    request: Request,
+    q: str = "",
+    status: str = "",
+    family: str = "",
+    role_id: str = "",
+    scope: str = "",
+    health: str = "",
+    order: str = "scope",
+    page: str = "1",
+):
+    denied = api_access_response(request, "search.view")
+    if denied:
+        return denied
+
+    selected_family = parse_optional_int(family)
+    if selected_family not in {4, 6}:
+        selected_family = None
+    selected_role_id = parse_optional_int(role_id)
+    selected_page = parse_optional_int(page) or 1
+
+    try:
+        async with IPAMService() as service:
+            data = await service.overview(
+                query=q,
+                status=status,
+                family=selected_family,
+                role_id=selected_role_id,
+                include_inventory=True,
+            )
+    except IPAMServiceError as exc:
+        return JSONResponse(
+            status_code=503,
+            content={"ok": False, "error": exc.message},
+        )
+
+    view = prepare_ipam_view(
+        data,
+        scope=scope,
+        health=health,
+        order=order,
+        page=selected_page,
+    )
+    return JSONResponse(
+        content={
+            "ok": True,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "inventory_warning": view["inventory_warning"],
+            "summary": view["summary"],
+            "pools": view["pools"],
+        },
+    )
+
+
+async def render_pool_form(
+    request: Request,
+    *,
+    form_data: dict[str, str],
+    form_options: dict[str, object],
+    errors: list[str] | None = None,
+    plan: dict[str, object] | None = None,
+    normalized: dict[str, object] | None = None,
+    analysis: dict[str, object] | None = None,
+    parent: dict[str, object] | None = None,
+    status_code: int = 200,
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="ipam_pool_form.html",
+        status_code=status_code,
+        context=context(
+            request,
+            current_page="ipam",
+            page_title="Crear pool IP",
+            page_subtitle=(
+                "Prevalidación de CIDR, VRF, jerarquía y solapamientos"
+            ),
+            form_data=form_data,
+            statuses=form_options["statuses"],
+            roles=form_options["roles"],
+            vrfs=form_options["vrfs"],
+            scopes=form_options["scopes"],
+            errors=errors or [],
+            plan=plan,
+            normalized=normalized or {},
+            analysis=analysis or {},
+            parent=parent,
+            csrf_token=csrf_token(request, "ipam_pool"),
+        ),
+    )
+
+
+@router.get("/ipam/pools/new", response_class=HTMLResponse)
+async def new_ipam_pool_page(
+    request: Request,
+    parent_id: str = "",
+):
+    redirect = access_redirect(request, "devices.create")
+    if redirect:
+        return redirect
+
+    form_data = default_pool_form()
+    selected_parent_id = parse_positive_int(parent_id)
+    parent: dict[str, object] | None = None
+    errors: list[str] = []
+    try:
+        async with IPAMPoolService() as service:
+            options = await service.load_form_options()
+            if selected_parent_id is not None:
+                parent = await service.prefill_from_parent(
+                    parent_id=selected_parent_id,
+                    form_data=form_data,
+                )
+    except IPAMPoolServiceError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="error.html",
+            status_code=503,
+            context=context(
+                request,
+                current_page="ipam",
+                page_title="Crear pool IP",
+                page_subtitle="No fue posible consultar NetBox",
+                error_title="No se pudo preparar el formulario",
+                error_message=exc.message,
+                netbox_connected=False,
+            ),
+        )
+
+    return await render_pool_form(
+        request,
+        form_data=form_data,
+        form_options=options,
+        errors=errors,
+        parent=parent,
+    )
+
+
+@router.post("/ipam/pools/preview", response_class=HTMLResponse)
+async def preview_ipam_pool(
+    request: Request,
+    csrf: str = Form(""),
+    prefix: str = Form(""),
+    status: str = Form("active"),
+    vrf_id: str = Form(""),
+    role_id: str = Form(""),
+    scope: str = Form(""),
+    description: str = Form(""),
+    change_reason: str = Form(""),
+    parent_id: str = Form(""),
+):
+    redirect = access_redirect(request, "devices.create")
+    if redirect:
+        return redirect
+
+    form_data = {
+        "prefix": prefix,
+        "status": status,
+        "vrf_id": vrf_id,
+        "role_id": role_id,
+        "scope": scope,
+        "description": description,
+        "change_reason": change_reason,
+        "parent_id": parent_id,
+    }
+    errors: list[str] = []
+    plan_errors: list[str] = []
+    if not verify_csrf(request, csrf, "ipam_pool"):
+        errors.append("La sesión del formulario expiró. Recarga la página.")
+
+    try:
+        async with IPAMPoolService() as service:
+            options = await service.load_form_options()
+            plan, normalized, analysis, plan_errors = (
+                await service.prepare_plan(
+                    form_data=form_data,
+                    requested_by=str(
+                        request.session.get("username") or "desconocido"
+                    ),
+                    form_options=options,
+                )
+            )
+    except IPAMPoolServiceError as exc:
+        errors.append(exc.message)
+        options = {
+            "statuses": [],
+            "roles": [],
+            "vrfs": [],
+            "scopes": [],
+        }
+        plan = None
+        normalized = {}
+        analysis = {}
+    errors.extend(plan_errors)
+
+    public_plan = plan.public_dict() if plan is not None and not errors else None
+    if public_plan is not None:
+        request.session["ipam_pool_form"] = form_data
+        request.session["ipam_pool_plan_id"] = plan.fingerprint
+    else:
+        request.session.pop("ipam_pool_form", None)
+        request.session.pop("ipam_pool_plan_id", None)
+
+    return await render_pool_form(
+        request,
+        form_data=form_data,
+        form_options=options,
+        errors=errors,
+        plan=public_plan,
+        normalized=normalized,
+        analysis=analysis,
+        parent=(analysis.get("parent") if analysis else None),
+        status_code=400 if errors else 200,
+    )
+
+
+@router.post("/ipam/pools/confirm", response_class=HTMLResponse)
+async def confirm_ipam_pool(
+    request: Request,
+    csrf: str = Form(""),
+    plan_id: str = Form(""),
+    confirmation_phrase: str = Form(""),
+):
+    redirect = access_redirect(request, "devices.create")
+    if redirect:
+        return redirect
+
+    stored_form = request.session.get("ipam_pool_form")
+    stored_plan_id = request.session.get("ipam_pool_plan_id")
+    if not isinstance(stored_form, dict):
+        return redirect_with_message(
+            "/ipam/pools/new",
+            error="La vista previa expiró. Revisa el pool nuevamente.",
+        )
+
+    form_data = {
+        key: str(stored_form.get(key) or "")
+        for key in default_pool_form()
+    }
+    errors: list[str] = []
+    if not verify_csrf(request, csrf, "ipam_pool"):
+        errors.append("La sesión del formulario expiró. Recarga la página.")
+    if not settings.netbox_write_enabled:
+        errors.append(
+            "La escritura está desactivada; el pool no fue enviado a NetBox."
+        )
+
+    try:
+        async with IPAMPoolService() as service:
+            options = await service.load_form_options()
+            plan, normalized, analysis, plan_errors = (
+                await service.prepare_plan(
+                    form_data=form_data,
+                    requested_by=str(
+                        request.session.get("username") or "desconocido"
+                    ),
+                    form_options=options,
+                )
+            )
+            errors.extend(plan_errors)
+            if plan is None:
+                pass
+            elif (
+                not isinstance(stored_plan_id, str)
+                or plan_id != stored_plan_id
+                or plan.fingerprint != stored_plan_id
+            ):
+                errors.append(
+                    "El inventario o el formulario cambió después de la "
+                    "vista previa. Revísalo nuevamente antes de crear."
+                )
+            else:
+                try:
+                    require_confirmation(plan, confirmation_phrase)
+                except ChangePlanError as exc:
+                    errors.append(str(exc))
+
+            if plan is not None and not errors:
+                saved = await service.create_pool(plan)
+            else:
+                saved = None
+    except IPAMPoolServiceError as exc:
+        errors.append(exc.message)
+        options = {
+            "statuses": [],
+            "roles": [],
+            "vrfs": [],
+            "scopes": [],
+        }
+        plan = None
+        normalized = {}
+        analysis = {}
+        saved = None
+
+    if errors or saved is None:
+        if plan is not None:
+            request.session["ipam_pool_plan_id"] = plan.fingerprint
+        audit_event(
+            request,
+            action="IPAM_POOL_CREATE",
+            resource="ipam_pool",
+            detail=" | ".join(errors) or "No se confirmó la creación.",
+            success=False,
+        )
+        return await render_pool_form(
+            request,
+            form_data=form_data,
+            form_options=options,
+            errors=errors,
+            plan=(plan.public_dict() if plan is not None else None),
+            normalized=normalized,
+            analysis=analysis,
+            parent=(analysis.get("parent") if analysis else None),
+            status_code=400,
+        )
+
+    saved_id = saved.get("id")
+    saved_prefix = str(saved.get("prefix") or form_data["prefix"])
+    audit_event(
+        request,
+        action="IPAM_POOL_CREATE",
+        resource="ipam_pool",
+        object_id=str(saved_id) if isinstance(saved_id, int) else None,
+        detail=f"Pool creado en NetBox: {saved_prefix}.",
+        success=True,
+    )
+    request.session.pop("ipam_pool_form", None)
+    request.session.pop("ipam_pool_plan_id", None)
+    IPAMService.clear_caches()
+    return redirect_with_message(
+        "/ipam",
+        notice=f"Pool {saved_prefix} creado correctamente.",
     )
 
 

@@ -332,6 +332,12 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         if path == "/search" or path.startswith("/api/search"):
             return "search.view"
 
+        if path.startswith("/ipam/pools/"):
+            return "devices.create"
+
+        if path == "/ipam" or path.startswith("/api/ipam/"):
+            return "search.view"
+
         if path == "/system" or path.startswith("/api/system"):
             return "system.view"
 

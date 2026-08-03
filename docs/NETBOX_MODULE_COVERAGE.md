@@ -41,7 +41,7 @@ Estados:
 |---|---|---|---|
 | VRF | Planificado | Catálogo, ficha y asistente | RD único cuando aplique |
 | Route targets | Planificado | Selector reutilizable | Importación/exportación coherentes |
-| Prefijos | En revisión de lectura | Pools, localidad y ocupación | VRF, jerarquía, solapamiento y estado |
+| Prefijos | En revisión | Pools, localidad, ocupación y alta protegida | CIDR, VRF, jerarquía, solapamiento, vista previa y estado |
 | Rangos IP | En revisión de lectura | Reservas y ocupación | Dentro del prefijo y sin duplicados |
 | Direcciones IP | En revisión de lectura | Buscar, asignar y liberar | Duplicados, VRF, NAT y objeto asignado |
 | VLAN | Planificado | Crear grupo, VLAN y alcance | VID, grupo, sitio y tenant |

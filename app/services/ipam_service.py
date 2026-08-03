@@ -6,7 +6,10 @@ from ipaddress import ip_address, ip_interface, ip_network
 from time import monotonic
 from typing import Any
 
-from app.services.netbox_client import NetBoxClient, NetBoxError
+from app.services.connection_service import (
+    ConnectionService,
+    ConnectionServiceError,
+)
 
 
 Interval = tuple[int, int]
@@ -16,9 +19,14 @@ InventoryKey = tuple[int, int | None]
 class IPAMServiceError(Exception):
     """Error controlado al preparar la vista de direccionamiento."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
+        self.status_code = status_code
 
 
 def nested_label(value: Any, fallback: str = "—") -> str:
@@ -298,14 +306,40 @@ class IPAMService:
         list[dict[str, Any]],
     ] | None = None
     _inventory_cache_seconds = 60.0
+    _overview_cache: dict[
+        tuple[str, str, int | None, int | None, bool],
+        tuple[float, dict[str, Any]],
+    ] = {}
+    _overview_cache_seconds = 30.0
+    _overview_cache_limit = 64
 
     def __init__(self) -> None:
-        self.client = NetBoxClient()
+        self.client = ConnectionService()
+
+    async def __aenter__(self) -> IPAMService:
+        await self.client.__aenter__()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: object,
+        exc_value: object,
+        traceback: object,
+    ) -> None:
+        await self.client.__aexit__(exc_type, exc_value, traceback)
+
+    @classmethod
+    def clear_caches(cls) -> None:
+        cls._inventory_cache = None
+        cls._overview_cache.clear()
 
     async def list_roles(self) -> list[dict[str, Any]]:
         return await self.client.get_all(
             "/api/ipam/roles/",
-            params={"ordering": "name"},
+            params={
+                "ordering": "name",
+                "brief": "true",
+            },
         )
 
     async def list_prefixes(
@@ -315,8 +349,15 @@ class IPAMService:
         status: str = "",
         family: int | None = None,
         role_id: int | None = None,
+        vrf_id: int | None = None,
     ) -> list[dict[str, Any]]:
-        params: dict[str, Any] = {"ordering": "prefix"}
+        params: dict[str, Any] = {
+            "ordering": "prefix",
+            "fields": (
+                "id,display,prefix,vrf,scope_type,scope_id,scope,status,"
+                "role,is_pool,mark_utilized,description,last_updated"
+            ),
+        }
 
         if query.strip():
             params["q"] = query.strip()
@@ -326,6 +367,8 @@ class IPAMService:
             params["family"] = family
         if role_id:
             params["role_id"] = role_id
+        if vrf_id:
+            params["vrf_id"] = vrf_id
 
         return await self.client.get_all(
             "/api/ipam/prefixes/",
@@ -337,7 +380,10 @@ class IPAMService:
     async def list_ip_addresses(self) -> list[dict[str, Any]]:
         return await self.client.get_all(
             "/api/ipam/ip-addresses/",
-            params={"ordering": "address"},
+            params={
+                "ordering": "address",
+                "fields": "address,vrf",
+            },
             page_limit=500,
             maximum_pages=200,
         )
@@ -345,7 +391,13 @@ class IPAMService:
     async def list_ip_ranges(self) -> list[dict[str, Any]]:
         return await self.client.get_all(
             "/api/ipam/ip-ranges/",
-            params={"ordering": "start_address"},
+            params={
+                "ordering": "start_address",
+                "fields": (
+                    "start_address,end_address,vrf,"
+                    "mark_populated,mark_utilized"
+                ),
+            },
             page_limit=500,
             maximum_pages=100,
         )
@@ -466,38 +518,68 @@ class IPAMService:
         status: str = "",
         family: int | None = None,
         role_id: int | None = None,
+        include_inventory: bool = True,
     ) -> dict[str, Any]:
+        clean_query = query.strip()
+        clean_status = status.strip()
+        clean_family = family if family in {4, 6} else None
+        clean_role_id = role_id if role_id else None
+        cache_key = (
+            clean_query,
+            clean_status,
+            clean_family,
+            clean_role_id,
+            include_inventory,
+        )
+        now = monotonic()
+        cached = type(self)._overview_cache.get(cache_key)
+        if cached is not None and cached[0] > now:
+            return cached[1]
+
         has_filters = bool(
-            query.strip()
-            or status.strip()
-            or family in {4, 6}
-            or role_id
+            clean_query
+            or clean_status
+            or clean_family is not None
+            or clean_role_id
         )
 
         try:
             if has_filters:
-                prefixes, all_prefixes, roles = await asyncio.gather(
+                tasks = [
                     self.list_prefixes(
-                        query=query,
-                        status=status,
-                        family=family,
-                        role_id=role_id,
+                        query=clean_query,
+                        status=clean_status,
+                        family=clean_family,
+                        role_id=clean_role_id,
                     ),
                     self.list_prefixes(),
                     self.list_roles(),
-                )
+                ]
+                if include_inventory:
+                    tasks.append(self.load_ip_inventory())
+                results = await asyncio.gather(*tasks)
+                prefixes = results[0]
+                all_prefixes = results[1]
+                roles = results[2]
             else:
-                prefixes, roles = await asyncio.gather(
-                    self.list_prefixes(),
-                    self.list_roles(),
-                )
+                tasks = [self.list_prefixes(), self.list_roles()]
+                if include_inventory:
+                    tasks.append(self.load_ip_inventory())
+                results = await asyncio.gather(*tasks)
+                prefixes = results[0]
+                roles = results[1]
                 all_prefixes = prefixes
-        except NetBoxError as exc:
-            raise IPAMServiceError(exc.message) from exc
+        except ConnectionServiceError as exc:
+            raise IPAMServiceError(exc.message, exc.status_code) from exc
 
-        ip_addresses, ip_ranges, inventory_warning = (
-            await self.load_ip_inventory()
-        )
+        if include_inventory:
+            inventory = results[-1]
+            ip_addresses, ip_ranges, inventory_warning = inventory
+        else:
+            ip_addresses = []
+            ip_ranges = []
+            inventory_warning = None
+
         (
             address_intervals,
             reserved_ranges,
@@ -519,7 +601,11 @@ class IPAMService:
                 address_intervals=address_intervals,
                 reserved_ranges=reserved_ranges,
                 prefix_intervals=prefix_intervals,
-                inventory_warning=inventory_warning,
+                inventory_warning=(
+                    inventory_warning
+                    if include_inventory
+                    else "La ocupación se está calculando."
+                ),
             )
             for prefix in pools
         ]
@@ -538,6 +624,12 @@ class IPAMService:
             1
             for pool in prepared_pools
             if pool.get("_utilization") is not None
+        )
+        available_pools = sum(
+            1
+            for pool in prepared_pools
+            if isinstance(pool.get("_available"), int)
+            and pool["_available"] > 0
         )
 
         scopes = sorted(
@@ -561,17 +653,35 @@ class IPAMService:
                 "_vrf_label": nested_label(vrf_data, "Global"),
             })
 
-        return {
+        result = {
             "prefixes": prefix_rows,
             "pools": prepared_pools,
             "roles": roles,
             "inventory_warning": inventory_warning,
+            "inventory_ready": include_inventory,
             "summary": {
                 "prefixes": len(prefixes),
                 "pools": len(prepared_pools),
                 "full_pools": full_pools,
                 "critical_pools": critical_pools,
                 "pools_with_capacity": pools_with_capacity,
+                "available_pools": available_pools,
                 "scopes": len(scopes),
             },
         }
+
+        cache = type(self)._overview_cache
+        expired = [
+            key
+            for key, value in cache.items()
+            if value[0] <= now
+        ]
+        for key in expired:
+            cache.pop(key, None)
+        if len(cache) >= self._overview_cache_limit:
+            cache.clear()
+        cache[cache_key] = (
+            monotonic() + self._overview_cache_seconds,
+            result,
+        )
+        return result

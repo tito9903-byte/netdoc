@@ -6,6 +6,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Added
 
+- Alta protegida de pools desde Direccionamiento, con CIDR, VRF, rol,
+  localidad, estado, descripción y motivo operativo.
+- Vista previa de pools con prefijo padre, bloques hijos, advertencias,
+  impacto, huella de confirmación y validación dinámica mediante `OPTIONS`.
+- Auditoría `IPAM_POOL_CREATE` y mensaje de cambio enviado a NetBox.
 - Creación por lote de hasta 50 conexiones entre dos equipos, con una fila por
   pareja de interfaces y etiqueta individual.
 - Inventario profesional debajo de la elevación del rack con dispositivo,
@@ -68,6 +73,13 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- Direccionamiento muestra prefijos y filtros antes de descargar el inventario
+  completo de direcciones y rangos; la ocupación y los KPI se completan en
+  segundo plano.
+- Los filtros principales de IPAM quedan visibles y familia, estado, rol y
+  orden se agrupan como opciones avanzadas.
+- Las consultas de IPAM reutilizan un mismo cliente HTTP por solicitud y piden
+  únicamente los campos necesarios de direcciones, rangos y prefijos.
 - La gestión de interfaces deja de ser un módulo independiente: el generador
   masivo y el inventario se concentran en la ficha de cada modelo, y las rutas
   antiguas redirigen a la sección de puertos del modelo correspondiente.
@@ -128,6 +140,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Security
 
+- La creación de pools exige autenticación, `devices.create`, CSRF, escritura
+  habilitada, CIDR canónico, relaciones existentes, ausencia de duplicado
+  exacto en la VRF, capacidad REST registrada y confirmación ligada al plan.
+- El plan de pool se reconstruye justo antes del POST; cambios en jerarquía o
+  solapamientos invalidan la vista previa anterior.
 - Reglas explícitas para secretos, mínimo privilegio, separación de entornos y verificación previa.
 - Protección contra despliegues con `.env` versionado o no ignorado.
 - Rechazo de cambios locales, archivos no rastreados y propietarios inesperados antes de desplegar.

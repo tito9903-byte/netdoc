@@ -2,8 +2,9 @@
 
 NetBox es la **fuente oficial** del inventario; NetDoc no mantiene una copia
 principal. Consume su API REST para lecturas de dispositivos, interfaces,
-racks y cables, y para escrituras guiadas conocidas: creación de equipos y de
-cables. NetBox conserva la validación e integridad técnica final.
+racks y cables, y para escrituras guiadas conocidas: creación de equipos,
+cables, sites y pools IPAM protegidos por validación previa. NetBox conserva la
+validación e integridad técnica final.
 
 La URL, token, tipo de token, verificación SSL y timeout se obtienen de `.env`.
 `NETBOX_VERIFY_SSL` y `NETBOX_TIMEOUT` son configurables. Nunca versionar o

@@ -67,7 +67,11 @@ El plan genera una huella SHA-256 y una frase de confirmación. Esto evita ejecu
 - operaciones que el asistente puede preparar solamente;
 - operaciones que, después de validación y confirmación, pueden llegar a ejecutarse.
 
-La primera capacidad preparada para ejecución asistida es la creación de un cable. Fabricantes, modelos, dispositivos, racks, IPAM y circuitos permanecen en modo de preparación hasta completar sus validadores específicos.
+La primera capacidad preparada para ejecución asistida es la creación de un
+cable. La creación humana de pools IPAM dispone de un validador específico,
+vista previa y confirmación, pero conserva `ai_execution_allowed=false`.
+Fabricantes, modelos, dispositivos, racks, el resto de IPAM y circuitos
+permanecen en modo de preparación hasta completar sus validadores específicos.
 
 ## Conexiones de cables
 

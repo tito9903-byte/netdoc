@@ -14,6 +14,7 @@ El repositorio incluye pruebas de servicios de acceso, rutas administrativas, b�
 | Sistema | Parsers de memoria/red, carga y métricas seguras | valores de servidor real, umbrales y compatibilidad no Linux |
 | Migraciones | base vacía, esquema heredado completo, idempotencia y esquema parcial | respaldo/restauración y próxima revisión incremental |
 | Dispositivos/interfaces | Manual | unitarias e integración con NetBox simulado |
+| Direccionamiento IP | Lectura, capacidad, filtros, carga diferida y alta protegida de pools | integración real con jerarquía y token limitado |
 | Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
 | Racks | Manual | datos de borde y UI |
 | Despliegue | Sintaxis y ejecución manual conocida | ensayo del nuevo esquema y respaldo |
@@ -22,6 +23,7 @@ El repositorio incluye pruebas de servicios de acceso, rutas administrativas, b�
 
 ```bash
 scripts/netdoc-test-isolated tests.test_sites tests.test_access_control
+scripts/netdoc-test-isolated tests.test_ipam_pool_management
 scripts/netdoc-test-isolated
 python -c 'from app.main import app; print(app.title, len(app.routes))'
 bash -n scripts/netdoc-deploy-dev

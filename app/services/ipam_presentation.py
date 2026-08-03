@@ -74,7 +74,7 @@ def prepare_ipam_view(
     *,
     scope: str = "",
     health: str = "",
-    order: str = "utilization_desc",
+    order: str = "scope",
     page: int = 1,
     page_size: int = 40,
 ) -> dict[str, Any]:
@@ -181,6 +181,12 @@ def prepare_ipam_view(
         for pool in pools
         if pool.get("_health") in {"critical", "full"}
     )
+    filtered_available = sum(
+        1
+        for pool in pools
+        if isinstance(pool.get("_available"), int)
+        and pool["_available"] > 0
+    )
 
     summary = dict(data.get("summary") or {})
     summary.update({
@@ -188,6 +194,7 @@ def prepare_ipam_view(
         "visible_pools": total,
         "full_pools": filtered_full,
         "critical_pools": filtered_critical,
+        "available_pools": filtered_available,
         "scopes": len(filtered_scopes),
     })
 

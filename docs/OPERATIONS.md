@@ -21,6 +21,7 @@ systemctl show netdoc-dev --property=MemoryCurrent --property=CPUUsageNSec
 stat -c '%a %U:%G %n' /opt/netdoc-prod/.env /opt/netdoc-dev/.env
 [[ -f /opt/netdoc-prod/.env ]] && echo '.env de producción presente'
 [[ -f /opt/netdoc-dev/.env ]] && echo '.env de desarrollo presente'
+runuser -u sshtelenord -- bash -lc 'cd /opt/netdoc-dev && .venv/bin/python -c "from app.core.config import get_settings; print(str(get_settings().netbox_write_enabled).lower())"'
 ```
 
 Actualice con `netdoc-deploy-dev` o `netdoc-deploy-prod` según [DEPLOYMENT](DEPLOYMENT.md); no intercambie directorios ni servicios. Los comandos de despliegue se invocan como root porque controlan systemd, pero las operaciones Git, pip, Python y Alembic se ejecutan como `sshtelenord`.
@@ -58,7 +59,9 @@ Las rutas anteriores solo aplican cuando `DATABASE_URL` usa el valor predetermin
 5. Revise logs buscando errores de migración, esquema parcial, SQLite o permisos.
 6. Compruebe `/login` mediante GET.
 7. Confirme que la base pertenece a `sshtelenord` y que existe un respaldo previo a la migración.
-8. Confirme que no existan escrituras inesperadas hacia NetBox.
+8. Confirme que el modo de escritura coincida con la autorización vigente. Si
+   está habilitado, contraste cada operación esperada con NetBox y Auditoría e
+   investigue cualquier escritura no reconocida.
 
 Búsqueda rápida de errores relevantes:
 

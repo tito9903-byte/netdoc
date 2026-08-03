@@ -109,7 +109,7 @@ Antes de una migración debe respaldarse la base. Desde `0.10.1`, ese respaldo t
 
 `feature/*` se crea desde `develop`; se abre PR a `develop`, se prueba en 8101 y después se promueve mediante otro PR hacia `main`. Producción usa 8100. No programe directamente en `main` ni modifique producción manualmente.
 
-Desarrollo y producción deben usar `.env`, cookie de sesión y base independientes. Desarrollo debe conservar `NETBOX_WRITE_ENABLED=false` para operaciones sobre NetBox. La carga local de imágenes sigue protegida por sesión, permiso y CSRF.
+Desarrollo y producción deben usar `.env`, cookie de sesión y base independientes. `NETBOX_WRITE_ENABLED=false` es el valor predeterminado; habilitarlo exige autorización expresa para un entorno concreto y no elimina permisos, CSRF, validación ni auditoría. Desarrollo tiene esa excepción para validación funcional desde 2026-08-03; producción no fue modificada. La carga local de imágenes sigue protegida por sesión, permiso y CSRF.
 
 ## Inicio rápido local
 

@@ -50,12 +50,12 @@ estado y las prioridades. Los ADR conservan decisiones de arquitectura. GitHub
 es la fuente del código compartido; un commit exclusivamente local no está
 publicado.
 
-## Estado validado al 2026-07-30
+## Estado validado al 2026-08-03
 
 - `main`: producción 0.10.0 en
   `bb8a63af37dfdadeba8f40910de50212d0b09774`.
 - `develop`: integración 0.10.1 en
-  `fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`.
+  `36bde61297375441d11cc5c74b5c8aa8bb7bf80b`.
 - PR #13: Sites, integrado en `develop`.
 - PR #14: navegación contextual sin `Acciones rápidas`, integrado en
   `develop`.
@@ -65,9 +65,23 @@ publicado.
   integrado en `develop`.
 - PR #17: funcionamiento de **Detalle ampliado** y optimización del catálogo de
   racks, integrado en `develop`.
+- PR #18: documentación de la validación funcional de Racks, integrado en
+  `develop`.
+- PR #19: conexiones múltiples y carga diferida de la ventana, integrado en
+  `develop`; su validación funcional sigue pendiente.
+- PR #20: gestión de interfaces dentro de la ficha de cada modelo, integrado en
+  `develop`; su validación funcional sigue pendiente.
+- PR #21: creación protegida de pools y carga diferida de Direccionamiento,
+  integrado en `develop`.
 - Desarrollo está desplegado en
-  `fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`; el despliegue terminó en el
-  puerto 8101 y `/login` respondió HTTP 200 después del arranque.
+  `36bde61297375441d11cc5c74b5c8aa8bb7bf80b`; `netdoc-dev` quedó activo en
+  8101, `/login` respondió HTTP 200 y `alembic current` coincidió con
+  `alembic heads` en `20260725_0002`.
+- Por autorización expresa del propietario, desarrollo quedó con
+  `NETBOX_WRITE_ENABLED=true` para validar operaciones reales. Antes del cambio
+  se respaldó su `.env`; esta excepción pertenece solo a desarrollo.
+- El PR #21 superó 23/23 pruebas específicas, 128/128 en la suite aislada
+  completa y `NetDoc CI`.
 - La corrección del PR #17 superó 16/16 pruebas específicas de racks, 104/104
   pruebas en la suite aislada completa y `NetDoc CI`; el comportamiento
   JavaScript también se comprobó con Node.
@@ -78,9 +92,13 @@ publicado.
   inventario, búsqueda, acceso a la ficha y reporte PDF.
 - Las posiciones y alturas U se conservaron; las fotografías usan
   `width: 100%`, `height: 100%` y `object-fit: fill`.
-- Producción no contiene estos cambios y permanece sin modificar.
-- Sigue pendiente completar la validación funcional de Sites y de los permisos
-  por rol.
+- Producción no contiene estos cambios y permanece sin modificar en
+  `bb8a63af37dfdadeba8f40910de50212d0b09774`.
+- Sigue pendiente crear un pool real y comprobar el objeto en NetBox y el evento
+  `IPAM_POOL_CREATE`; el despliegue y el modo de escritura no sustituyen esa
+  validación funcional.
+- También siguen pendientes las validaciones funcionales de Conexiones,
+  interfaces dentro de modelos, Sites y permisos por rol.
 
 Estos datos son un punto de partida, no una autorización para asumir que siguen
 vigentes. Verifica GitHub y el checkout antes de continuar.
@@ -108,7 +126,8 @@ vigentes. Verifica GitHub y el checkout antes de continuar.
 - Puerto: `8101`
 - URL: `http://192.168.10.93:8101`
 - Cookie: `netdoc_dev_session`
-- Escritura NetBox: `NETBOX_WRITE_ENABLED=false`
+- Escritura NetBox: `NETBOX_WRITE_ENABLED=true` desde 2026-08-03, únicamente
+  por autorización expresa para validación funcional controlada
 - Script: `/usr/local/sbin/netdoc-deploy-dev`
 
 ### Producción
@@ -258,7 +277,10 @@ afirmar que una función está en producción.
 - No incluyas `deliverables/` ni artefactos temporales en commits.
 - La seguridad real vive en el servidor; ocultar un enlace no sustituye
   permisos.
-- Desarrollo debe conservar la escritura hacia NetBox deshabilitada.
+- La escritura permanece deshabilitada por defecto. Solo puede habilitarse por
+  entorno con autorización expresa, token de mínimo privilegio, permisos,
+  CSRF, vista previa, confirmación y auditoría. Desarrollo tiene esa excepción;
+  producción no fue modificada.
 - No uses el servidor como origen de GitHub.
 - Distingue siempre: archivo modificado, commit local, commit remoto, PR, merge,
   despliegue en desarrollo y despliegue en producción.
@@ -295,6 +317,10 @@ después de la revisión de desarrollo.
 ## Pendientes conocidos
 
 - Completar la validación funcional de Sites en desarrollo.
+- Validar un pool real en desarrollo y comprobar su reflejo en NetBox y en
+  Auditoría antes de describir el PR #21 como funcionalmente terminado.
+- Validar la creación múltiple de Conexiones y la gestión contextual de
+  interfaces con datos reales.
 - Confirmar permisos `sites.view` y `sites.manage` con los tres roles.
 - Validar creación, edición, retiro y eventos de auditoría de Sites.
 - Confirmar filtros de racks por site.

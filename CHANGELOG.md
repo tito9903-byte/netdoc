@@ -127,6 +127,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La pantalla de conexiones diferencia modo de escritura y vista previa de solo lectura.
 - La arquitectura del futuro chat separa interpretación, resolución, planificación, políticas, confirmación y ejecución.
 - La versión de aplicación por defecto avanza a `0.10.1`.
+- La política operativa mantiene la escritura deshabilitada por defecto, pero
+  permite habilitarla por entorno con autorización expresa. Desarrollo quedó
+  habilitado para validación funcional el 2026-08-03; producción no cambió.
 
 ### Fixed
 
@@ -159,4 +162,6 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - La IA futura no podrá inventar endpoints, métodos, permisos, IDs ni payloads ejecutables.
 - Los planes automáticos no admiten eliminaciones en la primera etapa.
 - La confirmación queda ligada a la huella exacta del plan revisado.
-- Desarrollo conserva escritura hacia NetBox deshabilitada y producción no se modifica durante la revisión.
+- La habilitación de escritura en desarrollo no omite autenticación, permisos,
+  CSRF, validación, confirmación, mínimo privilegio ni auditoría, y no se
+  propaga a producción.

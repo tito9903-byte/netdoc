@@ -6,7 +6,9 @@
 - Las contraseñas se almacenan únicamente como hashes Argon2.
 - Las cuentas nuevas exigen al menos 10 caracteres, mayúscula, minúscula y número.
 - SessionMiddleware usa cookie, duración y opción `Secure` configurables por entorno.
-- Desarrollo mantiene `NETBOX_WRITE_ENABLED=false`.
+- La escritura hacia NetBox está deshabilitada por defecto. Desde 2026-08-03,
+  desarrollo tiene `NETBOX_WRITE_ENABLED=true` por autorización expresa para
+  validación funcional controlada; producción no fue modificada.
 - Las rutas HTML y API se autorizan con permisos del rol en el servidor.
 - Antes de cada solicitud protegida se vuelve a consultar la cuenta y sus permisos en la base.
 - Las acciones administrativas, el perfil y las operaciones guiadas usan tokens CSRF.
@@ -15,6 +17,12 @@
 - La base local se excluye de Git y cada entorno debe usar almacenamiento independiente.
 - SQLite activa restricciones de claves foráneas.
 - Alembic versiona el esquema y rechaza bases heredadas parciales.
+
+Habilitar el interruptor no evita los demás controles: cada escritura sigue
+requiriendo una sesión válida, el permiso correspondiente, CSRF, validación del
+payload y auditoría. Desarrollo debe usar un token de mínimo privilegio y las
+pruebas automatizadas deben mantener la escritura deshabilitada en su entorno
+aislado. La configuración no se propaga a producción por implicación.
 
 ## Identidades, roles y sesiones
 

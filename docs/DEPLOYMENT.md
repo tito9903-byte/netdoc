@@ -103,7 +103,8 @@ Antes de una migración confirme además:
 
 - una sola cabeza Alembic con `.venv/bin/alembic heads`;
 - desarrollo y producción apuntan a bases diferentes;
-- desarrollo conserva `NETBOX_WRITE_ENABLED=false` para escrituras hacia NetBox;
+- `NETBOX_WRITE_ENABLED` coincide con el estado autorizado para ese entorno;
+  su valor predeterminado es `false` y habilitarlo exige autorización expresa;
 - la base es escribible por `sshtelenord`;
 - no hay otro proceso de migración o respaldo en ejecución.
 
@@ -242,6 +243,22 @@ Ajuste ruta y servicio para producción.
 - La ruta de medios exige autenticación y devuelve `nosniff`, caché privada y ETag.
 - Propietarios de repositorio, `.venv` y base siguen siendo `sshtelenord`.
 - `.env` permanece presente, ignorado y no versionado.
-- Desarrollo sigue sin escrituras hacia NetBox.
+- `NETBOX_WRITE_ENABLED` coincide con el estado autorizado y fue comprobado sin
+  mostrar el resto de `.env`.
 
 Los scripts están versionados, pero no debe afirmarse que una migración o función nueva está probada en el servidor hasta realizar un despliegue controlado en 8101.
+
+## Estado operativo verificado el 2026-08-03
+
+Por autorización expresa del propietario, desarrollo fue actualizado desde
+`6843a353e74f0a9ee9300be6cb3e76865458fb42` hasta
+`36bde61297375441d11cc5c74b5c8aa8bb7bf80b` y quedó con
+`NETBOX_WRITE_ENABLED=true`. Antes de modificar la configuración se creó un
+respaldo del `.env` de desarrollo. `netdoc-dev` quedó activo, `/login` respondió
+HTTP 200 y `alembic current` coincidió con `alembic heads` en
+`20260725_0002`. Producción permaneció en
+`bb8a63af37dfdadeba8f40910de50212d0b09774`.
+
+Esta evidencia valida despliegue, configuración y salud, pero no la creación de
+un pool. Esa operación debe probarse desde la interfaz y verificarse en NetBox y
+en la Auditoría de NetDoc.

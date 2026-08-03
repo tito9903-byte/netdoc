@@ -9,7 +9,11 @@ NetDoc facilita la documentación, pero NetBox continúa siendo la fuente oficia
 1. **API REST únicamente.** No se usa ORM, acceso SQL, `nbshell` ni escritura directa al almacenamiento de NetBox.
 2. **Lista cerrada de capacidades.** Una operación solo puede ejecutarse si existe en `app/services/netbox_capabilities.py`.
 3. **Sin eliminaciones automáticas.** Los planes aceptan únicamente `POST` y `PATCH` durante esta etapa.
-4. **Solo lectura por defecto.** Desarrollo conserva `NETBOX_WRITE_ENABLED=false`.
+4. **Solo lectura por defecto.** `NETBOX_WRITE_ENABLED=false` es el valor
+   inicial. La escritura solo puede habilitarse por entorno con autorización
+   expresa y sin retirar los demás controles. Desarrollo tiene una excepción
+   autorizada desde 2026-08-03 para validación funcional; producción no fue
+   modificada.
 5. **Mínimo privilegio.** El token de NetBox pertenece a un usuario técnico sin privilegios de superusuario y con permisos por modelo y, cuando corresponda, por localidad, sitio, tenant o VRF.
 6. **Resolución exacta.** Antes de escribir, cada relación se convierte a un ID real de NetBox. Un nombre ambiguo produce una pregunta, nunca una selección silenciosa.
 7. **Esquema dinámico.** NetDoc debe consultar `OPTIONS` para conocer campos, obligatoriedad y opciones válidas de la versión instalada antes de habilitar una operación nueva.

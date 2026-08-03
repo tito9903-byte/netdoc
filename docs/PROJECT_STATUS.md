@@ -7,7 +7,7 @@
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo actual en
-  `feature/ipam-pool-workspace`.
+  `fix/device-detail-model-rack-links`.
 
 ## Resumen ejecutivo
 
@@ -37,6 +37,12 @@ todo el inventario de dispositivos y modelos. Fue integrado en `develop` en
 desarrollo en el puerto 8101 y validado funcionalmente por el propietario. El
 catálogo abre con agilidad, el detalle del rack carga y el selector **Rack
 completo / Detalle ampliado** funciona. Producción permanece sin cambios.
+
+La rama `fix/device-detail-model-rack-links` restaura una regresión de
+navegación en la ficha del dispositivo: el modelo vuelve a abrir su ficha y el
+rack asignado vuelve a abrir directamente su detalle 3D. La selección de
+regresión superó 7/7 pruebas y la suite aislada completa 129/129; la revisión
+funcional en desarrollo sigue pendiente.
 
 El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
@@ -178,6 +184,8 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - ausencia del acceso independiente **Plantillas de puertos** en la navegación;
 - redirección de enlaces antiguos hacia la sección de interfaces del modelo;
 - generador masivo e inventario de puertos renderizados en la ficha del modelo.
+- enlaces internos del modelo y rack desde la ficha del dispositivo, con texto
+  no interactivo cuando NetBox no entrega el ID correspondiente.
 
 ## Requiere verificación en desarrollo
 
@@ -211,6 +219,8 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
   dentro de la misma ficha;
 - comprobar que un enlace antiguo `/interface-templates?device_type_id=<id>`
   redirige a `/device-types/<id>#interfaces`.
+- abrir un dispositivo con modelo y rack asignados, comprobar que ambos valores
+  son enlaces y confirmar que el rack entra directamente en su detalle 3D.
 
 ## Riesgos y deuda
 
@@ -224,9 +234,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Completar pruebas y revisión del PR de Direccionamiento, integrarlo con
-autorización y validar la carga rápida y la creación protegida de un pool en
-desarrollo. Continúan pendientes la validación funcional del PR #20 para la
+Restaurar, probar y validar en desarrollo los accesos al modelo y al rack desde
+la ficha del dispositivo. Continúan pendientes la validación real de un pool,
+la validación funcional del PR #20 para la
 gestión contextual de interfaces, la validación del PR #19 de Conexiones y la
 revisión completa de Sites. La imagen representativa del site queda diferida
 hasta definir almacenamiento, respaldo y asociación sin duplicar el inventario

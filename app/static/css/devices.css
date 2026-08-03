@@ -392,6 +392,20 @@
     font-size: 12px;
 }
 
+.device-header-reference-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(32, 200, 210, 0.42);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+}
+
+.device-header-reference-link:hover,
+.device-header-reference-link:focus-visible {
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+}
+
 .detail-metrics {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -478,6 +492,49 @@
     overflow-wrap: anywhere;
     color: var(--text);
     font-size: 12px;
+}
+
+.device-reference-link {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 30px;
+    align-items: center;
+    gap: 7px;
+    border-radius: 6px;
+    color: var(--text);
+    font-weight: 650;
+    text-decoration: none;
+    transition:
+        color 150ms ease,
+        transform 150ms ease;
+}
+
+.device-reference-link::after {
+    content: "↗";
+    flex: 0 0 auto;
+    color: var(--accent);
+    font-size: 10px;
+    opacity: 0.72;
+    transition:
+        opacity 150ms ease,
+        transform 150ms ease;
+}
+
+.device-reference-link:hover,
+.device-reference-link:focus-visible {
+    color: var(--accent);
+}
+
+.device-reference-link:hover::after,
+.device-reference-link:focus-visible::after {
+    opacity: 1;
+    transform: translate(2px, -2px);
+}
+
+.device-reference-link:focus-visible,
+.device-header-reference-link:focus-visible {
+    outline: 2px solid rgba(32, 200, 210, 0.55);
+    outline-offset: 3px;
 }
 
 .interfaces-panel {
@@ -623,6 +680,11 @@
     .information-list > div {
         grid-template-columns: 1fr;
         gap: 5px;
+    }
+
+    .device-reference-link {
+        width: 100%;
+        min-height: 44px;
     }
 
     .system-error-actions {

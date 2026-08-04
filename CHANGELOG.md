@@ -130,6 +130,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Fixed
 
+- Se restauran en la ficha del dispositivo los enlaces internos al modelo del
+  equipo y al rack asignado; el rack abre su detalle 3D y los valores sin ID se
+  conservan como texto no interactivo.
 - El control **Detalle ampliado** vuelve a cambiar la escala real de la vista 3D
   y conserva la preferencia en el navegador.
 - El catálogo de racks deja de descargar todos los dispositivos y consultar

@@ -100,7 +100,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
   `contain` o `cover`.
 - `AGENTS.md` formaliza el flujo persistente para futuros chats: inspección
   previa, pruebas completas, commits creados por el agente, publicación con SHA
-  remoto verificado, PR hacia `develop`, despliegue aislado en 8101 y
+  remoto verificado, PR hacia `develop`, despliegue aislado en desarrollo y
   producción únicamente con autorización explícita.
 - La navegación principal queda limitada a módulos; cada alta se inicia desde
   el catálogo o detalle correspondiente y se elimina el bloque redundante de
@@ -130,6 +130,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Fixed
 
+- La búsqueda de dispositivos deja de responder con JSON de validación cuando
+  site, rol o página llegan vacíos o malformados; el formulario también omite
+  los controles sin valor antes de construir la URL.
 - Se restauran en la ficha del dispositivo los enlaces internos al modelo del
   equipo y al rack asignado; el rack abre su detalle 3D y los valores sin ID se
   conservan como texto no interactivo.
@@ -143,6 +146,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Security
 
+- La documentación pública omite direcciones internas e identificadores
+  concretos de rutas, servicios y endpoints de ejecución.
 - La creación de pools exige autenticación, `devices.create`, CSRF, escritura
   habilitada, CIDR canónico, relaciones existentes, ausencia de duplicado
   exacto en la VRF, capacidad REST registrada y confirmación ligada al plan.

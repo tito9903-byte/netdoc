@@ -15,6 +15,7 @@
         class="device-filters"
         method="get"
         action="/devices"
+        data-device-filters
     >
         <div class="filter-field search-field">
             <label for="device-search">Buscar</label>
@@ -297,4 +298,10 @@
         </div>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+    src="{{ url_for('static', path='js/devices.js') }}?v=20260804-device-filter-1"
+></script>
 {% endblock %}

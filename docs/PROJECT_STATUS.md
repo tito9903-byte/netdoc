@@ -7,7 +7,7 @@
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo actual en
-  `fix/ui-link-and-ipam-status`.
+  `fix/ipam-status-dom-target`.
 
 ## Resumen ejecutivo
 
@@ -56,6 +56,15 @@ carga de estilos de Direccionamiento que podía dejar el estado de ocupación y
 los filtros superpuestos por una hoja CSS anterior almacenada en caché. La
 selección aplicable superó 15/15 pruebas y la suite aislada completa 135/135;
 la revisión visual en desarrollo sigue pendiente.
+
+La rama `fix/ipam-status-dom-target` corrige la actualización del aviso de
+ocupación después de la carga diferida. El selector anterior también alcanzaba
+el punto indicador de 9 px y escribía allí la descripción completa, que se
+mostraba verticalmente sobre los filtros. El título y la descripción usan ahora
+selectores de datos inequívocos y el recurso JavaScript cambia de versión para
+invalidar la copia anterior del navegador. La selección de IPAM superó 14/14
+pruebas y la suite aislada completa 136/136; la revisión visual en desarrollo
+sigue pendiente.
 
 El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
@@ -206,6 +215,8 @@ configuran fuera del repositorio público. La versión documentada de NetBox es
 - señalización visual persistente de los enlaces internos de modelo y rack;
 - distribución propia del estado de ocupación de IPAM y versión renovada de su
   hoja de estilos para evitar superposición con los filtros.
+- destino explícito del título y la descripción del estado de IPAM para impedir
+  que el texto de finalización se inserte dentro del punto indicador.
 
 ## Requiere verificación en desarrollo
 

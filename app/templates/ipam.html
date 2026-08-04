@@ -93,12 +93,12 @@
     role="status"
     aria-live="polite"
 >
-    <span class="ipam-status-dot"></span>
+    <span class="ipam-status-dot" aria-hidden="true"></span>
     <div>
-        <strong>
+        <strong data-ipam-status-title>
             {{ "Ocupación calculada." if inventory_ready else "El catálogo ya está disponible." }}
         </strong>
-        <span>
+        <span data-ipam-status-copy>
             {% if inventory_ready %}
             Las cantidades reflejan el inventario IPAM documentado en NetBox.
             {% else %}
@@ -434,5 +434,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{{ url_for('static', path='js/ipam.js') }}?v=20260730-1"></script>
+<script src="{{ url_for('static', path='js/ipam.js') }}?v=20260804-status-dom-2"></script>
 {% endblock %}

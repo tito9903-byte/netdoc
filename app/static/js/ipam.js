@@ -24,8 +24,8 @@
     const setStatus = (state, title, copy) => {
         status.classList.remove("loading", "ready", "warning", "error");
         status.classList.add(state);
-        const titleNode = status.querySelector("strong");
-        const copyNode = status.querySelector("div > span");
+        const titleNode = status.querySelector("[data-ipam-status-title]");
+        const copyNode = status.querySelector("[data-ipam-status-copy]");
 
         if (titleNode) {
             titleNode.textContent = title;

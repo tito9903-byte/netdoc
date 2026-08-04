@@ -130,6 +130,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Fixed
 
+- El aviso diferido de Direccionamiento actualiza únicamente su título y su
+  descripción; deja de insertar el mensaje final dentro del punto indicador de
+  9 px y renueva la versión del JavaScript para descartar la copia anterior.
 - Los enlaces internos de modelo y rack en la ficha del dispositivo se
   distinguen por color y subrayado desde su estado normal, con navegación y
   foco accesibles.

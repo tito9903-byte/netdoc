@@ -355,7 +355,12 @@ class IPAMPoolRouteTests(unittest.TestCase):
             "css/ipam.css?v=20260804-status-layout-1",
             response.text,
         )
-        self.assertIn("js/ipam.js", response.text)
+        self.assertIn(
+            "js/ipam.js?v=20260804-status-dom-2",
+            response.text,
+        )
+        self.assertIn("data-ipam-status-title", response.text)
+        self.assertIn("data-ipam-status-copy", response.text)
         self.assertFalse(overview.await_args.kwargs["include_inventory"])
 
     def test_inventory_status_reserves_its_layout_space(self):
@@ -375,6 +380,24 @@ class IPAMPoolRouteTests(unittest.TestCase):
         self.assertIn(
             ".ipam-inventory-status > div",
             stylesheet,
+        )
+
+    def test_inventory_completion_updates_text_not_the_status_dot(self):
+        script = Path("app/static/js/ipam.js").read_text(
+            encoding="utf-8",
+        )
+
+        self.assertIn(
+            'status.querySelector("[data-ipam-status-title]")',
+            script,
+        )
+        self.assertIn(
+            'status.querySelector("[data-ipam-status-copy]")',
+            script,
+        )
+        self.assertNotIn(
+            'status.querySelector("div > span")',
+            script,
         )
 
     @patch.object(

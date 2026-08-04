@@ -7,7 +7,7 @@
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo actual en
-  `fix/device-search-empty-filters`.
+  `fix/ui-link-and-ipam-status`.
 
 ## Resumen ejecutivo
 
@@ -49,6 +49,13 @@ filtros vacíos o malformados se normalizan como no seleccionados, los IDs
 válidos conservan su tipo entero y el navegador omite controles vacíos al
 enviar el formulario. La selección aplicable superó 12/12 pruebas y la suite
 aislada completa 133/133; la revisión funcional en desarrollo sigue pendiente.
+
+La rama `fix/ui-link-and-ipam-status` hace visibles como enlaces los valores de
+modelo y rack desde su estado normal, sin depender del cursor, y corrige la
+carga de estilos de Direccionamiento que podía dejar el estado de ocupación y
+los filtros superpuestos por una hoja CSS anterior almacenada en caché. La
+selección aplicable superó 15/15 pruebas y la suite aislada completa 135/135;
+la revisión visual en desarrollo sigue pendiente.
 
 El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
@@ -196,6 +203,9 @@ configuran fuera del repositorio público. La versión documentada de NetBox es
   no interactivo cuando NetBox no entrega el ID correspondiente.
 - búsqueda de dispositivos con filtros vacíos, válidos y malformados sin
   exponer respuestas JSON de validación de FastAPI.
+- señalización visual persistente de los enlaces internos de modelo y rack;
+- distribución propia del estado de ocupación de IPAM y versión renovada de su
+  hoja de estilos para evitar superposición con los filtros.
 
 ## Requiere verificación en desarrollo
 

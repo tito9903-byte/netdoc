@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import re
 import unittest
 from unittest.mock import AsyncMock, patch
@@ -350,8 +351,31 @@ class IPAMPoolRouteTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn('href="/ipam/pools/new"', response.text)
         self.assertIn("calculando la ocupación en segundo plano", response.text)
+        self.assertIn(
+            "css/ipam.css?v=20260804-status-layout-1",
+            response.text,
+        )
         self.assertIn("js/ipam.js", response.text)
         self.assertFalse(overview.await_args.kwargs["include_inventory"])
+
+    def test_inventory_status_reserves_its_layout_space(self):
+        stylesheet = Path("app/static/css/ipam.css").read_text(
+            encoding="utf-8",
+        )
+        status_rule = stylesheet.split(
+            ".ipam-inventory-status {",
+            maxsplit=1,
+        )[1].split("}", maxsplit=1)[0]
+
+        self.assertIn("display: grid;", status_rule)
+        self.assertIn(
+            "grid-template-columns: 9px minmax(0, 1fr);",
+            status_rule,
+        )
+        self.assertIn(
+            ".ipam-inventory-status > div",
+            stylesheet,
+        )
 
     @patch.object(
         IPAMService,
@@ -393,6 +417,10 @@ class IPAMPoolRouteTests(unittest.TestCase):
         self.assertIn("Revisar pool", response.text)
         self.assertIn('name="change_reason"', response.text)
         self.assertIn("Duplicado exacto", response.text)
+        self.assertIn(
+            "css/ipam.css?v=20260804-status-layout-1",
+            response.text,
+        )
 
     @patch.object(
         IPAMPoolService,

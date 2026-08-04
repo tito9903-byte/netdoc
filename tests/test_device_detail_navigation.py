@@ -3,6 +3,7 @@ from __future__ import annotations
 from base64 import b64encode
 import json
 import os
+from pathlib import Path
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -105,8 +106,34 @@ class DeviceDetailNavigationTests(unittest.TestCase):
             'aria-label="Abrir rack 3NTI01"',
             response.text,
         )
+        self.assertIn(
+            "css/devices.css?v=20260804-reference-links-1",
+            response.text,
+        )
         get_device.assert_awaited_once_with(300)
         get_interfaces.assert_awaited_once_with(300)
+
+    def test_model_and_rack_links_are_visually_identifiable(self):
+        stylesheet = Path("app/static/css/devices.css").read_text(
+            encoding="utf-8",
+        )
+        link_rule = stylesheet.split(
+            ".device-reference-link {",
+            maxsplit=1,
+        )[1].split("}", maxsplit=1)[0]
+        header_link_rule = stylesheet.split(
+            ".device-header-reference-link {",
+            maxsplit=1,
+        )[1].split("}", maxsplit=1)[0]
+
+        self.assertIn("color: var(--accent);", link_rule)
+        self.assertIn("text-decoration: underline;", link_rule)
+        self.assertIn("color: var(--accent);", header_link_rule)
+        self.assertIn('content: "→";', stylesheet)
+        self.assertIn(
+            ".device-reference-link:focus-visible",
+            stylesheet,
+        )
 
 
 if __name__ == "__main__":

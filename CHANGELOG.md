@@ -130,6 +130,12 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Fixed
 
+- Los enlaces internos de modelo y rack en la ficha del dispositivo se
+  distinguen por color y subrayado desde su estado normal, con navegación y
+  foco accesibles.
+- Direccionamiento renueva la versión de caché de su hoja de estilos y reserva
+  el espacio del estado de ocupación para que sus textos no se superpongan con
+  los filtros.
 - La búsqueda de dispositivos deja de responder con JSON de validación cuando
   site, rol o página llegan vacíos o malformados; el formulario también omite
   los controles sin valor antes de construir la URL.

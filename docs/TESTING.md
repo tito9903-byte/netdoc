@@ -13,7 +13,7 @@ El repositorio incluye pruebas de servicios de acceso, rutas administrativas, b�
 | Búsqueda global | Agrupación, enlaces seguros y consulta corta | integración real con filtros `q` de NetBox |
 | Sistema | Parsers de memoria/red, carga y métricas seguras | valores de servidor real, umbrales y compatibilidad no Linux |
 | Migraciones | base vacía, esquema heredado completo, idempotencia y esquema parcial | respaldo/restauración y próxima revisión incremental |
-| Dispositivos/interfaces | Filtros de búsqueda vacíos, válidos y malformados; navegación interna a modelo y rack | integración real con NetBox y datos de borde del catálogo |
+| Dispositivos/interfaces | Filtros vacíos, navegación interna y agrupación de IPv4/IPv6 por interfaz | integración real con NetBox y datos de borde del catálogo |
 | Direccionamiento IP | Lectura, capacidad, filtros, carga diferida y alta protegida de pools | integración real con jerarquía y token limitado |
 | Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
 | Racks | Manual | datos de borde y UI |

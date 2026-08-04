@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 from math import ceil
+from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import FastAPI, Form, Request
@@ -639,9 +640,10 @@ async def device_detail(
     client = NetBoxClient()
 
     try:
-        device, interfaces = await asyncio.gather(
+        device, interfaces, interface_ip_addresses = await asyncio.gather(
             client.get_device(device_id),
             client.get_device_interfaces(device_id),
+            client.get_device_interface_ip_addresses(device_id),
         )
 
     except NetBoxError as exc:
@@ -676,6 +678,38 @@ async def device_detail(
                 "error_message": exc.message,
             },
         )
+
+    ip_addresses_by_interface: dict[int, list[dict[str, Any]]] = {}
+
+    for ip_address in interface_ip_addresses:
+        assigned_object_type = ip_address.get("assigned_object_type")
+
+        if assigned_object_type not in (None, "dcim.interface"):
+            continue
+
+        assigned_object = ip_address.get("assigned_object") or {}
+        interface_id = (
+            ip_address.get("assigned_object_id")
+            or assigned_object.get("id")
+        )
+
+        if not isinstance(interface_id, int):
+            continue
+
+        ip_addresses_by_interface.setdefault(interface_id, []).append(
+            ip_address
+        )
+
+    interfaces = [
+        {
+            **interface,
+            "_ip_addresses": ip_addresses_by_interface.get(
+                interface.get("id"),
+                [],
+            ),
+        }
+        for interface in interfaces
+    ]
 
     enabled_interfaces = sum(
         1

@@ -50,12 +50,12 @@ estado y las prioridades. Los ADR conservan decisiones de arquitectura. GitHub
 es la fuente del código compartido; un commit exclusivamente local no está
 publicado.
 
-## Estado validado al 2026-07-30
+## Estado validado al 2026-08-04
 
 - `main`: producción 0.10.0 en
   `bb8a63af37dfdadeba8f40910de50212d0b09774`.
 - `develop`: integración 0.10.1 en
-  `fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`.
+  `45f8a300f35f833cde353923edc0f0c931571400`.
 - PR #13: Sites, integrado en `develop`.
 - PR #14: navegación contextual sin `Acciones rápidas`, integrado en
   `develop`.
@@ -65,9 +65,12 @@ publicado.
   integrado en `develop`.
 - PR #17: funcionamiento de **Detalle ampliado** y optimización del catálogo de
   racks, integrado en `develop`.
+- PR #27: direcciones IPv4 e IPv6 por interfaz en la ficha del dispositivo,
+  integrado en `develop`.
 - Desarrollo está desplegado en
-  `fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`; el despliegue terminó en el
-  puerto 8101 y `/login` respondió HTTP 200 después del arranque.
+  `45f8a300f35f833cde353923edc0f0c931571400`; el servicio quedó activo, el
+  puerto 8101 respondió correctamente y Alembic permaneció en
+  `20260725_0002`.
 - La corrección del PR #17 superó 16/16 pruebas específicas de racks, 104/104
   pruebas en la suite aislada completa y `NetDoc CI`; el comportamiento
   JavaScript también se comprobó con Node.
@@ -78,7 +81,13 @@ publicado.
   inventario, búsqueda, acceso a la ficha y reporte PDF.
 - Las posiciones y alturas U se conservaron; las fotografías usan
   `width: 100%`, `height: 100%` y `object-fit: fill`.
-- Producción no contiene estos cambios y permanece sin modificar.
+- La corrección del PR #27 superó 4/4 pruebas específicas, 138/138 pruebas en
+  la suite aislada completa y `NetDoc CI`.
+- El propietario confirmó con inventario real en desarrollo que la columna
+  **Direcciones IP** muestra las IP asignadas a las interfaces del dispositivo.
+  La IP principal permanece como un dato independiente configurado en NetBox.
+- Producción permanece en `bb8a63af37dfdadeba8f40910de50212d0b09774` y no
+  fue modificada por este despliegue.
 - Sigue pendiente completar la validación funcional de Sites y de los permisos
   por rol.
 

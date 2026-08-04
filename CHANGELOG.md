@@ -131,7 +131,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 ### Fixed
 
 - La ficha del dispositivo consulta IPAM por equipo y muestra en cada interfaz
-  todas sus direcciones IPv4 e IPv6 sin confundirlas con la IP principal.
+  todas sus direcciones IPv4 e IPv6 sin confundirlas con la IP principal. La
+  visualización fue validada funcionalmente con inventario real en desarrollo.
 - El aviso diferido de Direccionamiento actualiza únicamente su título y su
   descripción; deja de insertar el mensaje final dentro del punto indicador de
   9 px y renueva la versión del JavaScript para descartar la copia anterior.

@@ -2,12 +2,12 @@
 
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
-- **Última actualización:** 2026-08-03.
+- **Última actualización:** 2026-08-04.
 - **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo actual en
-  `fix/device-detail-model-rack-links`.
+  `fix/device-search-empty-filters`.
 
 ## Resumen ejecutivo
 
@@ -34,15 +34,21 @@ El PR #17 corrigió dos regresiones detectadas por el propietario: el control
 **Detalle ampliado** no ejecutaba ninguna acción y el catálogo de racks cargaba
 todo el inventario de dispositivos y modelos. Fue integrado en `develop` en
 `fbdb0c2db146a1e954d6bdc7ca1ceb6ff3ebae5d`, desplegado únicamente en
-desarrollo en el puerto 8101 y validado funcionalmente por el propietario. El
+desarrollo y validado funcionalmente por el propietario. El
 catálogo abre con agilidad, el detalle del rack carga y el selector **Rack
 completo / Detalle ampliado** funciona. Producción permanece sin cambios.
 
-La rama `fix/device-detail-model-rack-links` restaura una regresión de
-navegación en la ficha del dispositivo: el modelo vuelve a abrir su ficha y el
-rack asignado vuelve a abrir directamente su detalle 3D. La selección de
-regresión superó 7/7 pruebas y la suite aislada completa 129/129; la revisión
-funcional en desarrollo sigue pendiente.
+El PR #23 restauró los enlaces internos al modelo y al rack desde la ficha del
+dispositivo. Fue integrado en `develop` en
+`4115bc7a2bf4d0f83fe053669d80870db06fad69`; la revisión funcional en
+desarrollo sigue pendiente.
+
+La rama `fix/device-search-empty-filters` corrige la respuesta JSON de
+validación que aparecía al buscar dispositivos sin seleccionar site o rol. Los
+filtros vacíos o malformados se normalizan como no seleccionados, los IDs
+válidos conservan su tipo entero y el navegador omite controles vacíos al
+enviar el formulario. La selección aplicable superó 12/12 pruebas y la suite
+aislada completa 133/133; la revisión funcional en desarrollo sigue pendiente.
 
 El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
@@ -66,12 +72,14 @@ funcional en desarrollo sigue pendiente.
 
 ## Entornos y servicios
 
-| Entorno | Ruta | Rama esperada | Servicio | Puerto | Base local |
-|---|---|---|---|---:|---|
-| Producción | `/opt/netdoc-prod` | `main` | `netdoc-prod` | 8100 | independiente |
-| Desarrollo | `/opt/netdoc-dev` | rama en revisión o `develop` | `netdoc-dev` | 8101 | independiente |
+| Entorno | Rama esperada | Aislamiento operativo |
+|---|---|---|
+| Producción | `main` | Ruta, servicio, endpoint y base independientes |
+| Desarrollo | rama en revisión o `develop` | Ruta, servicio, endpoint y base independientes |
 
-Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión documentada 4.4.2.
+Las direcciones internas y los identificadores concretos de ejecución se
+configuran fuera del repositorio público. La versión documentada de NetBox es
+4.4.2.
 
 ## Arquitectura vigente
 
@@ -186,6 +194,8 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 - generador masivo e inventario de puertos renderizados en la ficha del modelo.
 - enlaces internos del modelo y rack desde la ficha del dispositivo, con texto
   no interactivo cuando NetBox no entrega el ID correspondiente.
+- búsqueda de dispositivos con filtros vacíos, válidos y malformados sin
+  exponer respuestas JSON de validación de FastAPI.
 
 ## Requiere verificación en desarrollo
 
@@ -221,6 +231,8 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
   redirige a `/device-types/<id>#interfaces`.
 - abrir un dispositivo con modelo y rack asignados, comprobar que ambos valores
   son enlaces y confirmar que el rack entra directamente en su detalle 3D.
+- buscar un dispositivo sin seleccionar site, rol ni estado y confirmar que la
+  lista HTML abre sin parámetros vacíos ni respuesta JSON de validación.
 
 ## Riesgos y deuda
 
@@ -234,8 +246,9 @@ Servidor dedicado: `192.168.10.93`. NetBox: `https://192.168.10.95`, versión do
 
 ## Próximo objetivo
 
-Restaurar, probar y validar en desarrollo los accesos al modelo y al rack desde
-la ficha del dispositivo. Continúan pendientes la validación real de un pool,
+Validar en desarrollo la búsqueda de dispositivos con filtros vacíos y los
+accesos al modelo y al rack desde la ficha. Continúan pendientes la validación
+real de un pool,
 la validación funcional del PR #20 para la
 gestión contextual de interfaces, la validación del PR #19 de Conexiones y la
 revisión completa de Sites. La imagen representativa del site queda diferida

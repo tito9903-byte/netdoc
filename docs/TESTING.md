@@ -13,7 +13,7 @@ El repositorio incluye pruebas de servicios de acceso, rutas administrativas, b�
 | Búsqueda global | Agrupación, enlaces seguros y consulta corta | integración real con filtros `q` de NetBox |
 | Sistema | Parsers de memoria/red, carga y métricas seguras | valores de servidor real, umbrales y compatibilidad no Linux |
 | Migraciones | base vacía, esquema heredado completo, idempotencia y esquema parcial | respaldo/restauración y próxima revisión incremental |
-| Dispositivos/interfaces | Manual | unitarias e integración con NetBox simulado |
+| Dispositivos/interfaces | Filtros de búsqueda vacíos, válidos y malformados; navegación interna a modelo y rack | integración real con NetBox y datos de borde del catálogo |
 | Direccionamiento IP | Lectura, capacidad, filtros, carga diferida y alta protegida de pools | integración real con jerarquía y token limitado |
 | Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
 | Racks | Manual | datos de borde y UI |
@@ -79,14 +79,16 @@ Se ejecutaron en un entorno aislado, no en el servidor:
 
 `.github/workflows/ci.yml` instala `requirements-lock.txt`, compila `app`, `tests` y `migrations`, valida `alembic heads`, ejecuta la suite, importa `app.main`, analiza todas las plantillas Jinja2 y valida los scripts de despliegue. `NetDoc CI` completó correctamente cada etapa para la revisión inicial Alembic.
 
-Estos resultados no validan systemd, el puerto 8101, una base persistente real del servidor, la restauración de un respaldo, la IP observada detrás de un proxy, el navegador con datos reales ni NetBox.
+Estos resultados no validan systemd, el endpoint real de desarrollo, una base
+persistente del servidor, la restauración de un respaldo, la dirección
+observada detrás de un proxy, el navegador con datos reales ni NetBox.
 
 ## Prueba manual requerida en desarrollo
 
 1. Confirmar el `DATABASE_URL` de desarrollo sin mostrar credenciales.
 2. Respaldar la base existente y comprobar tamaño, propietario y permisos del respaldo.
 3. Confirmar `alembic heads` y una sola cabeza.
-4. Desplegar únicamente `develop` en el puerto 8101.
+4. Desplegar únicamente `develop` en el endpoint aislado de desarrollo.
 5. Revisar logs del arranque y confirmar que la base fue creada, marcada o actualizada sin pérdida.
 6. Iniciar sesión con la cuenta administrativa existente.
 7. Crear usuarios de los roles Administrador, Operador y Consulta.

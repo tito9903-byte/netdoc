@@ -6,8 +6,8 @@
 - **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
-- **Ramas:** producción `main`; integración `develop`; trabajo actual en
-  `fix/device-interface-ip-addresses`.
+- **Ramas:** producción `main`; integración `develop`; trabajo documental en
+  `docs/validate-device-interface-ips`.
 
 ## Resumen ejecutivo
 
@@ -66,12 +66,15 @@ invalidar la copia anterior del navegador. La selección de IPAM superó 14/14
 pruebas y la suite aislada completa 136/136; la revisión visual en desarrollo
 sigue pendiente.
 
-La rama `fix/device-interface-ip-addresses` completa la ficha del dispositivo
-con las direcciones IPv4 e IPv6 asignadas a cada interfaz. La vista consulta
-IPAM una sola vez por dispositivo, limita la solicitud mediante `device_id`,
-asocia cada dirección por `assigned_object_id` y conserva separada la IP
-principal configurada en NetBox. La revisión con inventario real en desarrollo
-sigue pendiente.
+El PR #27 completó la ficha del dispositivo con las direcciones IPv4 e IPv6
+asignadas a cada interfaz y fue integrado en `develop` en
+`45f8a300f35f833cde353923edc0f0c931571400`. La vista consulta IPAM una sola
+vez por dispositivo, limita la solicitud mediante `device_id`, asocia cada
+dirección por `assigned_object_id` y conserva separada la IP principal
+configurada en NetBox. Superó 4/4 pruebas específicas, 138/138 pruebas en la
+suite aislada completa y `NetDoc CI`. El propietario confirmó con inventario
+real en desarrollo que la columna **Direcciones IP** muestra las IP asignadas
+a las interfaces del dispositivo. Producción no fue modificada.
 
 El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
@@ -263,9 +266,6 @@ configuran fuera del repositorio público. La versión documentada de NetBox es
   son enlaces y confirmar que el rack entra directamente en su detalle 3D.
 - buscar un dispositivo sin seleccionar site, rol ni estado y confirmar que la
   lista HTML abre sin parámetros vacíos ni respuesta JSON de validación.
-- abrir un dispositivo con direcciones asignadas a sus interfaces y confirmar
-  que cada IPv4/IPv6 aparece en la fila correcta; una interfaz sin IP debe
-  mostrar `—` y la IP principal debe seguir dependiendo de NetBox.
 
 ## Riesgos y deuda
 
@@ -279,9 +279,8 @@ configuran fuera del repositorio público. La versión documentada de NetBox es
 
 ## Próximo objetivo
 
-Validar en desarrollo la búsqueda de dispositivos con filtros vacíos, los
-accesos al modelo y al rack, y las direcciones IP por interfaz desde la ficha.
-Continúan pendientes la validación real de un pool,
+Validar en desarrollo la búsqueda de dispositivos con filtros vacíos y los
+accesos al modelo y al rack. Continúan pendientes la validación real de un pool,
 la validación funcional del PR #20 para la
 gestión contextual de interfaces, la validación del PR #19 de Conexiones y la
 revisión completa de Sites. La imagen representativa del site queda diferida

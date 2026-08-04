@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from base64 import b64encode
 import json
 import os
@@ -14,6 +15,7 @@ from sqlalchemy import func, select
 from app.core.database import session_scope
 from app.main import app
 from app.models.access import User
+from app.services.netbox_client import NetBoxClient
 
 
 DEVICE = {
@@ -39,6 +41,45 @@ DEVICE = {
     "position": 4.0,
     "face": {"value": "front", "label": "Front"},
 }
+
+INTERFACES = [
+    {
+        "id": 910,
+        "name": "MGMT",
+        "type": {"value": "virtual", "label": "Virtual"},
+        "enabled": True,
+    },
+    {
+        "id": 911,
+        "name": "port1",
+        "type": {"value": "1000base-t", "label": "1000BASE-T"},
+        "enabled": True,
+    },
+]
+
+INTERFACE_IP_ADDRESSES = [
+    {
+        "id": 1001,
+        "address": "192.0.2.10/24",
+        "display": "192.0.2.10/24",
+        "assigned_object_type": "dcim.interface",
+        "assigned_object_id": 910,
+    },
+    {
+        "id": 1002,
+        "address": "2001:db8::10/64",
+        "display": "2001:db8::10/64",
+        "assigned_object_type": "dcim.interface",
+        "assigned_object": {"id": 910, "name": "MGMT"},
+    },
+    {
+        "id": 1003,
+        "address": "198.51.100.40/24",
+        "display": "198.51.100.40/24",
+        "assigned_object_type": "virtualization.vminterface",
+        "assigned_object_id": 910,
+    },
+]
 
 
 class DeviceDetailNavigationTests(unittest.TestCase):
@@ -73,6 +114,11 @@ class DeviceDetailNavigationTests(unittest.TestCase):
         self.client_context.__exit__(None, None, None)
 
     @patch(
+        "app.main.NetBoxClient.get_device_interface_ip_addresses",
+        new_callable=AsyncMock,
+        return_value=[],
+    )
+    @patch(
         "app.main.NetBoxClient.get_device_interfaces",
         new_callable=AsyncMock,
         return_value=[],
@@ -86,6 +132,7 @@ class DeviceDetailNavigationTests(unittest.TestCase):
         self,
         get_device,
         get_interfaces,
+        get_ip_addresses,
     ):
         response = self.client.get("/devices/300")
 
@@ -107,11 +154,65 @@ class DeviceDetailNavigationTests(unittest.TestCase):
             response.text,
         )
         self.assertIn(
-            "css/devices.css?v=20260804-reference-links-1",
+            "css/devices.css?v=20260804-interface-ips-1",
             response.text,
         )
         get_device.assert_awaited_once_with(300)
         get_interfaces.assert_awaited_once_with(300)
+        get_ip_addresses.assert_awaited_once_with(300)
+
+    @patch(
+        "app.main.NetBoxClient.get_device_interface_ip_addresses",
+        new_callable=AsyncMock,
+        return_value=INTERFACE_IP_ADDRESSES,
+    )
+    @patch(
+        "app.main.NetBoxClient.get_device_interfaces",
+        new_callable=AsyncMock,
+        return_value=INTERFACES,
+    )
+    @patch(
+        "app.main.NetBoxClient.get_device",
+        new_callable=AsyncMock,
+        return_value=DEVICE,
+    )
+    def test_interface_ip_addresses_are_grouped_and_rendered(
+        self,
+        _get_device,
+        _get_interfaces,
+        get_ip_addresses,
+    ):
+        response = self.client.get("/devices/300")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Direcciones IP", response.text)
+        self.assertIn("192.0.2.10/24", response.text)
+        self.assertIn("2001:db8::10/64", response.text)
+        self.assertNotIn("198.51.100.40/24", response.text)
+        self.assertEqual(
+            response.text.count('class="interface-ip-list"'),
+            1,
+        )
+        self.assertIn('class="interface-ip-empty">—</span>', response.text)
+        get_ip_addresses.assert_awaited_once_with(300)
+
+    def test_device_ip_query_is_limited_to_the_selected_device(self):
+        client = NetBoxClient()
+        client.get_all = AsyncMock(return_value=INTERFACE_IP_ADDRESSES)
+
+        result = asyncio.run(
+            client.get_device_interface_ip_addresses(300)
+        )
+
+        self.assertEqual(result, INTERFACE_IP_ADDRESSES)
+        client.get_all.assert_awaited_once_with(
+            "/api/ipam/ip-addresses/",
+            params={
+                "device_id": 300,
+                "ordering": "address",
+            },
+            page_limit=200,
+        )
 
     def test_model_and_rack_links_are_visually_identifiable(self):
         stylesheet = Path("app/static/css/devices.css").read_text(

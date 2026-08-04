@@ -550,6 +550,31 @@
     color: var(--text);
 }
 
+.interface-ip-list {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.interface-ip-list span {
+    display: inline-flex;
+    padding: 3px 7px;
+    border: 1px solid rgba(32, 200, 210, 0.16);
+    border-radius: 6px;
+    color: #a7c4d8;
+    background: rgba(32, 200, 210, 0.06);
+    font-family:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        monospace;
+}
+
+.interface-ip-empty {
+    color: var(--muted);
+}
+
 .interface-enabled,
 .interface-disabled,
 .connection-connected,

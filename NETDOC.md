@@ -55,7 +55,7 @@ publicado.
 - `main`: producción 0.10.0 en
   `bb8a63af37dfdadeba8f40910de50212d0b09774`.
 - `develop`: integración 0.10.1 en
-  `45f8a300f35f833cde353923edc0f0c931571400`.
+  `03c5b2a5b4ac5cf22c018847e5ac6ece28770959`.
 - PR #13: Sites, integrado en `develop`.
 - PR #14: navegación contextual sin `Acciones rápidas`, integrado en
   `develop`.
@@ -86,10 +86,18 @@ publicado.
 - El propietario confirmó con inventario real en desarrollo que la columna
   **Direcciones IP** muestra las IP asignadas a las interfaces del dispositivo.
   La IP principal permanece como un dato independiente configurado en NetBox.
+- El propietario confirmó en desarrollo el flujo completo de Sites: crear,
+  editar, retirar y aplicar permisos por rol.
+- El propietario confirmó con datos reales la creación por lote de conexiones,
+  sus etiquetas, la exclusión de interfaces utilizadas y la auditoría.
+- El propietario confirmó la creación de un pool mediante vista previa y su
+  resultado en NetBox.
+- El propietario confirmó la gestión contextual de interfaces desde el modelo,
+  incluida la generación y la verificación del inventario resultante.
+- El propietario confirmó la búsqueda sin filtros, los enlaces internos de
+  modelo y rack y las correcciones visuales del estado de IPAM.
 - Producción permanece en `bb8a63af37dfdadeba8f40910de50212d0b09774` y no
   fue modificada por este despliegue.
-- Sigue pendiente completar la validación funcional de Sites y de los permisos
-  por rol.
 
 Estos datos son un punto de partida, no una autorización para asumir que siguen
 vigentes. Verifica GitHub y el checkout antes de continuar.
@@ -303,9 +311,6 @@ después de la revisión de desarrollo.
 
 ## Pendientes conocidos
 
-- Completar la validación funcional de Sites en desarrollo.
-- Confirmar permisos `sites.view` y `sites.manage` con los tres roles.
-- Validar creación, edición, retiro y eventos de auditoría de Sites.
 - Confirmar filtros de racks por site.
 - Definir almacenamiento y respaldo para una imagen representativa de cada
   site antes de implementarla.

@@ -7,7 +7,7 @@
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo documental en
-  `docs/validate-device-interface-ips`.
+  `docs/validate-release-0.10.1`.
 
 ## Resumen ejecutivo
 
@@ -15,8 +15,8 @@ La versión `0.10.0` fue promovida a `main` y reúne autenticación, roles, audi
 
 Sites fue integrado en `develop` mediante el PR #13 y desplegado en desarrollo
 en el commit `b85553346b5580ed37353d035168c0efec30befc`; el servicio terminó activo y
-`/login` respondió HTTP 200. La revisión funcional completa del módulo sigue
-pendiente.
+`/login` respondió HTTP 200. El propietario confirmó después la creación,
+edición y retiro de un site y los permisos por rol.
 
 El PR #14 eliminó el bloque redundante `Acciones rápidas` y fue integrado en
 `develop` en `5e7d6cf4bf3529a40d909644067d67605acb666e`.
@@ -40,22 +40,23 @@ completo / Detalle ampliado** funciona. Producción permanece sin cambios.
 
 El PR #23 restauró los enlaces internos al modelo y al rack desde la ficha del
 dispositivo. Fue integrado en `develop` en
-`4115bc7a2bf4d0f83fe053669d80870db06fad69`; la revisión funcional en
-desarrollo sigue pendiente.
+`4115bc7a2bf4d0f83fe053669d80870db06fad69`; el propietario confirmó en
+desarrollo que ambos enlaces abren sus detalles internos.
 
 La rama `fix/device-search-empty-filters` corrige la respuesta JSON de
 validación que aparecía al buscar dispositivos sin seleccionar site o rol. Los
 filtros vacíos o malformados se normalizan como no seleccionados, los IDs
 válidos conservan su tipo entero y el navegador omite controles vacíos al
 enviar el formulario. La selección aplicable superó 12/12 pruebas y la suite
-aislada completa 133/133; la revisión funcional en desarrollo sigue pendiente.
+aislada completa 133/133; el propietario confirmó la búsqueda sin filtros con
+inventario real en desarrollo.
 
 La rama `fix/ui-link-and-ipam-status` hace visibles como enlaces los valores de
 modelo y rack desde su estado normal, sin depender del cursor, y corrige la
 carga de estilos de Direccionamiento que podía dejar el estado de ocupación y
 los filtros superpuestos por una hoja CSS anterior almacenada en caché. La
 selección aplicable superó 15/15 pruebas y la suite aislada completa 135/135;
-la revisión visual en desarrollo sigue pendiente.
+el propietario confirmó la corrección visual en desarrollo.
 
 La rama `fix/ipam-status-dom-target` corrige la actualización del aviso de
 ocupación después de la carga diferida. El selector anterior también alcanzaba
@@ -63,8 +64,8 @@ el punto indicador de 9 px y escribía allí la descripción completa, que se
 mostraba verticalmente sobre los filtros. El título y la descripción usan ahora
 selectores de datos inequívocos y el recurso JavaScript cambia de versión para
 invalidar la copia anterior del navegador. La selección de IPAM superó 14/14
-pruebas y la suite aislada completa 136/136; la revisión visual en desarrollo
-sigue pendiente.
+pruebas y la suite aislada completa 136/136; el propietario confirmó que el
+estado diferido se presenta correctamente en desarrollo.
 
 El PR #27 completó la ficha del dispositivo con las direcciones IPv4 e IPv6
 asignadas a cada interfaz y fue integrado en `develop` en
@@ -78,23 +79,24 @@ a las interfaces del dispositivo. Producción no fue modificada.
 
 El PR #19 contiene la creación de varias conexiones entre dos equipos en una
 sola operación y evita que la consulta de cables recientes bloquee la apertura
-inicial de la pantalla. Su validación funcional en desarrollo sigue pendiente.
+inicial de la pantalla. El propietario confirmó con datos reales la apertura,
+la creación del lote y la auditoría resultante en desarrollo.
 
-La rama `feature/ipam-pool-workspace` habilita la creación humana de pools
-desde Direccionamiento mediante un plan revisable. Valida CIDR canónico,
+El PR #21 integró la creación humana de pools desde Direccionamiento mediante
+un plan revisable. Valida CIDR canónico,
 duplicados dentro de la VRF, jerarquía, prefijo padre, bloques contenidos,
 relaciones visibles y el contrato `OPTIONS` de NetBox antes del único `POST`.
 También separa la apertura del catálogo del cálculo completo de ocupación:
 prefijos y filtros aparecen primero, mientras direcciones y rangos se procesan
-en segundo plano. Esta función todavía no ha sido integrada ni validada en
-desarrollo.
+en segundo plano. El propietario confirmó en desarrollo la carga diferida, la
+creación de un pool real y su resultado en NetBox.
 
 El PR #20 integró en `develop`, en
 `6843a353e74f0a9ee9300be6cb3e76865458fb42`, la eliminación del módulo
 independiente **Plantillas de puertos** y concentró el generador masivo y el
 inventario de interfaces dentro de la ficha del modelo correspondiente. Las
-rutas antiguas se conservan como redirecciones compatibles. La revisión
-funcional en desarrollo sigue pendiente.
+rutas antiguas se conservan como redirecciones compatibles. El propietario
+confirmó en desarrollo la generación de interfaces y el inventario resultante.
 
 ## Entornos y servicios
 
@@ -230,42 +232,32 @@ configuran fuera del repositorio público. La versión documentada de NetBox es
 - consulta acotada de direcciones IP por dispositivo, asociación a interfaces
   físicas mediante el objeto asignado y presentación de varias IPv4/IPv6.
 
+## Validado funcionalmente en desarrollo
+
+- creación, edición y retiro de Sites y permisos por rol;
+- apertura y creación por lote de Conexiones con auditoría;
+- creación de un pool real comprobado en NetBox;
+- generación de interfaces dentro del modelo y verificación del inventario;
+- enlaces internos de modelo y rack, búsqueda sin filtros y correcciones
+  visuales de IPAM.
+
 ## Requiere verificación en desarrollo
 
-- confirmar `alembic current` y `alembic heads` en `20260725_0002`;
+- confirmar `alembic current` y `alembic heads` en `20260725_0002` después del
+  próximo despliegue de código;
 - cargar una imagen en un modelo existente;
 - confirmar la etiqueta **Guardada en NetDoc**;
 - revisar la misma imagen en catálogo, ficha, rack 2D y rack 3D;
 - sustituirla y comprobar el cambio de `ETag`;
 - revisar el evento de auditoría;
 - confirmar que NetBox no recibió un `PATCH` de imagen.
-- crear, editar y retirar un site de prueba en desarrollo;
-- confirmar permisos de Administrador, Operador y Consulta;
-- revisar los eventos `SITE_CREATE`, `SITE_UPDATE` y `SITE_DEACTIVATE`.
-- confirmar que no aparece `Acciones rápidas`;
-- comprobar que crear equipos, racks y sites sigue disponible dentro de cada
-  módulo y que ninguna ruta de creación fue eliminada.
-- medir la apertura de Conexiones con el inventario real;
-- crear varias filas entre dos equipos y comprobar etiquetas individuales;
-- confirmar que una interfaz usada desaparece de las demás filas;
-- validar que un lote real crea exactamente todos los cables solicitados y
-  genera auditoría controlada.
-- medir la apertura de Direccionamiento con el inventario IPAM real;
-- revisar que los KPI y cada fila se completen después de la carga inicial;
-- validar un pool nuevo primero en vista previa y confirmar VRF, localidad,
-  rol, padre, hijos y advertencias;
-- comprobar con un token limitado que un duplicado exacto no escribe y que un
-  pool válido crea un solo prefijo con `is_pool=true`;
-- revisar el cambio en NetBox y el evento `IPAM_POOL_CREATE` en Auditoría.
-- confirmar que **Plantillas de puertos** no aparece como módulo independiente;
-- abrir un modelo y validar generación, vista previa e inventario de interfaces
-  dentro de la misma ficha;
-- comprobar que un enlace antiguo `/interface-templates?device_type_id=<id>`
-  redirige a `/device-types/<id>#interfaces`.
-- abrir un dispositivo con modelo y rack asignados, comprobar que ambos valores
-  son enlaces y confirmar que el rack entra directamente en su detalle 3D.
-- buscar un dispositivo sin seleccionar site, rol ni estado y confirmar que la
-  lista HTML abre sin parámetros vacíos ni respuesta JSON de validación.
+- revisar los eventos `SITE_CREATE`, `SITE_UPDATE` y `SITE_DEACTIVATE`;
+- confirmar que no aparece `Acciones rápidas` y que las altas siguen dentro de
+  cada módulo;
+- comprobar con un token limitado que un duplicado exacto no escribe y revisar
+  el evento `IPAM_POOL_CREATE`;
+- comprobar que el enlace antiguo de plantillas redirige a la sección de
+  interfaces del modelo.
 
 ## Riesgos y deuda
 
@@ -279,13 +271,10 @@ configuran fuera del repositorio público. La versión documentada de NetBox es
 
 ## Próximo objetivo
 
-Validar en desarrollo la búsqueda de dispositivos con filtros vacíos y los
-accesos al modelo y al rack. Continúan pendientes la validación real de un pool,
-la validación funcional del PR #20 para la
-gestión contextual de interfaces, la validación del PR #19 de Conexiones y la
-revisión completa de Sites. La imagen representativa del site queda diferida
-hasta definir almacenamiento, respaldo y asociación sin duplicar el inventario
-oficial.
+Promover la versión 0.10.1 a producción mediante PR de `develop` a `main`,
+respaldo verificable de la base local y despliegue fijado al SHA fusionado. La
+imagen representativa del site queda diferida hasta definir almacenamiento,
+respaldo y asociación sin duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
 

@@ -4,22 +4,21 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/racks.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/rack_devices.css') }}?v=20260729-image-fill-1">
 {% endblock %}
 
 {% block content %}
 <section class="workflow-intro">
     <div>
         <span class="eyebrow">Infraestructura física</span>
-        <h2>Ubica cada equipo y revisa la capacidad real del rack</h2>
+        <h2>Abre rápidamente el rack que necesitas revisar</h2>
         <p>
-            La ocupación se calcula con la posición, cara y altura U del modelo.
-            Los equipos de 0U se mantienen asociados sin consumir espacio vertical.
+            El catálogo carga solo la información general. La ocupación, las imágenes,
+            los conflictos y la vista 3D se calculan al abrir un rack específico.
         </p>
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/device-types">Preparar modelos</a>
-        <a class="button secondary" href="/topology">Topología 3D</a>
         {% if "devices.create" in current_permissions %}
         <a class="button secondary" href="/racks/actions/new">Crear rack</a>
         <a class="button primary" href="/devices/actions/new">Ubicar un equipo</a>
@@ -54,16 +53,16 @@
 <section class="rack-list-header">
     <div>
         <h2>Inventario de racks</h2>
-        <p>{{ racks | length }} bastidores con ocupación calculada</p>
+        <p>{{ racks | length }} bastidores disponibles</p>
     </div>
-    <a class="rack-result-badge" href="/topology">Vista 3D disponible</a>
+    <span class="rack-result-badge">Detalle 3D y reporte al abrir</span>
 </section>
 
 {% if racks %}
 <section class="rack-card-grid">
     {% for rack in racks %}
     {% set rack_width = rack.get("width") %}
-    <a class="rack-card {% if rack.get('_has_conflicts') %}rack-card-conflict{% endif %}" href="/racks/{{ rack.get('id') }}">
+    <a class="rack-card" href="/racks/{{ rack.get('id') }}">
         <div class="rack-card-top">
             <div class="rack-card-icon">▥</div>
             <div class="rack-card-identity">
@@ -78,31 +77,37 @@
 
         <div class="rack-card-metrics">
             <div><span>Altura</span><strong>{{ rack.get("_u_height") }}U</strong></div>
-            <div><span>Equipos</span><strong>{{ rack.get("_device_count") }}</strong></div>
-            <div><span>Ocupación</span><strong>{{ rack.get("_utilization") | round(1) }}%</strong></div>
-        </div>
-
-        <div class="rack-progress">
-            <div class="rack-progress-fill" style="width: {{ rack.get('_utilization') }}%;"></div>
+            <div>
+                <span>Equipos</span>
+                <strong>
+                    {% if rack.get("_device_count") is not none %}
+                        {{ rack.get("_device_count") }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </strong>
+            </div>
+            <div>
+                <span>Ancho</span>
+                <strong>
+                    {% if rack_width is mapping %}
+                        {{ rack_width.get("label") or rack_width.get("value") or "—" }}
+                    {% else %}
+                        {{ rack_width or "—" }}
+                    {% endif %}
+                </strong>
+            </div>
         </div>
 
         <div class="rack-card-capacity">
-            <span>{{ rack.get("_used_units_label") }}U ocupadas</span>
-            <span>{{ rack.get("_free_units_label") }}U libres</span>
-            {% if rack.get("_zero_u_devices") %}<span>{{ rack.get("_zero_u_devices") | length }} equipos de 0U</span>{% endif %}
-            {% if rack.get("_has_conflicts") %}<span class="rack-capacity-warning">Revisar superposición</span>{% endif %}
+            <span>La ocupación física y los conflictos se calculan al abrir este rack.</span>
         </div>
 
         <div class="rack-card-footer">
             <span>
-                {% if rack_width is mapping %}
-                    {{ rack_width.get("label") or rack_width.get("value") or "—" }}
-                {% else %}
-                    {{ rack_width or "—" }}
-                {% endif %}
-                {% if rack.get("facility_id") %} · {{ rack.get("facility_id") }}{% endif %}
+                {% if rack.get("facility_id") %}ID físico: {{ rack.get("facility_id") }}{% else %}Inventario NetBox{% endif %}
             </span>
-            <strong>Ver elevación →</strong>
+            <strong>Abrir rack →</strong>
         </div>
     </a>
     {% endfor %}

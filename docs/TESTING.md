@@ -13,7 +13,8 @@ El repositorio incluye pruebas de servicios de acceso, rutas administrativas, b�
 | Búsqueda global | Agrupación, enlaces seguros y consulta corta | integración real con filtros `q` de NetBox |
 | Sistema | Parsers de memoria/red, carga y métricas seguras | valores de servidor real, umbrales y compatibilidad no Linux |
 | Migraciones | base vacía, esquema heredado completo, idempotencia y esquema parcial | respaldo/restauración y próxima revisión incremental |
-| Dispositivos/interfaces | Manual | unitarias e integración con NetBox simulado |
+| Dispositivos/interfaces | Filtros vacíos, navegación interna y agrupación de IPv4/IPv6 por interfaz | integración real con NetBox y datos de borde del catálogo |
+| Direccionamiento IP | Lectura, capacidad, filtros, carga diferida y alta protegida de pools | integración real con jerarquía y token limitado |
 | Creación/cables | Validación manual existente | autorización, CSRF, errores y regresión |
 | Racks | Manual | datos de borde y UI |
 | Despliegue | Sintaxis y ejecución manual conocida | ensayo del nuevo esquema y respaldo |
@@ -21,13 +22,25 @@ El repositorio incluye pruebas de servicios de acceso, rutas administrativas, b�
 ## Comandos
 
 ```bash
-python -m compileall app tests migrations
-alembic heads
-python -m unittest discover -s tests -v
+scripts/netdoc-test-isolated tests.test_sites tests.test_access_control
+scripts/netdoc-test-isolated tests.test_ipam_pool_management
+scripts/netdoc-test-isolated
 python -c 'from app.main import app; print(app.title, len(app.routes))'
 bash -n scripts/netdoc-deploy-dev
 bash -n scripts/netdoc-deploy-prod
 ```
+
+El primer comando ejecuta una selección dentro de un entorno desechable; el
+segundo ejecuta toda la suite. El script establece un `DATABASE_URL` temporal,
+valores de prueba y escritura hacia NetBox deshabilitada antes de importar la
+aplicación.
+
+No ejecute `python -m unittest` directamente desde un checkout que contenga el
+`.env` de desarrollo o producción. Las configuraciones de FastAPI se resuelven
+al importar la aplicación y una ejecución directa puede abrir la base real,
+crear eventos de auditoría o autenticar contra usuarios reales. Una prueba
+selectiva debe pasar sus módulos como argumentos a
+`scripts/netdoc-test-isolated`.
 
 ## Resultados de la rama `feature/access-control-audit`
 
@@ -66,14 +79,16 @@ Se ejecutaron en un entorno aislado, no en el servidor:
 
 `.github/workflows/ci.yml` instala `requirements-lock.txt`, compila `app`, `tests` y `migrations`, valida `alembic heads`, ejecuta la suite, importa `app.main`, analiza todas las plantillas Jinja2 y valida los scripts de despliegue. `NetDoc CI` completó correctamente cada etapa para la revisión inicial Alembic.
 
-Estos resultados no validan systemd, el puerto 8101, una base persistente real del servidor, la restauración de un respaldo, la IP observada detrás de un proxy, el navegador con datos reales ni NetBox.
+Estos resultados no validan systemd, el endpoint real de desarrollo, una base
+persistente del servidor, la restauración de un respaldo, la dirección
+observada detrás de un proxy, el navegador con datos reales ni NetBox.
 
 ## Prueba manual requerida en desarrollo
 
 1. Confirmar el `DATABASE_URL` de desarrollo sin mostrar credenciales.
 2. Respaldar la base existente y comprobar tamaño, propietario y permisos del respaldo.
 3. Confirmar `alembic heads` y una sola cabeza.
-4. Desplegar únicamente `develop` en el puerto 8101.
+4. Desplegar únicamente `develop` en el endpoint aislado de desarrollo.
 5. Revisar logs del arranque y confirmar que la base fue creada, marcada o actualizada sin pérdida.
 6. Iniciar sesión con la cuenta administrativa existente.
 7. Crear usuarios de los roles Administrador, Operador y Consulta.

@@ -16,6 +16,7 @@ ACCESS_TABLES = {
     "users",
     "audit_events",
 }
+ACCESS_BASELINE_REVISION = "20260724_0001"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -55,7 +56,11 @@ def ensure_database_schema(engine: Engine) -> str:
             return "created"
 
         if present == ACCESS_TABLES:
-            command.stamp(config, "head")
+            # La base heredada corresponde al esquema original de acceso. Se
+            # marca esa revisión exacta y luego se aplican migraciones nuevas;
+            # marcar directamente ``head`` omitiría tablas posteriores.
+            command.stamp(config, ACCESS_BASELINE_REVISION)
+            command.upgrade(config, "head")
             return "stamped"
 
         missing = ", ".join(sorted(ACCESS_TABLES - present))

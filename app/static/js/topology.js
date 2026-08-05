@@ -6,6 +6,7 @@
 
     const viewButtons = document.querySelectorAll("[data-topology-view]");
     const faceButtons = document.querySelectorAll("[data-topology-face]");
+    const scaleButtons = document.querySelectorAll("[data-topology-scale]");
     const searchInput = document.querySelector("[data-topology-search]");
     const racks = Array.from(root.querySelectorAll("[data-topology-rack]"));
     const sites = Array.from(root.querySelectorAll("[data-topology-site]"));
@@ -24,6 +25,13 @@
         root.dataset.view = selected;
         setActive(viewButtons, "topologyView", selected);
         window.localStorage.setItem("netdocTopologyView", selected);
+    };
+
+    const applyScale = (scale) => {
+        const selected = scale === "detail" ? "detail" : "fit";
+        root.dataset.scale = selected;
+        setActive(scaleButtons, "topologyScale", selected);
+        window.localStorage.setItem("netdocRack3dScale", selected);
     };
 
     const imageForFace = (device, face) => {
@@ -102,8 +110,15 @@
         });
     });
 
+    scaleButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            applyScale(button.dataset.topologyScale || "fit");
+        });
+    });
+
     searchInput?.addEventListener("input", applySearch);
 
     applyView(window.localStorage.getItem("netdocTopologyView") || "isometric");
     applyFace(window.localStorage.getItem("netdocTopologyFace") || "front");
+    applyScale(window.localStorage.getItem("netdocRack3dScale") || "fit");
 })();

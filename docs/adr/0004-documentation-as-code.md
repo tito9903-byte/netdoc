@@ -10,7 +10,10 @@ NetDoc requiere decisiones explícitas y mantenibles para su evolución.
 Definir una dirección estable sin inventar hechos no verificados.
 
 ## Decisión
-La documentación vive en el repositorio, se revisa en PR y se actualiza con código. PROJECT_STATUS es estado oficial, ADR decisiones y AI_HANDOFF_PROMPT transferencia.
+La documentación vive en el repositorio, se revisa en PR y se actualiza con
+código. `PROJECT_STATUS.md` conserva el estado técnico, los ADR las decisiones
+y `NETDOC.md` la continuidad entre chats y el último estado validado por el
+propietario.
 
 ## Alternativas consideradas
 Documentación externa o conversaciones como única fuente.

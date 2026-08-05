@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 from math import ceil
+from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import FastAPI, Form, Request
@@ -85,6 +86,23 @@ DEVICE_STATUSES = [
     ("decommissioning", "En retiro"),
     ("offline", "Fuera de línea"),
 ]
+
+
+def parse_optional_positive_int(
+    value: str | int | None,
+) -> int | None:
+    if isinstance(value, int):
+        return value if value > 0 else None
+
+    if not isinstance(value, str):
+        return None
+
+    try:
+        parsed = int(value.strip())
+    except ValueError:
+        return None
+
+    return parsed if parsed > 0 else None
 
 
 def common_context(
@@ -430,10 +448,10 @@ async def dashboard(request: Request):
 async def devices(
     request: Request,
     q: str = "",
-    site_id: int | None = None,
+    site_id: str = "",
     status: str = "",
-    role_id: int | None = None,
-    page: int = 1,
+    role_id: str = "",
+    page: str = "1",
 ):
     redirect = access_redirect(
         request,
@@ -445,18 +463,22 @@ async def devices(
 
     client = NetBoxClient()
 
-    page = max(page, 1)
+    query = q.strip()
+    selected_site_id = parse_optional_positive_int(site_id)
+    selected_status = status.strip()
+    selected_role_id = parse_optional_positive_int(role_id)
+    selected_page = parse_optional_positive_int(page) or 1
     page_size = 25
 
     try:
         devices_payload, sites, roles = await asyncio.gather(
             client.list_devices(
-                page=page,
+                page=selected_page,
                 page_size=page_size,
-                query=q,
-                site_id=site_id,
-                status=status,
-                role_id=role_id,
+                query=query,
+                site_id=selected_site_id,
+                status=selected_status,
+                role_id=selected_role_id,
             ),
             client.list_sites(),
             client.list_device_roles(),
@@ -504,36 +526,36 @@ async def devices(
     )
 
     first_result = (
-        ((page - 1) * page_size) + 1
+        ((selected_page - 1) * page_size) + 1
         if total_count
         else 0
     )
 
     last_result = min(
-        page * page_size,
+        selected_page * page_size,
         total_count,
     )
 
     page_start = max(
         1,
-        page - 2,
+        selected_page - 2,
     )
 
     page_end = min(
         total_pages,
-        page + 2,
+        selected_page + 2,
     )
 
     page_links = [
         {
             "number": page_number,
-            "active": page_number == page,
+            "active": page_number == selected_page,
             "url": create_page_url(
                 page=page_number,
-                query=q,
-                site_id=site_id,
-                status=status,
-                role_id=role_id,
+                query=query,
+                site_id=selected_site_id,
+                status=selected_status,
+                role_id=selected_role_id,
             ),
         }
         for page_number in range(
@@ -544,24 +566,24 @@ async def devices(
 
     previous_url = None
 
-    if page > 1:
+    if selected_page > 1:
         previous_url = create_page_url(
-            page=page - 1,
-            query=q,
-            site_id=site_id,
-            status=status,
-            role_id=role_id,
+            page=selected_page - 1,
+            query=query,
+            site_id=selected_site_id,
+            status=selected_status,
+            role_id=selected_role_id,
         )
 
     next_url = None
 
-    if page < total_pages:
+    if selected_page < total_pages:
         next_url = create_page_url(
-            page=page + 1,
-            query=q,
-            site_id=site_id,
-            status=status,
-            role_id=role_id,
+            page=selected_page + 1,
+            query=query,
+            site_id=selected_site_id,
+            status=selected_status,
+            role_id=selected_role_id,
         )
 
     context = {
@@ -578,11 +600,11 @@ async def devices(
         "sites": sites,
         "roles": roles,
         "statuses": DEVICE_STATUSES,
-        "query": q,
-        "selected_site_id": site_id,
-        "selected_status": status,
-        "selected_role_id": role_id,
-        "page": page,
+        "query": query,
+        "selected_site_id": selected_site_id,
+        "selected_status": selected_status,
+        "selected_role_id": selected_role_id,
+        "page": selected_page,
         "total_pages": total_pages,
         "total_count": total_count,
         "first_result": first_result,
@@ -618,9 +640,10 @@ async def device_detail(
     client = NetBoxClient()
 
     try:
-        device, interfaces = await asyncio.gather(
+        device, interfaces, interface_ip_addresses = await asyncio.gather(
             client.get_device(device_id),
             client.get_device_interfaces(device_id),
+            client.get_device_interface_ip_addresses(device_id),
         )
 
     except NetBoxError as exc:
@@ -655,6 +678,38 @@ async def device_detail(
                 "error_message": exc.message,
             },
         )
+
+    ip_addresses_by_interface: dict[int, list[dict[str, Any]]] = {}
+
+    for ip_address in interface_ip_addresses:
+        assigned_object_type = ip_address.get("assigned_object_type")
+
+        if assigned_object_type not in (None, "dcim.interface"):
+            continue
+
+        assigned_object = ip_address.get("assigned_object") or {}
+        interface_id = (
+            ip_address.get("assigned_object_id")
+            or assigned_object.get("id")
+        )
+
+        if not isinstance(interface_id, int):
+            continue
+
+        ip_addresses_by_interface.setdefault(interface_id, []).append(
+            ip_address
+        )
+
+    interfaces = [
+        {
+            **interface,
+            "_ip_addresses": ip_addresses_by_interface.get(
+                interface.get("id"),
+                [],
+            ),
+        }
+        for interface in interfaces
+    ]
 
     enabled_interfaces = sum(
         1
@@ -703,6 +758,7 @@ from app.routers.device_create import router as device_create_router
 from app.routers.racks import router as racks_router
 from app.routers.profile import router as profile_router
 from app.routers.search import router as search_router
+from app.routers.sites import router as sites_router
 from app.routers.system import router as system_router
 
 app.include_router(device_create_router)
@@ -710,5 +766,6 @@ app.include_router(connections_router)
 app.include_router(racks_router)
 app.include_router(profile_router)
 app.include_router(search_router)
+app.include_router(sites_router)
 app.include_router(system_router)
 app.include_router(admin_router)

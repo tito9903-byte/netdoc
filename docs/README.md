@@ -19,7 +19,7 @@ sustituye al código versionado. Actualice primero la fuente oficial indicada.
 | [TESTING](TESTING.md) | Estrategia de pruebas | Desarrollo | Pruebas |
 | [GLOSSARY](GLOSSARY.md) | Vocabulario | Todo el equipo | Terminología |
 | [ADR](adr/README.md) | Decisiones | Todo el equipo | Decisiones |
-| [AI handoff](AI_HANDOFF_PROMPT.md) | Transferencia de contexto | Agentes IA | Handoff |
+| [NETDOC](../NETDOC.md) | Continuidad y estado validado | Agentes IA | Siempre |
 
 **Lectura recomendada:** nuevos desarrolladores: `AGENTS.md`, estado,
 arquitectura, seguridad, escritura segura, contribución y ADR; operación:
@@ -40,7 +40,7 @@ evite duplicar datos que puedan divergir.
 5. `NETBOX_WRITE_SAFETY.md`: reglas del límite de escritura.
 6. `NETBOX_MODULE_COVERAGE.md`: alcance funcional.
 7. `AI_ASSISTANT_ARCHITECTURE.md`: diseño conversacional.
-8. `AI_HANDOFF_PROMPT.md`: transferencia de contexto.
+8. `../NETDOC.md`: continuidad entre chats y estado validado.
 9. `DEPLOYMENT.md`: despliegue.
 10. `OPERATIONS.md`: operación rutinaria.
 11. `SECURITY.md`: reglas de seguridad.

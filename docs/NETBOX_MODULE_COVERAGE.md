@@ -17,7 +17,7 @@ Estados:
 | Objeto o proceso | Estado | Experiencia objetivo | Reglas principales |
 |---|---|---|---|
 | Regiones y grupos de sitios | Planificado | Árbol territorial reutilizable | No crear duplicados por nombre/slug |
-| Sitios | Fundamento | Catálogo, ficha y asistente de alta | Validar región, tenant, estado y slug |
+| Sitios | En revisión | Catálogo, alta, edición y retiro | Nombre/slug únicos, permisos, CSRF y sin eliminación |
 | Localidades | Fundamento | Administrar dentro del sitio | Exigir sitio y jerarquía correcta |
 | Racks | En revisión | Listado, ficha, alta, 2D y 3D | Altura, numeración, cara y conflictos |
 | Reservas de rack | Planificado | Calendario de unidades reservadas | No permitir solapamientos |
@@ -41,7 +41,7 @@ Estados:
 |---|---|---|---|
 | VRF | Planificado | Catálogo, ficha y asistente | RD único cuando aplique |
 | Route targets | Planificado | Selector reutilizable | Importación/exportación coherentes |
-| Prefijos | En revisión de lectura | Pools, localidad y ocupación | VRF, jerarquía, solapamiento y estado |
+| Prefijos | En revisión | Pools, localidad, ocupación y alta protegida | CIDR, VRF, jerarquía, solapamiento, vista previa y estado |
 | Rangos IP | En revisión de lectura | Reservas y ocupación | Dentro del prefijo y sin duplicados |
 | Direcciones IP | En revisión de lectura | Buscar, asignar y liberar | Duplicados, VRF, NAT y objeto asignado |
 | VLAN | Planificado | Crear grupo, VLAN y alcance | VID, grupo, sitio y tenant |

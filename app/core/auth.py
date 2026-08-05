@@ -260,6 +260,10 @@ class PermissionMiddleware(BaseHTTPMiddleware):
                 "CONNECTION_CREATE_SUBMIT",
                 "connection",
             ),
+            ("POST", "/api/connections/bulk"): (
+                "CONNECTION_BATCH_CREATE_SUBMIT",
+                "connection",
+            ),
         }.get((request.method.upper(), request.url.path))
 
         if mutation is None:
@@ -328,6 +332,12 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         if path == "/search" or path.startswith("/api/search"):
             return "search.view"
 
+        if path.startswith("/ipam/pools/"):
+            return "devices.create"
+
+        if path == "/ipam" or path.startswith("/api/ipam/"):
+            return "search.view"
+
         if path == "/system" or path.startswith("/api/system"):
             return "system.view"
 
@@ -340,11 +350,28 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         if path.startswith("/admin/audit"):
             return "audit.view"
 
+        if path.startswith("/sites/actions/"):
+            return "sites.manage"
+
+        if path.startswith("/sites/") and (
+            path.endswith("/edit") or path.endswith("/deactivate")
+        ):
+            return "sites.manage"
+
+        if path.startswith("/sites"):
+            return "sites.view"
+
         if path.startswith("/devices/actions/new"):
             return "devices.create"
 
         if path.startswith("/devices"):
             return "devices.view"
+
+        if (
+            path == "/api/connections/bulk"
+            and method.upper() == "POST"
+        ):
+            return "connections.create"
 
         if path.startswith("/api/connections"):
             return "connections.view"

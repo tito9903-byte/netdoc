@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Crear pool IP | NetDoc{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/device_create.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/ipam.css') }}?v=20260804-status-layout-1">
+{% endblock %}
+
+{% block content %}
+<div class="create-device-navigation">
+    <a href="/ipam">← Volver a Direccionamiento</a>
+</div>
+
+<section class="workflow-intro ipam-create-intro">
+    <div>
+        <span class="eyebrow">Alta protegida</span>
+        <h2>Revisa el bloque antes de convertirlo en pool</h2>
+        <p>
+            NetDoc valida el CIDR, la VRF, el prefijo padre, duplicados y
+            solapamientos. La escritura ocurre únicamente después de una vista previa.
+        </p>
+    </div>
+    <div class="ipam-write-state {{ 'enabled' if write_enabled else 'disabled' }}">
+        <span></span>
+        <div>
+            <strong>{{ "Escritura habilitada" if write_enabled else "Solo vista previa" }}</strong>
+            <small>
+                {{ "La confirmación final puede crear el pool." if write_enabled else "Este entorno no puede modificar NetBox." }}
+            </small>
+        </div>
+    </div>
+</section>
+
+{% if errors %}
+<section class="create-alert create-alert-error">
+    <strong>No se pudo preparar o crear el pool.</strong>
+    <ul>
+        {% for item in errors %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+{% if not write_enabled %}
+<div class="read-only-callout">
+    <span>◌</span>
+    <div>
+        <strong>El entorno está protegido en solo lectura.</strong>
+        <span>
+            Puedes completar la validación y revisar el plan, pero el botón final
+            permanecerá deshabilitado.
+        </span>
+    </div>
+</div>
+{% endif %}
+
+{% if parent %}
+<div class="ipam-parent-context">
+    <div>
+        <span>Prefijo padre seleccionado</span>
+        <strong>{{ parent.get("prefix") or parent.get("display") }}</strong>
+    </div>
+    <div>
+        <span>Localidad</span>
+        <strong>
+            {% set parent_scope = parent.get("scope") or {} %}
+            {{ parent_scope.get("display") or parent_scope.get("name") or "Sin localidad" }}
+        </strong>
+    </div>
+    <a href="/ipam/pools/new">Quitar selección</a>
+</div>
+{% endif %}
+
+<div class="ipam-create-layout">
+    <form
+        class="create-device-form ipam-pool-form"
+        method="post"
+        action="/ipam/pools/preview"
+    >
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <input type="hidden" name="parent_id" value="{{ form_data.get('parent_id', '') }}">
+
+        <section class="create-form-panel">
+            <div class="create-form-panel-header">
+                <div class="step-number">1</div>
+                <div>
+                    <h2>Bloque y contexto de enrutamiento</h2>
+                    <p>El mismo CIDR puede existir en VRF distintas, pero nunca se asumirá una VRF.</p>
+                </div>
+            </div>
+
+            <div class="create-form-grid">
+                <div class="create-field create-field-wide">
+                    <label for="pool-prefix">Pool en formato CIDR <span>*</span></label>
+                    <input
+                        id="pool-prefix"
+                        name="prefix"
+                        value="{{ form_data.get('prefix', '') }}"
+                        placeholder="Ejemplo: 170.79.144.0/24"
+                        autocomplete="off"
+                        spellcheck="false"
+                        required
+                        autofocus
+                    >
+                    <small>Debe ser la dirección de red exacta; no se corrigen bits de host silenciosamente.</small>
+                </div>
+
+                <div class="create-field">
+                    <label for="pool-vrf">VRF</label>
+                    <select id="pool-vrf" name="vrf_id">
+                        <option value="">Global</option>
+                        {% for vrf in vrfs %}
+                        <option
+                            value="{{ vrf.get('id') }}"
+                            {% if form_data.get('vrf_id') == vrf.get('id') | string %}selected{% endif %}
+                        >
+                            {{ vrf.get("_form_label") or vrf.get("display") or vrf.get("name") or "Sin nombre" }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small>Global y cada VRF se validan como espacios independientes.</small>
+                </div>
+
+                <div class="create-field">
+                    <label for="pool-status">Estado <span>*</span></label>
+                    <select id="pool-status" name="status" required>
+                        {% for item in statuses %}
+                        <option
+                            value="{{ item.get('value') }}"
+                            {% if form_data.get('status', 'active') == item.get('value') %}selected{% endif %}
+                        >{{ item.get("label") }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="create-form-panel">
+            <div class="create-form-panel-header">
+                <div class="step-number">2</div>
+                <div>
+                    <h2>Clasificación y localidad</h2>
+                    <p>Estos datos permiten encontrar el pool sin depender de notas externas.</p>
+                </div>
+            </div>
+
+            <div class="create-form-grid">
+                <div class="create-field">
+                    <label for="pool-role">Rol IPAM</label>
+                    <select id="pool-role" name="role_id">
+                        <option value="">Sin rol</option>
+                        {% for role in roles %}
+                        <option
+                            value="{{ role.get('id') }}"
+                            {% if form_data.get('role_id') == role.get('id') | string %}selected{% endif %}
+                        >
+                            {{ role.get("display") or role.get("name") or "Sin nombre" }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="create-field create-field-wide">
+                    <label for="pool-scope">Localidad / alcance</label>
+                    <select id="pool-scope" name="scope">
+                        <option value="">Sin localidad</option>
+                        {% for group in scopes | groupby("group") %}
+                        <optgroup label="{{ group.grouper }}">
+                            {% for item in group.list %}
+                            <option
+                                value="{{ item.get('value') }}"
+                                {% if form_data.get('scope') == item.get('value') %}selected{% endif %}
+                            >{{ item.get("label") }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                    <small>Site, ubicación, región o grupo de sites publicado por NetBox.</small>
+                </div>
+
+                <div class="create-field create-field-full">
+                    <label for="pool-description">Descripción</label>
+                    <input
+                        id="pool-description"
+                        name="description"
+                        maxlength="200"
+                        value="{{ form_data.get('description', '') }}"
+                        placeholder="Ejemplo: Pool corporativo de Samaná"
+                    >
+                </div>
+            </div>
+        </section>
+
+        <section class="create-form-panel">
+            <div class="create-form-panel-header">
+                <div class="step-number">3</div>
+                <div>
+                    <h2>Trazabilidad</h2>
+                    <p>El motivo quedará asociado al cambio en NetBox y en la auditoría de NetDoc.</p>
+                </div>
+            </div>
+
+            <div class="create-form-grid">
+                <div class="create-field create-field-full">
+                    <label for="pool-reason">Motivo operativo <span>*</span></label>
+                    <textarea
+                        id="pool-reason"
+                        name="change_reason"
+                        maxlength="300"
+                        rows="3"
+                        required
+                        placeholder="Ejemplo: Nuevo bloque para clientes corporativos del site Samaná"
+                    >{{ form_data.get("change_reason", "") }}</textarea>
+                </div>
+            </div>
+        </section>
+
+        <section class="create-submit-bar">
+            <div>
+                <strong>Esta acción todavía no crea nada.</strong>
+                <span>Primero verás el padre, los bloques contenidos y el cambio exacto.</span>
+            </div>
+            <div class="create-submit-actions">
+                <a class="create-secondary-button" href="/ipam">Cancelar</a>
+                <button class="create-primary-button" type="submit">Revisar pool</button>
+            </div>
+        </section>
+    </form>
+
+    <aside class="ipam-safety-panel">
+        <span class="eyebrow">Controles automáticos</span>
+        <h3>Qué verifica NetDoc</h3>
+        <ul>
+            <li><strong>CIDR canónico</strong><span>Rechaza direcciones con bits de host.</span></li>
+            <li><strong>Duplicado exacto</strong><span>Compara dentro de la misma VRF.</span></li>
+            <li><strong>Jerarquía</strong><span>Identifica el padre más cercano.</span></li>
+            <li><strong>Solapamientos</strong><span>Muestra prefijos y pools contenidos.</span></li>
+            <li><strong>Contrato REST</strong><span>Valida el payload con OPTIONS de NetBox.</span></li>
+        </ul>
+    </aside>
+</div>
+
+{% if plan %}
+<section class="ipam-plan-panel" id="pool-preview">
+    <div class="panel-header compact-panel-header">
+        <div>
+            <span class="eyebrow">Vista previa lista</span>
+            <h2>Confirma exactamente este pool</h2>
+            <p>Si el inventario cambia antes de guardar, NetDoc invalidará esta vista previa.</p>
+        </div>
+        <span class="status-pill accent">Sin escritura todavía</span>
+    </div>
+
+    <div class="ipam-plan-grid">
+        <div><span>Pool</span><strong>{{ normalized.get("prefix") }}</strong></div>
+        <div><span>VRF</span><strong>{{ normalized.get("vrf_label") }}</strong></div>
+        <div><span>Localidad</span><strong>{{ normalized.get("scope_label") }}</strong></div>
+        <div><span>Rol</span><strong>{{ normalized.get("role_label") }}</strong></div>
+        <div><span>Estado</span><strong>{{ normalized.get("status_label") }}</strong></div>
+        <div>
+            <span>Prefijo padre</span>
+            {% set preview_parent = analysis.get("parent") or {} %}
+            <strong>{{ preview_parent.get("prefix") or preview_parent.get("display") or "Bloque raíz" }}</strong>
+        </div>
+    </div>
+
+    {% if plan.get("warnings") %}
+    <div class="ipam-plan-warnings">
+        <strong>Revisión necesaria</strong>
+        <ul>
+            {% for warning in plan.get("warnings") %}<li>{{ warning }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="ipam-plan-impact">
+        <div>
+            <span>Objetos que se crearán</span>
+            <strong>1 pool</strong>
+        </div>
+        <div>
+            <span>Objetos existentes que se modificarán</span>
+            <strong>0</strong>
+        </div>
+        <div>
+            <span>Prefijos hijos detectados</span>
+            <strong>{{ analysis.get("children", []) | length }}</strong>
+        </div>
+    </div>
+
+    <form class="ipam-confirm-form" method="post" action="/ipam/pools/confirm">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <input type="hidden" name="plan_id" value="{{ plan.get('plan_id') }}">
+        <input
+            type="hidden"
+            name="confirmation_phrase"
+            value="{{ plan.get('confirmation_phrase') }}"
+        >
+        <div>
+            <strong>{{ plan.get("confirmation_phrase") }}</strong>
+            <span>La confirmación está ligada a esta vista previa.</span>
+        </div>
+        <button
+            class="button primary"
+            type="submit"
+            {% if not write_enabled %}disabled{% endif %}
+        >Confirmar y crear pool</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

@@ -5,12 +5,13 @@
 {% block extra_head %}
 <link
     rel="stylesheet"
-    href="{{ url_for('static', path='css/devices.css') }}"
+    href="{{ url_for('static', path='css/devices.css') }}?v=20260804-interface-ips-1"
 >
 {% endblock %}
 
 {% block content %}
 {% set device_type = device.get("device_type") or {} %}
+{% set device_type_id = device_type.get("id") %}
 {% set manufacturer = device_type.get("manufacturer") or {} %}
 {% set role = device.get("role")
     or device.get("device_role")
@@ -18,8 +19,10 @@
 {% set site = device.get("site") or {} %}
 {% set location = device.get("location") or {} %}
 {% set rack = device.get("rack") or {} %}
+{% set rack_id = rack.get("id") %}
 {% set status_data = device.get("status") or {} %}
 {% set primary_ip = device.get("primary_ip4")
+    or device.get("primary_ip6")
     or device.get("primary_ip")
     or {} %}
 
@@ -49,9 +52,21 @@
 
                 ·
 
-                {{ device_type.get("display")
-                   or device_type.get("model")
-                   or "Modelo no definido" }}
+                {% if device_type_id %}
+                    <a
+                        class="device-header-reference-link"
+                        href="/device-types/{{ device_type_id }}"
+                        aria-label="Abrir modelo {{ device_type.get('display') or device_type.get('model') or '' }}"
+                    >
+                        {{ device_type.get("display")
+                           or device_type.get("model")
+                           or "Modelo no definido" }}
+                    </a>
+                {% else %}
+                    {{ device_type.get("display")
+                       or device_type.get("model")
+                       or "Modelo no definido" }}
+                {% endif %}
             </p>
         </div>
     </div>
@@ -120,9 +135,23 @@
             <div>
                 <dt>Modelo</dt>
                 <dd>
-                    {{ device_type.get("display")
-                       or device_type.get("model")
-                       or "—" }}
+                    {% if device_type_id %}
+                        <a
+                            class="device-reference-link"
+                            href="/device-types/{{ device_type_id }}"
+                            aria-label="Abrir ficha del modelo {{ device_type.get('display') or device_type.get('model') or '' }}"
+                        >
+                            <span>
+                                {{ device_type.get("display")
+                                   or device_type.get("model")
+                                   or "—" }}
+                            </span>
+                        </a>
+                    {% else %}
+                        {{ device_type.get("display")
+                           or device_type.get("model")
+                           or "—" }}
+                    {% endif %}
                 </dd>
             </div>
 
@@ -187,9 +216,23 @@
             <div>
                 <dt>Rack</dt>
                 <dd>
-                    {{ rack.get("display")
-                       or rack.get("name")
-                       or "—" }}
+                    {% if rack_id %}
+                        <a
+                            class="device-reference-link"
+                            href="/racks/{{ rack_id }}"
+                            aria-label="Abrir rack {{ rack.get('display') or rack.get('name') or '' }}"
+                        >
+                            <span>
+                                {{ rack.get("display")
+                                   or rack.get("name")
+                                   or "—" }}
+                            </span>
+                        </a>
+                    {% else %}
+                        {{ rack.get("display")
+                           or rack.get("name")
+                           or "—" }}
+                    {% endif %}
                 </dd>
             </div>
 
@@ -264,6 +307,7 @@
                         <th>Interfaz</th>
                         <th>Tipo</th>
                         <th>Descripción</th>
+                        <th>Direcciones IP</th>
                         <th>MAC</th>
                         <th>LAG</th>
                         <th>Estado</th>
@@ -277,6 +321,8 @@
                         {% set lag = interface.get("lag") or {} %}
                         {% set cable = interface.get("cable") or {} %}
                         {% set endpoints = interface.get("connected_endpoints")
+                            or [] %}
+                        {% set ip_addresses = interface.get("_ip_addresses")
                             or [] %}
 
                         <tr>
@@ -294,6 +340,22 @@
 
                             <td>
                                 {{ interface.get("description") or "—" }}
+                            </td>
+
+                            <td class="interface-ip-cell">
+                                {% if ip_addresses %}
+                                    <div class="interface-ip-list">
+                                        {% for ip_address in ip_addresses %}
+                                            <span>
+                                                {{ ip_address.get("display")
+                                                   or ip_address.get("address")
+                                                   or "—" }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="interface-ip-empty">—</span>
+                                {% endif %}
                             </td>
 
                             <td class="mono-value">

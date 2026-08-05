@@ -10,9 +10,11 @@
 {% set manufacturer = device_type.get("manufacturer") or {} %}
 {% set manufacturer_name = manufacturer.get("display") or manufacturer.get("name") or "Sin fabricante" %}
 {% set model_name = device_type.get("model") or device_type.get("display") or "Sin modelo" %}
+{% set front_source = device_type.get("_front_image_source") %}
+{% set rear_source = device_type.get("_rear_image_source") %}
 
 <div class="model-image-navigation">
-    <a href="/device-types?device_type_id={{ device_type.get('id') }}">← Volver al modelo</a>
+    <a href="/device-types/{{ device_type.get('id') }}">← Volver al modelo</a>
     <a href="/racks">Revisar racks →</a>
 </div>
 
@@ -36,12 +38,13 @@
         <h2>{{ model_name }}</h2>
         <p>
             {{ manufacturer_name }} · {{ device_type.get("u_height") or 0 }}U.
-            La misma imagen se reutiliza en todos los equipos creados con este modelo.
+            Las imágenes se asocian al ID del modelo de NetBox y se reutilizan en
+            todos los racks donde aparezca este equipo.
         </p>
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/interface-templates?device_type_id={{ device_type.get('id') }}">Plantillas de puertos</a>
-        <a class="button primary" href="/topology">Topología 3D</a>
+        <a class="button primary" href="/racks">Abrir racks</a>
     </div>
 </section>
 
@@ -52,7 +55,13 @@
                 <span class="eyebrow">Frente</span>
                 <h2>Imagen frontal</h2>
             </div>
-            {% if device_type.get("front_image") %}<span class="status-pill healthy">Documentada</span>{% else %}<span class="status-pill neutral">Sin imagen</span>{% endif %}
+            {% if device_type.get("front_image") %}
+            <span class="status-pill healthy">
+                {% if front_source == "netdoc" %}Guardada en NetDoc{% else %}Disponible en NetBox{% endif %}
+            </span>
+            {% else %}
+            <span class="status-pill neutral">Sin imagen</span>
+            {% endif %}
         </header>
         <div class="model-image-preview">
             {% if device_type.get("front_image") %}
@@ -73,7 +82,13 @@
                 <span class="eyebrow">Parte trasera</span>
                 <h2>Imagen trasera</h2>
             </div>
-            {% if device_type.get("rear_image") %}<span class="status-pill healthy">Documentada</span>{% else %}<span class="status-pill neutral">Sin imagen</span>{% endif %}
+            {% if device_type.get("rear_image") %}
+            <span class="status-pill healthy">
+                {% if rear_source == "netdoc" %}Guardada en NetDoc{% else %}Disponible en NetBox{% endif %}
+            </span>
+            {% else %}
+            <span class="status-pill neutral">Sin imagen</span>
+            {% endif %}
         </header>
         <div class="model-image-preview">
             {% if device_type.get("rear_image") %}
@@ -95,22 +110,24 @@
             <h2>Actualizar imágenes del modelo</h2>
             <p>JPG, PNG, WEBP o GIF; máximo 5 MB por archivo.</p>
         </div>
-        {% if write_enabled and "devices.create" in current_permissions %}
-        <span class="status-pill healthy">Escritura habilitada</span>
+        {% if media_write_enabled and "devices.create" in current_permissions %}
+        <span class="status-pill healthy">Almacenamiento local habilitado</span>
         {% else %}
-        <span class="status-pill neutral">Solo preparación</span>
+        <span class="status-pill neutral">Sin permiso de edición</span>
         {% endif %}
     </div>
 
-    {% if not write_enabled %}
     <div class="read-only-callout model-image-readonly">
         <span>i</span>
         <div>
-            <strong>Desarrollo continúa en modo de solo lectura.</strong>
-            <span>Puedes revisar las imágenes existentes. La carga se habilitará únicamente en un entorno autorizado para escritura.</span>
+            <strong>Las nuevas imágenes se guardan en NetDoc.</strong>
+            <span>
+                NetBox conserva el modelo, fabricante, altura y componentes. NetDoc
+                guarda únicamente los archivos frontal y trasero en su base local,
+                evitando depender de permisos sobre el directorio MEDIA_ROOT de NetBox.
+            </span>
         </div>
     </div>
-    {% endif %}
 
     <form
         class="model-image-form"
@@ -136,9 +153,9 @@
         <button
             class="button primary"
             type="submit"
-            {% if not write_enabled or "devices.create" not in current_permissions %}disabled{% endif %}
+            {% if not media_write_enabled or "devices.create" not in current_permissions %}disabled{% endif %}
         >
-            Guardar imágenes en NetBox
+            Guardar imágenes en NetDoc
         </button>
     </form>
 </section>

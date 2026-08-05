@@ -29,9 +29,9 @@
         <span class="eyebrow">Ficha física reutilizable</span>
         <h2>Crear modelo de equipo</h2>
         <p>
-            Registra fabricante, dimensiones y las vistas frontal y trasera. Las
-            imágenes se reutilizarán automáticamente en la elevación 2D y la vista
-            3D del rack.
+            El fabricante, las dimensiones y los componentes se registran en NetBox.
+            Las vistas frontal y trasera se guardan en NetDoc y se reutilizan
+            automáticamente en la elevación 2D y la vista 3D del rack.
         </p>
     </div>
     <div class="workflow-intro-actions">
@@ -43,8 +43,8 @@
 <div class="read-only-callout">
     <span>◌</span>
     <div>
-        <strong>Desarrollo está en modo de solo lectura.</strong>
-        <span>Puedes revisar el formulario y seleccionar imágenes, pero no se enviará ningún cambio a NetBox.</span>
+        <strong>La creación de modelos en NetBox está deshabilitada.</strong>
+        <span>Puedes revisar el formulario, pero el modelo no podrá crearse hasta habilitar la escritura controlada.</span>
     </div>
 </div>
 {% endif %}
@@ -53,7 +53,7 @@
     <div class="panel-header compact-panel-header">
         <div>
             <h2>Datos e imágenes del modelo</h2>
-            <p>Esta información se heredará en todos los equipos creados con el modelo.</p>
+            <p>La ficha se guarda en NetBox y los archivos de imagen en la base local de NetDoc.</p>
         </div>
         <span class="panel-badge">Modelo físico</span>
     </div>
@@ -120,7 +120,8 @@
                         <h3>Imágenes para el rack</h3>
                         <p>
                             Usa fotografías o diagramas recortados del frente y la
-                            parte trasera. Son opcionales y pueden sustituirse después.
+                            parte trasera. Se guardan en NetDoc, son opcionales y
+                            pueden sustituirse después.
                         </p>
                     </div>
                     <span class="panel-badge">Máximo 5 MB por imagen</span>
@@ -163,7 +164,7 @@
         <div class="model-form-actions">
             <div>
                 <strong>Después agrega las plantillas de puertos.</strong>
-                <span>El modelo y sus imágenes se guardan primero; las interfaces se administran en una pantalla independiente.</span>
+                <span>Primero se crea el modelo en NetBox y se guardan sus imágenes en NetDoc; las interfaces se administran en una pantalla independiente.</span>
             </div>
             <div>
                 <a class="button secondary" href="/device-types">Cancelar</a>

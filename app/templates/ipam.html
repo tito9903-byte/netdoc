@@ -3,10 +3,23 @@
 {% block title %}Direccionamiento IP | NetDoc{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/ipam.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/ipam.css') }}?v=20260804-status-layout-1">
 {% endblock %}
 
 {% block content %}
+{% if notice %}
+<div class="notice success-notice">
+    <strong>Operación completada.</strong>
+    <span>{{ notice }}</span>
+</div>
+{% endif %}
+{% if error %}
+<div class="notice error-notice">
+    <strong>No fue posible completar la operación.</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
 <section class="workflow-intro">
     <div>
         <span class="eyebrow">IPAM operativo</span>
@@ -18,25 +31,41 @@
     </div>
     <div class="workflow-intro-actions">
         <a class="button secondary" href="/search">Buscar en todo NetBox</a>
+        {% if can_manage_ipam %}
+        <a class="button primary" href="/ipam/pools/new">Crear pool</a>
+        {% else %}
         <a class="button primary" href="#pool-inventory">Revisar pools</a>
+        {% endif %}
     </div>
 </section>
 
-<section class="summary-grid summary-grid-four">
+<section
+    class="summary-grid summary-grid-four"
+    data-ipam-summary
+    data-inventory-ready="{{ 'true' if inventory_ready else 'false' }}"
+>
     <article class="summary-card">
-        <span>Prefijos visibles</span>
-        <strong>{{ summary.prefixes }}</strong>
-        <small>Según los filtros de NetBox</small>
+        <span>Pools documentados</span>
+        <strong data-summary-total>{{ summary.total_pools }}</strong>
+        <small>{{ summary.visible_pools }} visibles con estos filtros</small>
     </article>
     <article class="summary-card">
-        <span>Pools visibles</span>
-        <strong>{{ summary.visible_pools }}</strong>
-        <small>De {{ summary.total_pools }} pools documentados</small>
+        <span>Con espacio</span>
+        <strong data-summary-available>
+            {{ summary.available_pools if inventory_ready else "—" }}
+        </strong>
+        <small data-summary-available-copy>
+            {{ "Disponibilidad calculada" if inventory_ready else "Calculando ocupación…" }}
+        </small>
     </article>
     <article class="summary-card {% if summary.critical_pools %}attention{% endif %}">
         <span>Críticos o llenos</span>
-        <strong>{{ summary.critical_pools }}</strong>
-        <small>{{ summary.full_pools }} completamente agotados</small>
+        <strong data-summary-critical>
+            {{ summary.critical_pools if inventory_ready else "—" }}
+        </strong>
+        <small data-summary-critical-copy>
+            {% if inventory_ready %}{{ summary.full_pools }} completamente agotados{% else %}Calculando ocupación…{% endif %}
+        </small>
     </article>
     <article class="summary-card">
         <span>Localidades visibles</span>
@@ -53,6 +82,28 @@
             NetDoc combina direcciones IP, rangos reservados y prefijos hijos en
             la misma VRF. No escanea la red, no consulta leases DHCP y no sustituye
             la actualización del inventario.
+        </span>
+    </div>
+</div>
+
+<div
+    class="ipam-inventory-status {{ 'ready' if inventory_ready else 'loading' }}"
+    data-ipam-inventory-status
+    data-endpoint="/api/ipam/pools/availability?{{ {'q': query, 'family': selected_family or '', 'status': selected_status, 'role_id': selected_role_id or '', 'scope': selected_scope, 'health': selected_health, 'order': selected_order, 'page': pool_pagination.page} | urlencode }}"
+    role="status"
+    aria-live="polite"
+>
+    <span class="ipam-status-dot" aria-hidden="true"></span>
+    <div>
+        <strong data-ipam-status-title>
+            {{ "Ocupación calculada." if inventory_ready else "El catálogo ya está disponible." }}
+        </strong>
+        <span data-ipam-status-copy>
+            {% if inventory_ready %}
+            Las cantidades reflejan el inventario IPAM documentado en NetBox.
+            {% else %}
+            NetDoc está calculando la ocupación en segundo plano sin bloquear la ventana.
+            {% endif %}
         </span>
     </div>
 </div>
@@ -92,7 +143,7 @@
             </select>
         </div>
 
-        <div class="field ipam-filter-field">
+        <div class="field ipam-health-field">
             <label for="ipam-health">Disponibilidad</label>
             <select id="ipam-health" name="health">
                 <option value="" {% if not selected_health %}selected{% endif %}>Todos los pools</option>
@@ -105,56 +156,67 @@
             </select>
         </div>
 
-        <div class="field ipam-filter-field">
-            <label for="ipam-order">Ordenar</label>
-            <select id="ipam-order" name="order">
-                <option value="utilization_desc" {% if selected_order == "utilization_desc" %}selected{% endif %}>Mayor ocupación</option>
-                <option value="availability_desc" {% if selected_order == "availability_desc" %}selected{% endif %}>Mayor disponibilidad</option>
-                <option value="scope" {% if selected_order == "scope" %}selected{% endif %}>Localidad</option>
-                <option value="prefix" {% if selected_order == "prefix" %}selected{% endif %}>Prefijo</option>
-            </select>
-        </div>
-
-        <div class="field ipam-filter-field">
-            <label for="ipam-family">Familia</label>
-            <select id="ipam-family" name="family">
-                <option value="">IPv4 e IPv6</option>
-                <option value="4" {% if selected_family == 4 %}selected{% endif %}>IPv4</option>
-                <option value="6" {% if selected_family == 6 %}selected{% endif %}>IPv6</option>
-            </select>
-        </div>
-
-        <div class="field ipam-filter-field">
-            <label for="ipam-status">Estado del prefijo</label>
-            <select id="ipam-status" name="status">
-                <option value="">Todos los estados</option>
-                {% for value, label in prefix_statuses %}
-                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
-                    {{ label }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="field ipam-filter-field">
-            <label for="ipam-role">Rol IPAM</label>
-            <select id="ipam-role" name="role_id">
-                <option value="">Todos los roles</option>
-                {% for role in roles %}
-                <option
-                    value="{{ role.get('id') }}"
-                    {% if selected_role_id == role.get('id') %}selected{% endif %}
-                >
-                    {{ role.get("display") or role.get("name") or "Sin nombre" }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-
         <div class="ipam-filter-actions">
             <button class="button primary" type="submit">Aplicar filtros</button>
             <a class="button secondary" href="/ipam">Limpiar</a>
         </div>
+
+        <details
+            class="ipam-advanced-filters"
+            {% if selected_family or selected_status or selected_role_id or selected_order != "scope" %}open{% endif %}
+        >
+            <summary>
+                <span>Filtros avanzados</span>
+                <small>Familia, estado, rol y orden</small>
+            </summary>
+            <div class="ipam-advanced-grid">
+                <div class="field">
+                    <label for="ipam-order">Ordenar</label>
+                    <select id="ipam-order" name="order">
+                        <option value="utilization_desc" {% if selected_order == "utilization_desc" %}selected{% endif %}>Mayor ocupación</option>
+                        <option value="availability_desc" {% if selected_order == "availability_desc" %}selected{% endif %}>Mayor disponibilidad</option>
+                        <option value="scope" {% if selected_order == "scope" %}selected{% endif %}>Localidad</option>
+                        <option value="prefix" {% if selected_order == "prefix" %}selected{% endif %}>Prefijo</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="ipam-family">Familia</label>
+                    <select id="ipam-family" name="family">
+                        <option value="">IPv4 e IPv6</option>
+                        <option value="4" {% if selected_family == 4 %}selected{% endif %}>IPv4</option>
+                        <option value="6" {% if selected_family == 6 %}selected{% endif %}>IPv6</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="ipam-status">Estado del prefijo</label>
+                    <select id="ipam-status" name="status">
+                        <option value="">Todos los estados</option>
+                        {% for value, label in prefix_statuses %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="ipam-role">Rol IPAM</label>
+                    <select id="ipam-role" name="role_id">
+                        <option value="">Todos los roles</option>
+                        {% for role in roles %}
+                        <option
+                            value="{{ role.get('id') }}"
+                            {% if selected_role_id == role.get('id') %}selected{% endif %}
+                        >
+                            {{ role.get("display") or role.get("name") or "Sin nombre" }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </details>
     </form>
 </section>
 
@@ -184,11 +246,15 @@
                     <th>Documentadas</th>
                     <th>Libres estimadas</th>
                     <th>Ocupación</th>
+                    {% if can_manage_ipam %}<th class="ipam-action-heading">Acción</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for pool in pools %}
-                <tr>
+                <tr
+                    data-pool-id="{{ pool.get('id') }}"
+                    data-pool-health="{{ pool.get('_health') }}"
+                >
                     <td>
                         <div class="primary-cell">
                             <strong>{{ pool.get("prefix") or pool.get("display") or "—" }}</strong>
@@ -214,41 +280,58 @@
                     </td>
                     <td class="numeric-cell">
                         <div class="ipam-count" title="{{ pool.get('_used_exact') }}">
-                            <strong>{{ pool.get("_used_compact") }}</strong>
+                            <strong data-pool-used>
+                                {{ pool.get("_used_compact") if inventory_ready else "—" }}
+                            </strong>
                             <small>Registradas o reservadas</small>
                         </div>
                     </td>
                     <td class="numeric-cell">
                         <div class="ipam-count" title="{{ pool.get('_available_exact') }}">
-                            <strong>{{ pool.get("_available_compact") }}</strong>
+                            <strong data-pool-available>
+                                {{ pool.get("_available_compact") if inventory_ready else "—" }}
+                            </strong>
                             {% if pool.get("_availability_estimated") %}
                             <small>Estimadas desde IPAM</small>
-                            {% elif pool.get("_availability_error") %}
-                            <small title="{{ pool.get('_availability_error') }}">No calculado</small>
+                            {% else %}
+                            <small data-pool-availability-copy>Calculando…</small>
                             {% endif %}
                         </div>
                     </td>
                     <td>
-                        {% if pool.get("_utilization") is not none %}
-                        <div class="utilization-cell">
+                        <div
+                            class="utilization-cell {% if not inventory_ready %}is-loading{% endif %}"
+                            data-pool-utilization
+                        >
                             <div class="progress-track">
                                 <span
                                     class="progress-fill {{ pool.get('_health') }}"
-                                    style="width: {{ pool.get('_utilization') }}%;"
+                                    style="width: {{ pool.get('_utilization') if inventory_ready and pool.get('_utilization') is not none else 0 }}%;"
                                 ></span>
                             </div>
-                            <strong>{{ pool.get("_utilization") }}%</strong>
+                            <strong>
+                                {% if inventory_ready and pool.get("_utilization") is not none %}{{ pool.get("_utilization") }}%{% else %}—{% endif %}
+                            </strong>
                         </div>
-                        <span class="ipam-health-label {{ pool.get('_health') }}">
-                            {% if pool.get("_health") == "full" %}Lleno
+                        <span
+                            class="ipam-health-label {{ pool.get('_health') }}"
+                            data-pool-health-label
+                        >
+                            {% if not inventory_ready %}Calculando
+                            {% elif pool.get("_health") == "full" %}Lleno
                             {% elif pool.get("_health") == "critical" %}Crítico
                             {% elif pool.get("_health") == "warning" %}Advertencia
                             {% else %}Con espacio{% endif %}
                         </span>
-                        {% else %}
-                        <span class="status-pill neutral" title="{{ pool.get('_availability_error') or 'Inventario IPAM incompleto' }}">Pendiente</span>
-                        {% endif %}
                     </td>
+                    {% if can_manage_ipam %}
+                    <td class="ipam-row-action">
+                        <a
+                            class="ipam-subpool-action"
+                            href="/ipam/pools/new?parent_id={{ pool.get('id') }}"
+                        >Crear subpool</a>
+                    </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -301,6 +384,7 @@
                         <th>Rol</th>
                         <th>Estado</th>
                         <th>Uso</th>
+                        {% if can_manage_ipam %}<th>Acción</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -325,6 +409,14 @@
                             <span class="muted">Prefijo</span>
                             {% endif %}
                         </td>
+                        {% if can_manage_ipam %}
+                        <td class="ipam-row-action">
+                            <a
+                                class="ipam-subpool-action"
+                                href="/ipam/pools/new?parent_id={{ prefix.get('id') }}"
+                            >Crear dentro</a>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -339,4 +431,8 @@
         {% endif %}
     </div>
 </details>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='js/ipam.js') }}?v=20260804-status-dom-2"></script>
 {% endblock %}

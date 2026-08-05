@@ -1,47 +1,44 @@
 # NetDoc
 
-NetDoc simplifica la consulta, creación guiada y visualización de infraestructura de red mediante NetBox como fuente oficial del inventario técnico. Su objetivo es reducir los pasos repetitivos de NetBox sin duplicar ni sustituir su modelo de datos.
+NetDoc simplifica la consulta, creación guiada y visualización de infraestructura de red mediante NetBox como fuente oficial del inventario técnico. Su objetivo es reducir pasos repetitivos sin sustituir el modelo de datos ni las validaciones de NetBox.
 
 ## Estado y funcionalidades
 
-El estado oficial está en [PROJECT_STATUS](docs/PROJECT_STATUS.md). `develop` incluye:
+El estado oficial está en [PROJECT_STATUS](docs/PROJECT_STATUS.md).
 
-- dashboard, dispositivos, interfaces, conexiones y racks 2D;
-- autenticación multiusuario, roles, permisos y auditoría;
-- perfil de autoservicio y protección temporal de login;
+La versión `0.10.0` fue promovida a `main` y contiene:
+
+- dashboard, dispositivos, interfaces, conexiones e IPAM;
+- autenticación multiusuario, roles, permisos, perfil y auditoría;
 - búsqueda global y estado del sistema;
+- fabricantes, modelos, plantillas de puertos e imágenes;
+- creación guiada de modelos, equipos y racks;
+- racks 2D/3D con ocupación basada en `u_height`;
 - persistencia local versionada con Alembic;
-- desarrollo y producción separados con despliegue controlado.
+- planes seguros y vista previa de conexiones para el futuro asistente.
 
-La rama `feature/documentation-workflows-ui`, presentada en el PR #4 hacia `develop`, incorpora para revisión:
+La rama `feature/local-device-type-images` prepara la versión `0.10.1`. Cambia únicamente la persistencia visual de los modelos:
 
-- navegación organizada por procesos de documentación;
-- dashboard como punto de inicio operativo;
-- direccionamiento IP con prefijos, pools, localidad, VRF, capacidad y disponibilidad;
-- modelos de dispositivo con generación masiva de interfaces mediante patrones;
-- carga opcional de imágenes frontal y trasera durante la creación del modelo;
-- administración posterior de imágenes;
-- creación guiada de racks y mejoras en la instalación física;
-- ocupación basada en `u_height`, incluida media unidad y equipos 0U;
-- elevación 2D y vista física 3D que reutilizan las imágenes del modelo;
-- planes inmutables para preparar escrituras seguras hacia NetBox;
-- lista cerrada de capacidades y rechazo inicial de eliminaciones automáticas;
-- descubrimiento de campos y opciones mediante `OPTIONS`;
-- planificador de cables y API de vista previa sin escritura;
-- documentación de cobertura de módulos y arquitectura del futuro asistente.
+- NetBox conserva fabricante, modelo, dimensiones y componentes;
+- NetDoc guarda las imágenes frontal y trasera en su base local;
+- la asociación usa el `device_type_id` real de NetBox;
+- una imagen local tiene prioridad y una imagen antigua de NetBox funciona como fallback;
+- las mismas rutas alimentan catálogo, ficha, rack 2D y rack 3D;
+- los archivos se validan por firma, MIME y tamaño, y se entregan con ETag.
 
-Esta rama es la versión `0.10.0`, permanece como borrador y debe validarse únicamente en desarrollo, puerto 8101, antes de fusionarse.
+Esta rama debe validarse primero en desarrollo, puerto 8101, antes de fusionarse.
 
 ## Principios de producto
 
-1. **NetBox sigue siendo la fuente oficial.** NetDoc no mantiene una copia paralela del inventario.
+1. **NetBox sigue siendo la fuente oficial.** NetDoc no mantiene una copia paralela del inventario técnico.
 2. **Los flujos frecuentes deben requerir menos pasos.** Modelos, interfaces, racks, pools y conexiones se presentan como procesos guiados.
-3. **Documentar una vez y reutilizar.** Los tipos de dispositivo, sus imágenes y componentes se definen antes de crear equipos.
+3. **Documentar una vez y reutilizar.** Los modelos, imágenes y componentes se definen antes de crear equipos.
 4. **La ubicación debe ser explícita.** Sitio, localidad, rack, cara y posición U forman parte del alta física.
-5. **La capacidad debe ser visible.** Los pools IP y racks muestran disponibilidad real o declaran claramente cuando no puede calcularse.
-6. **Las escrituras son controladas.** Autenticación, permiso, CSRF, auditoría y `NETBOX_WRITE_ENABLED=true` son obligatorios.
-7. **La IA no ejecuta HTTP libre.** Interpreta la intención; resolutores, planificadores y políticas deterministas construyen el cambio.
-8. **Todo cambio se revisa.** El usuario confirma la huella del plan exacto que será ejecutado.
+5. **La capacidad debe ser visible.** Los pools IP y racks muestran disponibilidad o declaran claramente cuando no puede calcularse.
+6. **Las escrituras hacia NetBox son controladas.** Autenticación, permiso, CSRF, auditoría y `NETBOX_WRITE_ENABLED=true` son obligatorios.
+7. **Los datos propios permanecen separados.** Cuentas, auditoría e imágenes locales pertenecen a NetDoc; el inventario pertenece a NetBox.
+8. **La IA no ejecuta HTTP libre.** Interpreta intención; resolutores, planificadores y políticas deterministas construyen el cambio.
+9. **Todo cambio se revisa.** El usuario confirma la huella del plan exacto que será ejecutado.
 
 ## Arquitectura y tecnologías
 
@@ -54,20 +51,28 @@ Resolutores y planes seguros
         ↓
 Servicios deterministas
         ↓
-NetBox REST / base local / métricas Linux
+NetBox REST / base local de NetDoc / métricas Linux
 ```
 
-NetDoc usa Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, SQLAlchemy, Alembic, Uvicorn, HTML, CSS y JavaScript. NetBox mantiene dispositivos, componentes, racks, cables e IPAM; una base propia configurable conserva únicamente usuarios, roles, permisos y auditoría. Consulte [arquitectura](docs/ARCHITECTURE.md) y [escrituras seguras](docs/NETBOX_WRITE_SAFETY.md).
+NetDoc usa Python, FastAPI, Jinja2, HTTPX, Pydantic Settings, SessionMiddleware, Argon2, SQLAlchemy, Alembic, Uvicorn, HTML, CSS y JavaScript.
+
+NetBox mantiene dispositivos, componentes, racks, cables e IPAM. La base configurable de NetDoc conserva:
+
+- usuarios, roles y permisos;
+- auditoría;
+- imágenes frontal y trasera asociadas a tipos de dispositivo.
+
+Consulte [arquitectura](docs/ARCHITECTURE.md), [escrituras seguras](docs/NETBOX_WRITE_SAFETY.md) y [racks e imágenes](docs/RACKS_AND_DEVICE_IMAGES.md).
 
 ## Fundamento de cambios seguros
 
 - `app/services/change_plan.py`: pasos, huella y confirmación.
-- `app/services/netbox_capabilities.py`: allowlist de operaciones conocidas.
+- `app/services/netbox_capabilities.py`: lista cerrada de operaciones conocidas.
 - `app/services/netbox_schema_service.py`: descubrimiento `OPTIONS` y validación dinámica.
 - `app/services/cable_planner.py`: planificador determinista de cables.
 - `POST /api/change-plans/cable`: vista previa de un plan; nunca escribe.
 
-La primera etapa no admite `DELETE`. La IA futura podrá preparar muchas operaciones, pero solo las capacidades explícitamente habilitadas podrán ejecutarse después de validación y confirmación.
+La primera etapa no admite `DELETE`. La IA futura podrá preparar operaciones, pero solo las capacidades explícitamente habilitadas podrán ejecutarse después de validación y confirmación.
 
 ## Estructura
 
@@ -84,22 +89,27 @@ La primera etapa no admite `DELETE`. La IA futura podrá preparar muchas operaci
 
 ## Persistencia y migraciones
 
-`DATABASE_URL` selecciona la base de NetDoc. El valor inicial es `sqlite:///./data/netdoc.db`; desarrollo y producción deben usar archivos o motores independientes.
+`DATABASE_URL` selecciona la base de NetDoc. El valor inicial es `sqlite:///./data/netdoc.db`; desarrollo y producción deben usar bases independientes.
 
-Durante el arranque, NetDoc ejecuta Alembic hasta `head`:
+La cabeza Alembic de esta rama es `20260725_0002`:
 
-- una base vacía recibe la migración inicial;
-- una base heredada completa se marca en `head` sin borrar datos;
-- una base versionada se actualiza;
+- `20260724_0001`: cuentas, roles, permisos y auditoría;
+- `20260725_0002`: imágenes de modelos.
+
+Durante el arranque:
+
+- una base vacía recibe todas las migraciones;
+- una base con `alembic_version` se actualiza hasta `head`;
+- una base heredada completa del esquema inicial se marca en `20260724_0001` y luego se actualiza;
 - un esquema parcial provoca un error de arranque.
 
-Antes de una migración debe respaldarse la base. El rollback de código no revierte ni restaura automáticamente el archivo de datos.
+Antes de una migración debe respaldarse la base. Desde `0.10.1`, ese respaldo también conserva las imágenes. El rollback de código no revierte ni restaura automáticamente el archivo de datos.
 
 ## Entornos y ramas
 
 `feature/*` se crea desde `develop`; se abre PR a `develop`, se prueba en 8101 y después se promueve mediante otro PR hacia `main`. Producción usa 8100. No programe directamente en `main` ni modifique producción manualmente.
 
-Desarrollo y producción deben usar `.env`, cookie de sesión y base independientes. Desarrollo debe conservar `NETBOX_WRITE_ENABLED=false`.
+Desarrollo y producción deben usar `.env`, cookie de sesión y base independientes. Desarrollo debe conservar `NETBOX_WRITE_ENABLED=false` para operaciones sobre NetBox. La carga local de imágenes sigue protegida por sesión, permiso y CSRF.
 
 ## Inicio rápido local
 
@@ -119,7 +129,7 @@ python -m compileall -q app tests migrations
 python -c 'from app.main import app; print(app.title, len(app.routes))'
 ```
 
-No ejecute directamente la suite desde un checkout con el `.env` de desarrollo o producción. El ejecutor aislado crea una base temporal, mantiene escritura deshabilitada y elimina los datos de prueba.
+No ejecute directamente la suite desde un checkout con el `.env` de desarrollo o producción. El ejecutor aislado crea una base temporal, mantiene las escrituras hacia NetBox deshabilitadas y elimina los datos de prueba.
 
 No versionar `.env`, bases, tokens, contraseñas, hashes, secretos de sesión o claves. Para despliegues consulte [DEPLOYMENT](docs/DEPLOYMENT.md); `git push` no despliega al servidor.
 

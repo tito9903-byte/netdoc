@@ -326,3 +326,16 @@ class NetBoxClient:
             },
             page_limit=200,
         )
+
+    async def get_device_interface_ip_addresses(
+        self,
+        device_id: int,
+    ) -> list[dict[str, Any]]:
+        return await self.get_all(
+            "/api/ipam/ip-addresses/",
+            params={
+                "device_id": device_id,
+                "ordering": "address",
+            },
+            page_limit=200,
+        )

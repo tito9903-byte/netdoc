@@ -73,6 +73,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- El propietario confirmó en desarrollo los flujos probados de Sites,
+  conexiones por lote, creación de pools, gestión contextual de interfaces,
+  búsqueda sin filtros, enlaces internos y presentación diferida de IPAM.
 - Direccionamiento muestra prefijos y filtros antes de descargar el inventario
   completo de direcciones y rangos; la ocupación y los KPI se completan en
   segundo plano.

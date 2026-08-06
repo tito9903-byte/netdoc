@@ -2,16 +2,21 @@
 
 - **Propósito:** interfaz operativa para consultar, crear y visualizar inventario de red cuyo origen oficial es NetBox.
 - **Estado general:** En progreso.
-- **Última actualización:** 2026-08-04.
+- **Última actualización:** 2026-08-06.
 - **Versión documental:** 3.0.
 - **Versión de aplicación de la rama:** 0.10.1.
 - **Responsable / repositorio:** Luis Emilio García Pichardo / `tito9903-byte/netdoc`.
 - **Ramas:** producción `main`; integración `develop`; trabajo documental en
-  `docs/validate-release-0.10.1`.
+  `docs/record-production-0.10.1`.
 
 ## Resumen ejecutivo
 
-La versión `0.10.0` fue promovida a `main` y reúne autenticación, roles, auditoría, búsqueda, Sistema, IPAM, fabricantes, modelos, plantillas, conexiones, racks 2D/3D y la base segura para el futuro asistente.
+La versión `0.10.1` fue promovida a `main` mediante el PR #30, en el commit
+`adb23925327e49090bb3be1bbbe74e1820650583`. Reúne Sites, conexiones por
+lote, creación protegida de pools, gestión contextual de interfaces, mejoras de
+racks, búsqueda y direcciones IPv4/IPv6 por interfaz. El propietario confirmó
+el 2026-08-06 que el despliegue quedó funcionando en producción mediante el
+servicio del puerto 8100.
 
 Sites fue integrado en `develop` mediante el PR #13 y desplegado en desarrollo
 en el commit `b85553346b5580ed37353d035168c0efec30befc`; el servicio terminó activo y
@@ -104,6 +109,15 @@ confirmó en desarrollo la generación de interfaces y el inventario resultante.
 |---|---|---|
 | Producción | `main` | Ruta, servicio, endpoint y base independientes |
 | Desarrollo | rama en revisión o `develop` | Ruta, servicio, endpoint y base independientes |
+
+Estado actual confirmado:
+
+- producción ejecuta la versión 0.10.1 de `main` en
+  `adb23925327e49090bb3be1bbbe74e1820650583` y el propietario confirmó su
+  funcionamiento en el puerto 8100;
+- `develop` permanece en
+  `24d2001159a567815def1f02679903f7c1e26df6`; no se realizó un nuevo
+  despliegue de desarrollo durante esta promoción.
 
 Las direcciones internas y los identificadores concretos de ejecución se
 configuran fuera del repositorio público. La versión documentada de NetBox es
@@ -271,10 +285,11 @@ configuran fuera del repositorio público. La versión documentada de NetBox es
 
 ## Próximo objetivo
 
-Promover la versión 0.10.1 a producción mediante PR de `develop` a `main`,
-respaldo verificable de la base local y despliegue fijado al SHA fusionado. La
-imagen representativa del site queda diferida hasta definir almacenamiento,
-respaldo y asociación sin duplicar el inventario oficial.
+Completar las verificaciones operativas todavía pendientes: imágenes de
+modelos en catálogo y racks, eventos de auditoría específicos, navegación sin
+accesos duplicados y compatibilidad de redirecciones antiguas. La imagen
+representativa del site queda diferida hasta definir almacenamiento, respaldo y
+asociación sin duplicar el inventario oficial.
 
 ## Reglas de mantenimiento
 

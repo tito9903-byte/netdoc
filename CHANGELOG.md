@@ -73,6 +73,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ### Changed
 
+- La versión 0.10.1 fue promovida a `main` en
+  `adb23925327e49090bb3be1bbbe74e1820650583`; el propietario confirmó que el
+  despliegue funciona en producción mediante el servicio del puerto 8100.
 - El propietario confirmó en desarrollo los flujos probados de Sites,
   conexiones por lote, creación de pools, gestión contextual de interfaces,
   búsqueda sin filtros, enlaces internos y presentación diferida de IPAM.

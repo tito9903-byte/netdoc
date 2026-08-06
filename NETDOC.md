@@ -50,12 +50,12 @@ estado y las prioridades. Los ADR conservan decisiones de arquitectura. GitHub
 es la fuente del código compartido; un commit exclusivamente local no está
 publicado.
 
-## Estado validado al 2026-08-04
+## Estado validado al 2026-08-06
 
-- `main`: producción 0.10.0 en
-  `bb8a63af37dfdadeba8f40910de50212d0b09774`.
+- `main`: producción 0.10.1 en
+  `adb23925327e49090bb3be1bbbe74e1820650583`.
 - `develop`: integración 0.10.1 en
-  `03c5b2a5b4ac5cf22c018847e5ac6ece28770959`.
+  `24d2001159a567815def1f02679903f7c1e26df6`.
 - PR #13: Sites, integrado en `develop`.
 - PR #14: navegación contextual sin `Acciones rápidas`, integrado en
   `develop`.
@@ -67,6 +67,9 @@ publicado.
   racks, integrado en `develop`.
 - PR #27: direcciones IPv4 e IPv6 por interfaz en la ficha del dispositivo,
   integrado en `develop`.
+- PR #29: validación funcional de la versión 0.10.1 documentada e integrada en
+  `develop`.
+- PR #30: versión 0.10.1 promovida de `develop` a `main`.
 - Desarrollo está desplegado en
   `45f8a300f35f833cde353923edc0f0c931571400`; el servicio quedó activo, el
   puerto 8101 respondió correctamente y Alembic permaneció en
@@ -96,8 +99,12 @@ publicado.
   incluida la generación y la verificación del inventario resultante.
 - El propietario confirmó la búsqueda sin filtros, los enlaces internos de
   modelo y rack y las correcciones visuales del estado de IPAM.
-- Producción permanece en `bb8a63af37dfdadeba8f40910de50212d0b09774` y no
-  fue modificada por este despliegue.
+- El propietario confirmó que la versión 0.10.1 quedó funcionando en
+  producción después del despliegue de `main` en
+  `adb23925327e49090bb3be1bbbe74e1820650583`, mediante el servicio de
+  producción en el puerto 8100.
+- No se realizó un nuevo despliegue de desarrollo durante la promoción a
+  producción.
 
 Estos datos son un punto de partida, no una autorización para asumir que siguen
 vigentes. Verifica GitHub y el checkout antes de continuar.
